@@ -280,4 +280,15 @@ export function createPlayerPiecesRandom() {
   })
 }
 
+/**
+ * Create two full Alpha Sets for one player (Mega Colors mode).
+ * Set A uses piece IDs 1–22; Set B uses IDs 101–122 to keep them unique.
+ * Both sets share the same player color — placement rules treat them as one.
+ */
+export function createMegaColorPieces() {
+  const setA = createPlayerPiecesRandom()
+  const setB = createPlayerPiecesRandom().map(p => ({ ...p, id: p.id + 100 }))
+  return [...setA, ...setB]
+}
+
 

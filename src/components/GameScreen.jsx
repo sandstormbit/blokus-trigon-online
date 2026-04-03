@@ -57,9 +57,16 @@ export default function GameScreen({
     ? players.find(p => p.id === state.noMovesModalPlayerId)
     : null
 
-  // Layout: for 2p/4p → 2 left, 2 right; for 3p → 1 left, 2 right
-  const leftPlayers  = playerCount === 3 ? [players[0]]                : [players[0], players[3]]
-  const rightPlayers = playerCount === 3 ? [players[1], players[2]]    : [players[1], players[2]]
+  // Mega Colors 2p has only 2 player slots instead of 4
+  const isMegaColors2p = state.gameModes?.megaColors && playerCount === 2
+
+  // Layout: 3p → 1 left, 2 right; Mega Colors 2p → 1 left, 1 right; 2p/4p → 2 left, 2 right
+  const leftPlayers  = playerCount === 3  ? [players[0]]
+                     : isMegaColors2p     ? [players[0]]
+                     : [players[0], players[3]]
+  const rightPlayers = playerCount === 3  ? [players[1], players[2]]
+                     : isMegaColors2p     ? [players[1]]
+                     : [players[1], players[2]]
 
   const isModalOpen = !!state.pendingPlacement || state.showEndGameConfirm ||
                       (state.phase === 'ended' && !viewingFinalBoard) || !!state.noMovesModalPlayerId
@@ -143,6 +150,7 @@ export default function GameScreen({
             onBoardLeave={handleBoardLeave}
             players={players}
             disabled={!!boardDisabled}
+            requiredStartCells={state.gameModes?.requiredStart ? state.requiredStartCells : null}
           />
         </div>
 

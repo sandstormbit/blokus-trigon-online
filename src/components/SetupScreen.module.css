@@ -1,96 +1,132 @@
+/* ── Page shell ─────────────────────────────────────────────────────────────── */
+
 .container {
   position: relative;
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px 24px;
+  padding: 20px 24px;
   overflow: auto;
 }
 
 .backdrop {
   position: fixed;
   inset: 0;
-  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(59,130,246,0.08) 0%, transparent 60%),
-              radial-gradient(ellipse 60% 40% at 80% 80%, rgba(239,68,68,0.06) 0%, transparent 50%),
-              var(--bg-base);
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(59,130,246,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(239,68,68,0.06) 0%, transparent 50%),
+    var(--bg-base);
   z-index: 0;
 }
 
-.content {
+.wrapper {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 480px;
+  max-width: 720px;
   animation: fadeIn 400ms ease forwards;
 }
 
+/* ── Brand header — horizontal logo + title ─────────────────────────────────── */
+
 .header {
-  text-align: center;
-  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding-left: 2px;
 }
 
 .logoMark {
-  display: inline-flex;
+  flex-shrink: 0;
+  display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8px;
-  filter: drop-shadow(0 0 16px rgba(59,130,246,0.4));
+  filter: drop-shadow(0 0 14px rgba(59,130,246,0.45));
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .title {
   font-family: var(--font-display);
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 800;
   letter-spacing: -0.5px;
   color: var(--text-primary);
-  margin-bottom: 4px;
+  line-height: 1;
 }
 
 .subtitle {
-  font-size: 13px;
-  letter-spacing: 0.08em;
+  font-size: 11px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-muted);
   font-weight: 500;
 }
 
-.card {
+/* ── Two-column panels ──────────────────────────────────────────────────────── */
+
+.panels {
+  display: grid;
+  grid-template-columns: 1fr 216px;
+  gap: 14px;
+  align-items: start;
+}
+
+/* ── Shared card shell ──────────────────────────────────────────────────────── */
+
+.setupCard,
+.modesCard {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
-  padding: 20px;
   box-shadow: var(--shadow-xl);
 }
 
+.setupCard {
+  padding: 18px;
+}
+
+.modesCard {
+  padding: 16px;
+}
+
+/* ── Section ────────────────────────────────────────────────────────────────── */
+
 .section {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .sectionLabel {
   display: block;
   font-family: var(--font-display);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-muted);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
-/* Count selector */
+/* ── Player count selector ──────────────────────────────────────────────────── */
+
 .countSelector {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
 
 .countBtn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 10px 12px;
+  gap: 1px;
+  padding: 8px 6px;
   background: var(--bg-elevated);
   border: 1.5px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -106,33 +142,34 @@
 
 .countBtnActive {
   border-color: var(--accent-blue) !important;
-  background: rgba(59,130,246,0.1) !important;
+  background: rgba(59,130,246,0.10) !important;
   color: var(--accent-blue-light) !important;
   box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
 }
 
 .countNum {
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 700;
   line-height: 1;
 }
 
 .countLabel {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 400;
   opacity: 0.7;
 }
 
 .boardTag {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 500;
-  letter-spacing: 0.05em;
-  opacity: 0.5;
-  margin-top: 2px;
+  letter-spacing: 0.04em;
+  opacity: 0.45;
+  margin-top: 1px;
 }
 
-/* Player list */
+/* ── Player list ────────────────────────────────────────────────────────────── */
+
 .playerList {
   display: flex;
   flex-direction: column;
@@ -142,35 +179,36 @@
 .playerRow {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   animation: slideInLeft 250ms ease forwards;
 }
 
 .playerNumber {
   flex-shrink: 0;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   border: 1.5px solid;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   transition: all var(--transition-mid);
 }
 
 .nameInput {
   flex: 1;
-  height: 34px;
-  padding: 0 12px;
+  height: 30px;
+  padding: 0 10px;
   background: var(--bg-input);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 12px;
   transition: border-color var(--transition-fast);
+  min-width: 0;
 }
 
 .nameInput:focus {
@@ -184,13 +222,13 @@
 
 .colorPicker {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   flex-shrink: 0;
 }
 
 .colorSwatch {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   border: 2px solid transparent;
   transition: all var(--transition-fast);
@@ -213,49 +251,89 @@
   cursor: not-allowed;
 }
 
-/* Board info */
+/* ── 2-player color groups ──────────────────────────────────────────────────── */
+
+.twoPlayerGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  border: 0.5px solid var(--border-subtle);
+}
+
+.twoPlayerHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.twoPlayerColors {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 2px;
+}
+
+.twoPlayerColorRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.colorSetLabel {
+  font-size: 10px;
+  color: var(--text-muted);
+  min-width: 34px;
+  flex-shrink: 0;
+}
+
+/* ── Board info strip ───────────────────────────────────────────────────────── */
+
 .boardInfo {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
+  gap: 10px;
+  padding: 7px 10px;
   background: rgba(59,130,246,0.06);
   border: 1px solid rgba(59,130,246,0.15);
   border-radius: var(--radius-md);
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .boardInfoIcon {
-  font-size: 20px;
+  font-size: 16px;
   color: var(--accent-blue);
   flex-shrink: 0;
 }
 
 .boardInfoTitle {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-primary);
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
 .boardInfoDesc {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
 }
 
-/* Start button */
+/* ── Start button ───────────────────────────────────────────────────────────── */
+
 .startBtn {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 42px;
+  height: 40px;
   background: var(--accent-blue);
   color: white;
   border-radius: var(--radius-md);
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.02em;
   box-shadow: 0 4px 16px rgba(59,130,246,0.35);
@@ -272,46 +350,103 @@
   transform: translateY(0);
 }
 
+/* ── Game modes panel ───────────────────────────────────────────────────────── */
+
+.modesList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modeToggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 10px;
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--transition-mid);
+  width: 100%;
+}
+
+.modeToggle:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.modeToggleActive {
+  border-color: var(--accent-blue) !important;
+  background: rgba(59,130,246,0.08) !important;
+}
+
+.modeToggleDisabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.modeToggleCheck {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  border-radius: 3px;
+  border: 1.5px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+  transition: all var(--transition-fast);
+}
+
+.modeToggleCheckActive {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+.modeToggleBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.modeToggleNameRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 2px;
+  flex-wrap: wrap;
+}
+
+.modeToggleName {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.modeToggleDesc {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.modeBadge {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: rgba(59,130,246,0.14);
+  color: #93C5FD;
+  white-space: nowrap;
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────────── */
+
 .footer {
   text-align: center;
   font-size: 10px;
   color: var(--text-muted);
   margin-top: 10px;
   letter-spacing: 0.03em;
-}
-
-.twoPlayerGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  background: var(--color-background-secondary);
-  border-radius: 8px;
-  border: 0.5px solid var(--color-border-tertiary);
-}
-
-.twoPlayerHeader {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.twoPlayerColors {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-left: 4px;
-}
-
-.twoPlayerColorRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.colorSetLabel {
-  font-size: 11px;
-  color: var(--color-text-tertiary);
-  min-width: 36px;
-  flex-shrink: 0;
 }
