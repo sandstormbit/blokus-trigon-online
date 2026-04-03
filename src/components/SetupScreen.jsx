@@ -66,14 +66,14 @@ export default function SetupScreen({ onStart }) {
       <div className={styles.content}>
         <div className={styles.header}>
           <div className={styles.logoMark}>
-            <svg viewBox="0 0 60 52" width="52" height="45">
+            <svg viewBox="-6 -6 72 64" width="52" height="45" overflow="visible">
               <polygon points="30,4 56,48 4,48" fill="none" stroke="#3B82F6" strokeWidth="2.5" strokeLinejoin="round"/>
               <polygon points="30,16 46,44 14,44" fill="rgba(59,130,246,0.2)" stroke="#3B82F6" strokeWidth="1.5" strokeLinejoin="round"/>
               <polygon points="20,28 30,44 10,44" fill="rgba(239,68,68,0.3)" stroke="#EF4444" strokeWidth="1" strokeLinejoin="round"/>
               <polygon points="40,28 50,44 30,44" fill="rgba(234,179,8,0.3)" stroke="#EAB308" strokeWidth="1" strokeLinejoin="round"/>
             </svg>
           </div>
-          <h1 className={styles.title}>Blokus Trigon</h1>
+          <h1 className={styles.title}>Delta Prism</h1>
           <p className={styles.subtitle}>Strategy. Territory. Triangles.</p>
         </div>
 
@@ -215,7 +215,7 @@ export default function SetupScreen({ onStart }) {
           </button>
         </div>
 
-        <p className={styles.footer}>Phase 2 · Pass and play · Full rules enforced</p>
+        <p className={styles.footer}>For educational purposes only. Online adaptation of Blokus Trigon by Mattel.</p>
       </div>
     </div>
   )

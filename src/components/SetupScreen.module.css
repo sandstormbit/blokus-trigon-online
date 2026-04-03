@@ -4,7 +4,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 12px 24px;
   overflow: auto;
 }
 
@@ -27,24 +27,24 @@
 
 .header {
   text-align: center;
-  margin-bottom: 28px;
+  margin-bottom: 14px;
 }
 
 .logoMark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 14px;
-  filter: drop-shadow(0 0 24px rgba(59,130,246,0.4));
+  margin-bottom: 8px;
+  filter: drop-shadow(0 0 16px rgba(59,130,246,0.4));
 }
 
 .title {
   font-family: var(--font-display);
-  font-size: 36px;
+  font-size: 30px;
   font-weight: 800;
   letter-spacing: -0.5px;
   color: var(--text-primary);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .subtitle {
@@ -59,12 +59,12 @@
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
-  padding: 28px;
+  padding: 20px;
   box-shadow: var(--shadow-xl);
 }
 
 .section {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .sectionLabel {
@@ -90,7 +90,7 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 16px 12px;
+  padding: 10px 12px;
   background: var(--bg-elevated);
   border: 1.5px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -136,7 +136,7 @@
 .playerList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .playerRow {
@@ -218,11 +218,11 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 8px 12px;
   background: rgba(59,130,246,0.06);
   border: 1px solid rgba(59,130,246,0.15);
   border-radius: var(--radius-md);
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .boardInfoIcon {
@@ -250,7 +250,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 48px;
+  height: 42px;
   background: var(--accent-blue);
   color: white;
   border-radius: var(--radius-md);
@@ -274,10 +274,10 @@
 
 .footer {
   text-align: center;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
-  margin-top: 16px;
-  letter-spacing: 0.05em;
+  margin-top: 10px;
+  letter-spacing: 0.03em;
 }
 
 .twoPlayerGroup {
