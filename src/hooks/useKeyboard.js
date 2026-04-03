@@ -15,6 +15,7 @@ export function useKeyboard({
   pendingPlacement,
   onRotate,
   onFlip,
+  onToggleHover,
   onDeselect,
   onConfirmPlacement,
   onCancelPlacement,
@@ -52,6 +53,11 @@ export function useKeyboard({
           e.preventDefault()
           onFlip()
           break
+        case 'h':
+        case 'H':
+          e.preventDefault()
+          onToggleHover()
+          break
         case 'Escape':
           e.preventDefault()
           onDeselect()
@@ -67,6 +73,7 @@ export function useKeyboard({
     pendingPlacement,
     onRotate,
     onFlip,
+    onToggleHover,
     onDeselect,
     onConfirmPlacement,
     onCancelPlacement,

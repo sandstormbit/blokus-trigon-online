@@ -7,6 +7,8 @@ export default function HUD({
   selectedPiece,
   onRotate,
   onFlip,
+  onToggleHover,
+  freeHoverEnabled,
   onDeselect,
   onEndGame,
   playerCount,
@@ -54,6 +56,17 @@ export default function HUD({
                   <path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8zM12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z"/>
                 </svg>
                 Flip <kbd>F</kbd>
+              </button>
+              <button
+                className={freeHoverEnabled ? styles.controlBtn : styles.controlBtnGhost}
+                onClick={onToggleHover}
+                title={freeHoverEnabled ? 'Hide hover preview (H)' : 'Show hover preview (H)'}
+              >
+                <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
+                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                  <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/>
+                </svg>
+                Hover <kbd>H</kbd>
               </button>
               <button className={styles.controlBtnGhost} onClick={onDeselect} title="Deselect (Esc)">
                 <svg viewBox="0 0 20 20" width="12" height="12" fill="currentColor">
