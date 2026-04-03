@@ -1,0 +1,222 @@
+import React, { useState } from 'react'
+import { PLAYER_COLORS, COLOR_KEYS } from '../hooks/useGameState.js'
+import styles from './SetupScreen.module.css'
+
+const PLAYER_COUNT_OPTIONS = [2, 3, 4]
+
+export default function SetupScreen({ onStart }) {
+  const [playerCount, setPlayerCount] = useState(4)
+  const [playerNames, setPlayerNames] = useState(['', '', ''])
+  // null means no color chosen for that slot
+  const [playerColors, setPlayerColors] = useState([null, null, null, null])
+
+  const updateName = (idx, name) => {
+    const updated = [...playerNames]
+    updated[idx] = name
+    setPlayerNames(updated)
+  }
+
+  // Toggle color selection: clicking an already-selected color deselects it (sets to null).
+  // Clicking an unselected color assigns it to this slot, clearing it from any other slot.
+  const updateColor = (slotIdx, color) => {
+    const updated = [...playerColors]
+    if (updated[slotIdx] === color) {
+      // Deselect: clear this slot
+      updated[slotIdx] = null
+    } else {
+      // If another slot already has this color, clear that slot first
+      const currentHolder = updated.findIndex((c, i) => c === color && i !== slotIdx)
+      if (currentHolder !== -1) updated[currentHolder] = null
+      updated[slotIdx] = color
+    }
+    setPlayerColors(updated)
+  }
+
+  // Fallback color for display when none selected
+  const slotColor = (idx) => playerColors[idx] || 'blue'
+
+  const handleStart = () => {
+    if (playerCount === 2) {
+      const names = [
+        playerNames[0].trim() || 'Player 1',
+        playerNames[1].trim() || 'Player 2',
+      ]
+      // Fill any null slots with defaults
+      const defaults = ['blue', 'red', 'green', 'yellow']
+      const resolved = playerColors.slice(0, 4).map((c, i) => c || defaults[i])
+      onStart(2, names, resolved)
+    } else {
+      const names = Array.from({ length: playerCount }, (_, i) =>
+        playerNames[i].trim() || `Player ${i + 1}`
+      )
+      const defaults = ['blue', 'red', 'green', 'yellow']
+      const resolved = playerColors.slice(0, playerCount).map((c, i) => c || defaults[i])
+      onStart(playerCount, names, resolved)
+    }
+  }
+
+  const boardSize = playerCount === 3 ? 384 : 486
+
+  // All active color slots across all players
+  const activeColorSlots = playerCount === 2 ? 4 : playerCount
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.backdrop} />
+      <div className={styles.content}>
+        <div className={styles.header}>
+          <div className={styles.logoMark}>
+            <svg viewBox="0 0 60 52" width="52" height="45">
+              <polygon points="30,4 56,48 4,48" fill="none" stroke="#3B82F6" strokeWidth="2.5" strokeLinejoin="round"/>
+              <polygon points="30,16 46,44 14,44" fill="rgba(59,130,246,0.2)" stroke="#3B82F6" strokeWidth="1.5" strokeLinejoin="round"/>
+              <polygon points="20,28 30,44 10,44" fill="rgba(239,68,68,0.3)" stroke="#EF4444" strokeWidth="1" strokeLinejoin="round"/>
+              <polygon points="40,28 50,44 30,44" fill="rgba(234,179,8,0.3)" stroke="#EAB308" strokeWidth="1" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <h1 className={styles.title}>Blokus Trigon</h1>
+          <p className={styles.subtitle}>Strategy. Territory. Triangles.</p>
+        </div>
+
+        <div className={styles.card}>
+          {/* Player count */}
+          <div className={styles.section}>
+            <label className={styles.sectionLabel}>Number of players</label>
+            <div className={styles.countSelector}>
+              {PLAYER_COUNT_OPTIONS.map(n => (
+                <button
+                  key={n}
+                  className={`${styles.countBtn} ${playerCount === n ? styles.countBtnActive : ''}`}
+                  onClick={() => setPlayerCount(n)}
+                >
+                  <span className={styles.countNum}>{n}</span>
+                  <span className={styles.countLabel}>players</span>
+                  <span className={styles.boardTag}>{n === 3 ? '384' : '486'} tiles</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Player setup */}
+          <div className={styles.section}>
+            <label className={styles.sectionLabel}>Players</label>
+            <div className={styles.playerList}>
+
+              {playerCount === 2 ? (
+                // 2-player: show 2 human names, each with 2 color pickers
+                [0, 1].map(humanIdx => (
+                  <div key={humanIdx} className={styles.twoPlayerGroup}>
+                    <div className={styles.twoPlayerHeader}>
+                      <div
+                        className={styles.playerNumber}
+                        style={{
+                          background: PLAYER_COLORS[slotColor(humanIdx * 2)].bg + '22',
+                          borderColor: PLAYER_COLORS[slotColor(humanIdx * 2)].bg
+                        }}
+                      >
+                        <span style={{ color: PLAYER_COLORS[slotColor(humanIdx * 2)].bg }}>
+                          {humanIdx + 1}
+                        </span>
+                      </div>
+                      <input
+                        className={styles.nameInput}
+                        placeholder={`Player ${humanIdx + 1}`}
+                        value={playerNames[humanIdx]}
+                        onChange={e => updateName(humanIdx, e.target.value)}
+                        maxLength={16}
+                      />
+                    </div>
+                    <div className={styles.twoPlayerColors}>
+                      {[0, 1].map(setIdx => {
+                        const slotIdx = humanIdx * 2 + setIdx
+                        return (
+                          <div key={setIdx} className={styles.twoPlayerColorRow}>
+                            <span className={styles.colorSetLabel}>Set {setIdx + 1}</span>
+                            <div className={styles.colorPicker}>
+                              {COLOR_KEYS.map(colorKey => {
+                                const isUsed = playerColors.slice(0, 4).some((c, i) => c === colorKey && i !== slotIdx)
+                                const isSelected = playerColors[slotIdx] === colorKey
+                                return (
+                                  <button
+                                    key={colorKey}
+                                    className={`${styles.colorSwatch} ${isSelected ? styles.colorSwatchSelected : ''} ${isUsed ? styles.colorSwatchUsed : ''}`}
+                                    style={{ background: PLAYER_COLORS[colorKey].bg }}
+                                    onClick={() => updateColor(slotIdx, colorKey)}
+                                    title={PLAYER_COLORS[colorKey].label}
+                                    disabled={isUsed}
+                                  />
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                // 3/4-player: one color per player
+                Array.from({ length: playerCount }, (_, i) => (
+                  <div key={i} className={styles.playerRow}>
+                    <div
+                      className={styles.playerNumber}
+                      style={{ background: PLAYER_COLORS[slotColor(i)].bg + '22', borderColor: PLAYER_COLORS[slotColor(i)].bg }}
+                    >
+                      <span style={{ color: PLAYER_COLORS[slotColor(i)].bg }}>{i + 1}</span>
+                    </div>
+                    <input
+                      className={styles.nameInput}
+                      placeholder={`Player ${i + 1}`}
+                      value={playerNames[i]}
+                      onChange={e => updateName(i, e.target.value)}
+                      maxLength={16}
+                    />
+                    <div className={styles.colorPicker}>
+                      {COLOR_KEYS.map(colorKey => {
+                        const isUsed = playerColors.slice(0, playerCount).some((c, j) => c === colorKey && j !== i)
+                        const isSelected = playerColors[i] === colorKey
+                        return (
+                          <button
+                            key={colorKey}
+                            className={`${styles.colorSwatch} ${isSelected ? styles.colorSwatchSelected : ''} ${isUsed ? styles.colorSwatchUsed : ''}`}
+                            style={{ background: PLAYER_COLORS[colorKey].bg }}
+                            onClick={() => updateColor(i, colorKey)}
+                            title={PLAYER_COLORS[colorKey].label}
+                            disabled={isUsed}
+                          />
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Board info */}
+          <div className={styles.boardInfo}>
+            <div className={styles.boardInfoIcon}>⬡</div>
+            <div>
+              <div className={styles.boardInfoTitle}>
+                {playerCount === 2 ? '2-player board' : `${playerCount}-player board`} — {boardSize} triangles
+              </div>
+              <div className={styles.boardInfoDesc}>
+                {playerCount === 2
+                  ? '2 × 22 pieces per player · 4 color sets total · Rules enforced'
+                  : `22 pieces per player · Pass and play · Rules enforced`}
+              </div>
+            </div>
+          </div>
+
+          <button className={styles.startBtn} onClick={handleStart}>
+            <span>Start Game</span>
+            <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor">
+              <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd"/>
+            </svg>
+          </button>
+        </div>
+
+        <p className={styles.footer}>Phase 2 · Pass and play · Full rules enforced</p>
+      </div>
+    </div>
+  )
+}
