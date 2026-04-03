@@ -188,6 +188,7 @@ export default function Board({
   onBoardLeave,
   players,
   disabled,
+  requiredStartCells,  // Set<"q,r"> | null — Required Start mode markers
 }) {
   const svgRef = useRef(null)
 
@@ -403,6 +404,8 @@ export default function Board({
           let stroke      = EMPTY_STROKE
           let strokeWidth = 0.5
 
+          const isRequiredStart = requiredStartCells && requiredStartCells.has(id)
+
           if (occupied && playerColorMap[occupiedBy]) {
             fill        = playerColorMap[occupiedBy].bg
             // Keep a very subtle inner-cell line so adjacent same-color triangles
@@ -413,6 +416,10 @@ export default function Board({
             fill        = ghostIsLegal ? legalGhost.fill   : GHOST_ILLEGAL_FILL
             stroke      = ghostIsLegal ? legalGhost.stroke : GHOST_ILLEGAL_STROKE
             strokeWidth = 1.5
+          } else if (isRequiredStart) {
+            fill        = 'rgba(234,179,8,0.10)'
+            stroke      = 'rgba(234,179,8,0.45)'
+            strokeWidth = 0.9
           }
 
           return (
@@ -426,6 +433,22 @@ export default function Board({
             />
           )
         })}
+
+        {/* Required Start markers — gold dot + ring at centroid of each marked cell */}
+        {requiredStartCells && cells
+          .filter(cell => !cell.occupiedBy && requiredStartCells.has(cell.id))
+          .map(cell => {
+            const cent = triCentroid(cell.q, cell.r)
+            const cx = cent.x + offsetX
+            const cy = cent.y + offsetY
+            return (
+              <g key={`rs-${cell.id}`} pointerEvents="none">
+                <circle cx={cx} cy={cy} r={5.5} fill="none" stroke="rgba(234,179,8,0.4)" strokeWidth={0.8} />
+                <circle cx={cx} cy={cy} r={3}   fill="rgba(234,179,8,0.85)" />
+              </g>
+            )
+          })
+        }
 
         {/*
           Placed piece outer borders — one outline per connected piece.

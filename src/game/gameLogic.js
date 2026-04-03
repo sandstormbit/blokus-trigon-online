@@ -204,15 +204,29 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
 /**
  * Check whether placing `newCells` (array of {q,r}) is legal for `playerId`.
  *
+ * gameOptions = { gameModes: {}, requiredStartCells: Set|null }
  * Returns { legal: boolean, reason: string }
  */
-export function isLegalPlacement(boardCells, newCells, playerId, isFirstPiece) {
+export function isLegalPlacement(boardCells, newCells, playerId, isFirstPiece, gameOptions = {}) {
+  const { gameModes = {}, requiredStartCells = null } = gameOptions
+
   // Rule 1: all target cells must be empty and on the board
   for (const { q, r } of newCells) {
     const cell = boardCells[`${q},${r}`]
     if (!cell) return { legal: false, reason: 'off_board' }
     if (cell.occupiedBy !== null) return { legal: false, reason: 'occupied' }
   }
+
+  // Required Start: first piece must cover one of the 6 marked triangles.
+  // This applies even in Zen Mode — it is a placement origin constraint, not a
+  // contact-rule. Both modes can be active simultaneously.
+  if (isFirstPiece && gameModes.requiredStart && requiredStartCells) {
+    const coversRequired = newCells.some(({ q, r }) => requiredStartCells.has(`${q},${r}`))
+    if (!coversRequired) return { legal: false, reason: 'required_start' }
+  }
+
+  // Zen Mode: skip all contact/adjacency rules — any empty cell is valid.
+  if (gameModes.zenMode) return { legal: true, reason: 'ok' }
 
   if (isFirstPiece) return { legal: true, reason: 'ok' }
 
@@ -335,7 +349,7 @@ function computeAnchor(hoverQ, hoverR, pieceCells) {
  * Strategy: try every board cell as the "hover target" (using parity-aware
  * anchor), deduplicate by anchor position, validate each unique placement.
  */
-function findOrientationPlacements(boardCells, orientedCells, playerId, isFirstPiece) {
+function findOrientationPlacements(boardCells, orientedCells, playerId, isFirstPiece, gameOptions = {}) {
   const tried = new Set()
   const valid = []
 
@@ -348,7 +362,7 @@ function findOrientationPlacements(boardCells, orientedCells, playerId, isFirstP
     tried.add(key)
 
     const placed = placePieceCells(orientedCells, anchorQ, anchorR)
-    const { legal } = isLegalPlacement(boardCells, placed, playerId, isFirstPiece)
+    const { legal } = isLegalPlacement(boardCells, placed, playerId, isFirstPiece, gameOptions)
     if (legal) valid.push({ anchorQ, anchorR })
   }
 
@@ -361,13 +375,13 @@ function findOrientationPlacements(boardCells, orientedCells, playerId, isFirstP
  *
  * Stops early once at least one is found if `findFirst` is true (for hasAnyLegalMove).
  */
-export function getValidPlacements(boardCells, piece, playerId, isFirstPiece, findFirst = false) {
+export function getValidPlacements(boardCells, piece, playerId, isFirstPiece, findFirst = false, gameOptions = {}) {
   const results = []
 
   for (let flipped = 0; flipped < 2; flipped++) {
     for (let rotIndex = 0; rotIndex < 6; rotIndex++) {
       const oriented = getPieceOrientation(piece, rotIndex, flipped === 1)
-      const placements = findOrientationPlacements(boardCells, oriented, playerId, isFirstPiece)
+      const placements = findOrientationPlacements(boardCells, oriented, playerId, isFirstPiece, gameOptions)
 
       for (const { anchorQ, anchorR } of placements) {
         results.push({ rotIndex, flipped: flipped === 1, anchorQ, anchorR })
@@ -382,10 +396,10 @@ export function getValidPlacements(boardCells, piece, playerId, isFirstPiece, fi
 /**
  * Check whether a player has any legal move remaining.
  */
-export function hasAnyLegalMove(boardCells, pieces, playerId, isFirstPiece) {
+export function hasAnyLegalMove(boardCells, pieces, playerId, isFirstPiece, gameOptions = {}) {
   for (const piece of pieces) {
     if (piece.placed) continue
-    const found = getValidPlacements(boardCells, piece, playerId, isFirstPiece, true)
+    const found = getValidPlacements(boardCells, piece, playerId, isFirstPiece, true, gameOptions)
     if (found.length > 0) return true
   }
   return false
@@ -395,11 +409,11 @@ export function hasAnyLegalMove(boardCells, pieces, playerId, isFirstPiece) {
  * Check whether the game is over.
  * Game ends when all non-skipped players have no legal moves.
  */
-export function checkGameOver(players, boardCells, skippedPlayerIds) {
+export function checkGameOver(players, boardCells, skippedPlayerIds, gameOptions = {}) {
   for (const player of players) {
     if (skippedPlayerIds.has(player.id)) continue
     const isFirst = !player.pieces.some(p => p.placed)
-    if (hasAnyLegalMove(boardCells, player.pieces, player.id, isFirst)) return false
+    if (hasAnyLegalMove(boardCells, player.pieces, player.id, isFirst, gameOptions)) return false
   }
   return true
 }

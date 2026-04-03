@@ -1,6 +1,6 @@
 import { useReducer, useCallback } from 'react'
 import { generateBoard } from '../game/boardGeometry.js'
-import { createPlayerPiecesRandom, getPieceOrientation, placePieceCells } from '../game/pieces.js'
+import { createPlayerPiecesRandom, createMegaColorPieces, getPieceOrientation, placePieceCells } from '../game/pieces.js'
 import { isLegalPlacement, hasAnyLegalMove, checkGameOver } from '../game/gameLogic.js'
 
 // ─── Parity-aware anchor ───────────────────────────────────────────────────────
@@ -52,6 +52,28 @@ function createInitialState() {
     skippedPlayerIds: new Set(), // players with no legal moves left
     noMovesModalPlayerId: null,  // show "no moves" modal for this player
     showEndGameConfirm: false,
+    gameModes: {},               // active game mode flags
+    requiredStartCells: null,    // Set<"q,r"> | null — for Required Start mode
+  }
+}
+
+// ─── Required Start helper ─────────────────────────────────────────────────────
+// Pick 6 random cells from the board to serve as required first-move targets.
+function generateRequiredStartCells(boardCells) {
+  const allKeys = Object.keys(boardCells)
+  // Fisher-Yates shuffle then take first 6
+  for (let i = allKeys.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const tmp = allKeys[i]; allKeys[i] = allKeys[j]; allKeys[j] = tmp
+  }
+  return new Set(allKeys.slice(0, 6))
+}
+
+// ─── Derive game options object from state ─────────────────────────────────────
+function getGameOptions(state) {
+  return {
+    gameModes: state.gameModes || {},
+    requiredStartCells: state.requiredStartCells || null,
   }
 }
 
@@ -60,8 +82,9 @@ function createInitialState() {
 // Checks if the next player also has no moves, setting noMovesModalPlayerId if so.
 // Returns the updated state fields.
 function advanceTurn(state, newBoard, newPlayers, newSkipped) {
-  const { playerCount, turnCount } = state
+  const { turnCount } = state
   const totalSlots = newPlayers.length  // may be >playerCount in 2p mode
+  const gameOptions = getGameOptions(state)
 
   // Find next non-skipped slot
   let nextIdx = (state.currentPlayerIndex + 1) % totalSlots
@@ -72,7 +95,7 @@ function advanceTurn(state, newBoard, newPlayers, newSkipped) {
   }
 
   // Check if game is over (all players skipped)
-  const gameOver = checkGameOver(newPlayers, newBoard.cells, newSkipped)
+  const gameOver = checkGameOver(newPlayers, newBoard.cells, newSkipped, gameOptions)
   if (gameOver) {
     return {
       board: newBoard,
@@ -91,7 +114,7 @@ function advanceTurn(state, newBoard, newPlayers, newSkipped) {
 
   const nextPlayer = newPlayers[nextIdx]
   const isFirst = !nextPlayer.pieces.some(p => p.placed)
-  const hasMoves = hasAnyLegalMove(newBoard.cells, nextPlayer.pieces, nextPlayer.id, isFirst)
+  const hasMoves = hasAnyLegalMove(newBoard.cells, nextPlayer.pieces, nextPlayer.id, isFirst, gameOptions)
 
   if (!hasMoves && !newSkipped.has(nextPlayer.id)) {
     return {
@@ -127,19 +150,25 @@ function gameReducer(state, action) {
   switch (action.type) {
 
     case ACTIONS.START_GAME: {
-      const { humanCount, playerNames, playerColors } = action.payload
+      const { humanCount, playerNames, playerColors, gameModes = {} } = action.payload
 
       // Build player slots.
-      // 2-player: 4 slots (2 per human), cycling Blue→Red→Green→Yellow
-      // 3-player: 3 slots, 4-player: 4 slots
+      // 2p Mega Colors: 2 slots, each with 44 pieces in one color
+      // 2p standard:    4 slots (2 per human), cycling Blue→Red→Green→Yellow
+      // 3/4p:           3 or 4 slots, one color each
       let players
-      if (humanCount === 2) {
+      if (humanCount === 2 && gameModes.megaColors) {
+        players = [
+          { id: 1, humanId: 1, name: playerNames[0] || 'Player 1', color: playerColors[0], pieces: createMegaColorPieces() },
+          { id: 2, humanId: 2, name: playerNames[1] || 'Player 2', color: playerColors[1], pieces: createMegaColorPieces() },
+        ]
+      } else if (humanCount === 2) {
         // playerNames has 2 entries, playerColors has 4 (2 per human)
         players = [
-          { id: 1, humanId: 1, name: `${playerNames[0]} (${PLAYER_COLORS[playerColors[0]].label})`, color: playerColors[0], pieces: createPlayerPiecesRandom(), placed: false },
-          { id: 2, humanId: 2, name: `${playerNames[1]} (${PLAYER_COLORS[playerColors[1]].label})`, color: playerColors[1], pieces: createPlayerPiecesRandom(), placed: false },
-          { id: 3, humanId: 1, name: `${playerNames[0]} (${PLAYER_COLORS[playerColors[2]].label})`, color: playerColors[2], pieces: createPlayerPiecesRandom(), placed: false },
-          { id: 4, humanId: 2, name: `${playerNames[1]} (${PLAYER_COLORS[playerColors[3]].label})`, color: playerColors[3], pieces: createPlayerPiecesRandom(), placed: false },
+          { id: 1, humanId: 1, name: `${playerNames[0]} (${PLAYER_COLORS[playerColors[0]].label})`, color: playerColors[0], pieces: createPlayerPiecesRandom() },
+          { id: 2, humanId: 2, name: `${playerNames[1]} (${PLAYER_COLORS[playerColors[1]].label})`, color: playerColors[1], pieces: createPlayerPiecesRandom() },
+          { id: 3, humanId: 1, name: `${playerNames[0]} (${PLAYER_COLORS[playerColors[2]].label})`, color: playerColors[2], pieces: createPlayerPiecesRandom() },
+          { id: 4, humanId: 2, name: `${playerNames[1]} (${PLAYER_COLORS[playerColors[3]].label})`, color: playerColors[3], pieces: createPlayerPiecesRandom() },
         ]
       } else {
         players = Array.from({ length: humanCount }, (_, i) => ({
@@ -148,7 +177,6 @@ function gameReducer(state, action) {
           name: playerNames[i] || `Player ${i + 1}`,
           color: playerColors[i],
           pieces: createPlayerPiecesRandom(),
-          placed: false,
         }))
       }
 
@@ -159,6 +187,10 @@ function gameReducer(state, action) {
       const boardPlayerCount = humanCount === 2 ? 4 : humanCount
       const board = generateBoard(boardPlayerCount)
 
+      const requiredStartCells = gameModes.requiredStart
+        ? generateRequiredStartCells(board.cells)
+        : null
+
       return {
         ...createInitialState(),
         phase: 'playing',
@@ -166,6 +198,8 @@ function gameReducer(state, action) {
         turnCount: 0,
         players,
         board,
+        gameModes,
+        requiredStartCells,
         currentPlayerIndex: 0,
         skippedPlayerIds: new Set(),
       }
@@ -226,7 +260,7 @@ function gameReducer(state, action) {
       const boardCells = placePieceCells(cells, anchorQ, anchorR)
 
       const isFirst = !currentPlayer.pieces.some(p => p.placed)
-      const { legal } = isLegalPlacement(state.board.cells, boardCells, currentPlayer.id, isFirst)
+      const { legal } = isLegalPlacement(state.board.cells, boardCells, currentPlayer.id, isFirst, getGameOptions(state))
       if (!legal) return state
 
       return {
@@ -307,8 +341,8 @@ function gameReducer(state, action) {
 export function useGameState() {
   const [state, dispatch] = useReducer(gameReducer, createInitialState())
 
-  const startGame      = useCallback((humanCount, playerNames, playerColors) => {
-    dispatch({ type: ACTIONS.START_GAME, payload: { humanCount, playerNames, playerColors } })
+  const startGame      = useCallback((humanCount, playerNames, playerColors, gameModes = {}) => {
+    dispatch({ type: ACTIONS.START_GAME, payload: { humanCount, playerNames, playerColors, gameModes } })
   }, [])
   const selectPiece    = useCallback(id  => dispatch({ type: ACTIONS.SELECT_PIECE,   payload: { pieceId: id } }), [])
   const deselectPiece  = useCallback(()  => dispatch({ type: ACTIONS.DESELECT_PIECE }), [])
@@ -342,7 +376,7 @@ export function useGameState() {
     const placed = placePieceCells(oriented, anchorQ, anchorR)
 
     const isFirst = !currentPlayer.pieces.some(p => p.placed)
-    const { legal } = isLegalPlacement(state.board.cells, placed, currentPlayer.id, isFirst)
+    const { legal } = isLegalPlacement(state.board.cells, placed, currentPlayer.id, isFirst, getGameOptions(state))
 
     return { cells: placed, isLegal: legal }
   }
