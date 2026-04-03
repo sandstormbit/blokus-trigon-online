@@ -30,6 +30,8 @@ export default function GameScreen({
   newGame,
 }) {
   const [viewingFinalBoard, setViewingFinalBoard] = useState(false)
+  const [freeHoverEnabled, setFreeHoverEnabled] = useState(true)
+  const toggleFreeHover = useCallback(() => setFreeHoverEnabled(v => !v), [])
 
   const selectedPiece = getSelectedPiece()
   const { cells: ghostCells, isLegal: ghostIsLegal } = getGhostCells()
@@ -39,6 +41,7 @@ export default function GameScreen({
     pendingPlacement: state.pendingPlacement,
     onRotate: rotatePiece,
     onFlip: flipPiece,
+    onToggleHover: toggleFreeHover,
     onDeselect: deselectPiece,
     onConfirmPlacement: confirmPlacement,
     onCancelPlacement: cancelPlacement,
@@ -102,6 +105,8 @@ export default function GameScreen({
           selectedPiece={selectedPiece}
           onRotate={rotatePiece}
           onFlip={flipPiece}
+          onToggleHover={toggleFreeHover}
+          freeHoverEnabled={freeHoverEnabled}
           onDeselect={deselectPiece}
           onEndGame={requestEndGame}
           players={players}
@@ -132,6 +137,7 @@ export default function GameScreen({
             ghostCells={ghostCells}
             ghostIsLegal={ghostIsLegal}
             currentPlayerColor={currentPlayer?.color || null}
+            freeHoverEnabled={freeHoverEnabled}
             onCellClick={placePiece}
             onCellHover={setHover}
             onBoardLeave={handleBoardLeave}

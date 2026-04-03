@@ -31,7 +31,6 @@ function ghostLegalColors(colorKey) {
     }
   }
   const hex = PLAYER_COLORS[colorKey].bg
-  // Convert hex to rgba with low opacity
   const r = parseInt(hex.slice(1, 3), 16)
   const g = parseInt(hex.slice(3, 5), 16)
   const b = parseInt(hex.slice(5, 7), 16)
@@ -41,38 +40,98 @@ function ghostLegalColors(colorKey) {
   }
 }
 
-// Returns a near-solid fill and bright stroke for the floating free hover
-function freeHoverColors(colorKey) {
-  if (!colorKey || !PLAYER_COLORS[colorKey]) {
-    return {
-      fill:   'rgba(120,130,160,0.88)',
-      stroke: 'rgba(255,255,255,0.95)',
+/**
+ * For a set of triangles (cells), collect every edge that borders a cell
+ * NOT in the set — i.e. the outer perimeter of the piece.
+ *
+ * Edge-neighbor mapping (verified against boardGeometry.js coordinate system):
+ *   UP  (q+r even):  v[0]-v[2] ↔ (q-1,r),  v[1]-v[2] ↔ (q+1,r),  v[0]-v[1] ↔ (q,r+1)
+ *   DOWN (q+r odd):  v[0]-v[2] ↔ (q-1,r),  v[1]-v[2] ↔ (q+1,r),  v[0]-v[1] ↔ (q,r-1)
+ *
+ * Returns array of {x1,y1,x2,y2} in SVG viewport space (with offsetX/Y applied).
+ */
+function getOuterEdges(cells, cellKeySet, offsetX = 0, offsetY = 0) {
+  const edges = []
+  for (const { q, r } of cells) {
+    const isUp = (q + r) % 2 === 0
+    const verts = getTriVertices(q, r)
+    const v = verts.map(vert => ({ x: vert.x + offsetX, y: vert.y + offsetY }))
+
+    const neighborEdges = isUp
+      ? [
+          { nq: q - 1, nr: r,     va: v[0], vb: v[2] },
+          { nq: q + 1, nr: r,     va: v[1], vb: v[2] },
+          { nq: q,     nr: r + 1, va: v[0], vb: v[1] },
+        ]
+      : [
+          { nq: q - 1, nr: r,     va: v[0], vb: v[2] },
+          { nq: q + 1, nr: r,     va: v[1], vb: v[2] },
+          { nq: q,     nr: r - 1, va: v[0], vb: v[1] },
+        ]
+
+    for (const { nq, nr, va, vb } of neighborEdges) {
+      if (!cellKeySet.has(`${nq},${nr}`)) {
+        edges.push({ x1: va.x, y1: va.y, x2: vb.x, y2: vb.y })
+      }
     }
   }
-  const hex = PLAYER_COLORS[colorKey].bg
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return {
-    fill:   `rgba(${r},${g},${b},0.88)`,
-    stroke: 'rgba(255,255,255,0.95)',
+  return edges
+}
+
+/**
+ * BFS over all board cells to find connected components of same-player cells.
+ * Returns an array of { edges, stroke } ready to render as outer-border lines.
+ */
+function getPlacedPieceOutlines(boardData, playerColorMap) {
+  if (!boardData) return []
+  const { cells, offsetX, offsetY } = boardData
+  const visited = new Set()
+  const result = []
+
+  for (const cell of Object.values(cells)) {
+    if (!cell.occupiedBy || visited.has(cell.id)) continue
+
+    const playerId = cell.occupiedBy
+    const component = []
+    const queue = [cell]
+    visited.add(cell.id)
+
+    while (queue.length > 0) {
+      const curr = queue.shift()
+      component.push(curr)
+      const isUp = (curr.q + curr.r) % 2 === 0
+      const neighbors = isUp
+        ? [{ q: curr.q - 1, r: curr.r }, { q: curr.q + 1, r: curr.r }, { q: curr.q, r: curr.r + 1 }]
+        : [{ q: curr.q - 1, r: curr.r }, { q: curr.q + 1, r: curr.r }, { q: curr.q, r: curr.r - 1 }]
+      for (const n of neighbors) {
+        const nid = `${n.q},${n.r}`
+        if (!visited.has(nid) && cells[nid] && cells[nid].occupiedBy === playerId) {
+          visited.add(nid)
+          queue.push(cells[nid])
+        }
+      }
+    }
+
+    const componentSet = new Set(component.map(c => c.id))
+    const edges = getOuterEdges(component, componentSet, offsetX, offsetY)
+    const colors = playerColorMap[playerId]
+    result.push({ edges, stroke: colors ? colors.dark : 'rgba(0,0,0,0.6)' })
   }
+
+  return result
 }
 
 /**
  * Compute the outline polygon of the board — the convex hull of all
  * board-cell vertex positions — as an SVG points string, offset by boardData offsets.
- * We do a simple approach: collect all unique vertex positions, compute convex hull.
  */
 function getBoardOutlinePoints(boardData) {
   if (!boardData) return ''
   const { cells, offsetX, offsetY } = boardData
 
-  // Collect all unique pixel vertices
   const pts = []
   const seen = new Set()
   for (const cell of Object.values(cells)) {
-    // Get pixel vertices from getTriPointsString indirectly via getTriVertices
     const S = TRI_SIZE
     const H = TRI_H
     const { q, r } = cell
@@ -97,7 +156,6 @@ function getBoardOutlinePoints(boardData) {
     }
   }
 
-  // Convex hull (gift wrapping)
   if (pts.length < 3) return ''
   const hull = []
   let start = pts.reduce((a, b) => (b.x < a.x || (b.x === a.x && b.y < a.y) ? b : a))
@@ -124,6 +182,7 @@ export default function Board({
   ghostCells,
   ghostIsLegal,
   currentPlayerColor,
+  freeHoverEnabled,
   onCellClick,
   onCellHover,
   onBoardLeave,
@@ -133,10 +192,10 @@ export default function Board({
   const svgRef = useRef(null)
 
   // --- Free hover spring state ---
-  const rawSvgPos     = useRef(null)
-  const springRef     = useRef({ x: 0, y: 0, vx: 0, vy: 0 })
-  const rafRef        = useRef(null)
-  const isOnBoardRef  = useRef(false)
+  const rawSvgPos    = useRef(null)
+  const springRef    = useRef({ x: 0, y: 0, vx: 0, vy: 0 })
+  const rafRef       = useRef(null)
+  const isOnBoardRef = useRef(false)
   const [freeHoverPos, setFreeHoverPos] = useState(null)
 
   // Spring animation loop — runs via requestAnimationFrame while mouse is on board
@@ -161,9 +220,7 @@ export default function Board({
 
   // Cancel RAF on unmount
   useEffect(() => {
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current)
-    }
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
   }, [])
 
   const viewBox = useMemo(() => {
@@ -182,25 +239,35 @@ export default function Board({
     return map
   }, [players])
 
-  // Legal ghost colors derived from current player's color
   const legalGhost = useMemo(() => ghostLegalColors(currentPlayerColor), [currentPlayerColor])
 
-  // Free hover colors (near-solid, bright border)
-  const floatColors = useMemo(() => freeHoverColors(currentPlayerColor), [currentPlayerColor])
+  // Player's primary hex color used for the free hover outline + glow
+  const playerColorHex = useMemo(() => {
+    if (!currentPlayerColor || !PLAYER_COLORS[currentPlayerColor]) return '#ffffff'
+    return PLAYER_COLORS[currentPlayerColor].bg
+  }, [currentPlayerColor])
 
-  // Board outline points for the white border (Fix 6)
   const outlinePoints = useMemo(() => getBoardOutlinePoints(boardData), [boardData])
 
   /**
-   * Compute piece triangles in SVG-space, expressed as vertex positions
-   * relative to the piece's own centroid. These are translated to the
-   * spring-animated cursor position at render time.
+   * Outer edges of each placed piece (connected component), expressed in SVG
+   * viewport space. Recomputed only when the board changes (on placement).
    */
-  const freeHoverTriangles = useMemo(() => {
+  const placedPieceOutlines = useMemo(
+    () => getPlacedPieceOutlines(boardData, playerColorMap),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [boardData, playerColorMap]
+  )
+
+  /**
+   * Outer border edges of the current ghost piece, expressed relative to the
+   * piece centroid. Translated to spring mouse position at render time.
+   */
+  const freeHoverEdges = useMemo(() => {
     if (!ghostCells || ghostCells.length === 0 || !boardData) return []
     const { offsetX, offsetY } = boardData
 
-    // Piece centroid in SVG space
+    // Piece centroid in SVG viewport space
     let cx = 0, cy = 0
     for (const c of ghostCells) {
       const cent = triCentroid(c.q, c.r)
@@ -210,14 +277,14 @@ export default function Board({
     cx /= ghostCells.length
     cy /= ghostCells.length
 
-    // Each triangle's vertices relative to piece centroid
-    return ghostCells.map(c => {
-      const verts = getTriVertices(c.q, c.r)
-      return verts.map(v => ({
-        x: v.x + offsetX - cx,
-        y: v.y + offsetY - cy,
-      }))
-    })
+    const cellKeySet = new Set(ghostCells.map(c => `${c.q},${c.r}`))
+    const edges = getOuterEdges(ghostCells, cellKeySet, offsetX, offsetY)
+
+    // Translate to centroid-relative coordinates
+    return edges.map(e => ({
+      x1: e.x1 - cx, y1: e.y1 - cy,
+      x2: e.x2 - cx, y2: e.y2 - cy,
+    }))
   }, [ghostCells, boardData])
 
   const svgPosToCell = useCallback((clientX, clientY) => {
@@ -280,10 +347,7 @@ export default function Board({
   const handleBoardLeave = useCallback(() => {
     isOnBoardRef.current = false
     rawSvgPos.current = null
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current)
-      rafRef.current = null
-    }
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
     setFreeHoverPos(null)
     onBoardLeave()
   }, [onBoardLeave])
@@ -298,7 +362,7 @@ export default function Board({
   const cells = Object.values(boardData.cells)
   const { offsetX, offsetY } = boardData
 
-  const showFreeHover = freeHoverPos && selectedPiece && !disabled && freeHoverTriangles.length > 0
+  const showFreeHover = freeHoverEnabled && freeHoverPos && selectedPiece && !disabled && freeHoverEdges.length > 0
 
   return (
     <div className={styles.boardWrapper}>
@@ -312,13 +376,13 @@ export default function Board({
         style={{ maxWidth: '100%', maxHeight: '100%' }}
       >
         <defs>
-          {/* Drop-shadow filter gives the free hover its 3D "floating" depth */}
-          <filter id="freeHoverShadow" x="-60%" y="-60%" width="220%" height="220%">
-            <feDropShadow dx="3" dy="5" stdDeviation="5" floodColor="rgba(0,0,0,0.75)" />
+          {/* Glow in the player's color for the free hover outline */}
+          <filter id="freeHoverGlow" x="-40%" y="-40%" width="180%" height="180%">
+            <feDropShadow dx="0" dy="0" stdDeviation="2.5" floodColor={playerColorHex} floodOpacity="0.8" />
           </filter>
         </defs>
 
-        {/* Fix 6: Bold white board outline */}
+        {/* Bold white board outline */}
         {outlinePoints && (
           <polygon
             points={outlinePoints}
@@ -329,6 +393,7 @@ export default function Board({
           />
         )}
 
+        {/* Cell fills */}
         {cells.map(cell => {
           const { q, r, occupiedBy, id } = cell
           const isGhost = ghostCellSet.has(id)
@@ -340,10 +405,11 @@ export default function Board({
 
           if (occupied && playerColorMap[occupiedBy]) {
             fill        = playerColorMap[occupiedBy].bg
-            stroke      = playerColorMap[occupiedBy].dark
-            strokeWidth = 0.5
+            // Keep a very subtle inner-cell line so adjacent same-color triangles
+            // are faintly distinguishable; the outer border handles the piece edge.
+            stroke      = 'rgba(0,0,0,0.18)'
+            strokeWidth = 0.4
           } else if (isGhost) {
-            // Fix 5: legal = transparent player color; illegal = gray
             fill        = ghostIsLegal ? legalGhost.fill   : GHOST_ILLEGAL_FILL
             stroke      = ghostIsLegal ? legalGhost.stroke : GHOST_ILLEGAL_STROKE
             strokeWidth = 1.5
@@ -362,35 +428,43 @@ export default function Board({
         })}
 
         {/*
-          Free view hover — spring-follows the mouse at all times.
-          Renders on top of ALL board cells (including placed pieces) with a
-          3D drop-shadow so the piece always "floats" visibly above the board.
-          The piece centroid tracks the cursor; it does not snap to any cell.
+          Placed piece outer borders — one outline per connected piece.
+          Thin line in a darker shade of the player's color traces only the
+          exterior edges (edges not shared with another same-player cell).
+        */}
+        {placedPieceOutlines.map((piece, pi) =>
+          piece.edges.map((edge, ei) => (
+            <line
+              key={`po-${pi}-${ei}`}
+              x1={edge.x1} y1={edge.y1}
+              x2={edge.x2} y2={edge.y2}
+              stroke={piece.stroke}
+              strokeWidth={1.5}
+              strokeLinecap="round"
+            />
+          ))
+        )}
+
+        {/*
+          Free view hover — spring-follows the mouse.
+          Shows only the outer border of the piece as a thin white outline,
+          always fully visible on top of everything including placed pieces.
         */}
         {showFreeHover && (
           <g
             transform={`translate(${freeHoverPos.x},${freeHoverPos.y})`}
-            filter="url(#freeHoverShadow)"
+            filter="url(#freeHoverGlow)"
             pointerEvents="none"
           >
-            {/* Depth/shadow offset layer — drawn first (behind) */}
-            {freeHoverTriangles.map((tri, i) => (
-              <polygon
-                key={`depth-${i}`}
-                points={tri.map(v => `${v.x + 2},${v.y + 3}`).join(' ')}
-                fill="rgba(0,0,0,0.45)"
-                stroke="none"
-              />
-            ))}
-            {/* Main floating piece layer */}
-            {freeHoverTriangles.map((tri, i) => (
-              <polygon
-                key={`piece-${i}`}
-                points={tri.map(v => `${v.x},${v.y}`).join(' ')}
-                fill={floatColors.fill}
-                stroke={floatColors.stroke}
-                strokeWidth={2.5}
-                strokeLinejoin="round"
+            {freeHoverEdges.map((edge, i) => (
+              <line
+                key={i}
+                x1={edge.x1} y1={edge.y1}
+                x2={edge.x2} y2={edge.y2}
+                stroke={playerColorHex}
+                strokeWidth={1.5}
+                strokeLinecap="round"
+                strokeOpacity={0.95}
               />
             ))}
           </g>
