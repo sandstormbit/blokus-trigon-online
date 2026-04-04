@@ -14,6 +14,7 @@ import {
   createRoom, joinRoom, reconnectPlayer, handleDisconnect,
   updateSettings, startRoom, updateGameState,
   getRoom, getTokenFromSocket, getPlayerByToken, isHost, getPublicRooms,
+  updatePlayerColor,
 } from './roomManager.js'
 
 import { createGameState, processAction, serializeState } from './gameEngine.js'
@@ -52,6 +53,7 @@ function getRoomPlayers(room) {
     name: p.name,
     connected: p.connected,
     isHost: p.token === room.hostToken,
+    color: p.color || null,
   }))
 }
 
@@ -77,6 +79,7 @@ io.on('connection', (socket) => {
           ack({
             ok: true,
             roomCode: room.code,
+            maxPlayers: room.maxPlayers,
             humanId: player.humanId,
             token: player.token,
             isHost: isHost(room, player.token),
@@ -98,6 +101,7 @@ io.on('connection', (socket) => {
       ack({
         ok: true,
         roomCode: room.code,
+        maxPlayers: room.maxPlayers,
         humanId: player.humanId,
         token: player.token,
         isHost: true,
@@ -125,6 +129,7 @@ io.on('connection', (socket) => {
           const payload = {
             ok: true,
             roomCode: room.code,
+            maxPlayers: room.maxPlayers,
             humanId: player.humanId,
             token: player.token,
             isHost: isHost(room, player.token),
@@ -155,6 +160,7 @@ io.on('connection', (socket) => {
       ack({
         ok: true,
         roomCode: room.code,
+        maxPlayers: room.maxPlayers,
         humanId: player.humanId,
         token: player.token,
         isHost: false,
@@ -295,6 +301,20 @@ io.on('connection', (socket) => {
       settings: room.settings,
     })
     ack?.({ ok: true })
+  })
+
+  // ── Select color (player chooses their color in waiting room) ─────────────
+  socket.on('select_color', ({ color }) => {
+    const token = getTokenFromSocket(socket.id)
+    if (!token) return
+
+    const roomCode = [...socket.rooms].find(r => r !== socket.id)
+    if (!roomCode) return
+
+    const result = updatePlayerColor(roomCode, token, color || null)
+    if (result.error) return
+
+    io.to(roomCode).emit('color_updated', { players: getRoomPlayers(result.room) })
   })
 
   // ── Disconnect ────────────────────────────────────────────────────────────

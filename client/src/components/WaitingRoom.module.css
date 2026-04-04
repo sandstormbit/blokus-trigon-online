@@ -192,7 +192,7 @@
 
 .playerSlot {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   padding: 10px 12px;
   border-radius: 8px;
@@ -221,6 +221,7 @@
   font-weight: 600;
   color: rgba(255,255,255,0.5);
   flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .playerSlotInfo {
@@ -240,6 +241,46 @@
   font-size: 12px;
   color: rgba(255,255,255,0.25);
   font-style: italic;
+}
+
+/* ── Color swatches ─── */
+.colorSwatches {
+  display: flex;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.colorSwatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: var(--swatch-bg);
+  cursor: default;
+  padding: 0;
+  flex-shrink: 0;
+  transition: transform 0.12s, border-color 0.12s, opacity 0.12s;
+  opacity: 0.45;
+}
+
+.colorSwatch:not(:disabled) {
+  cursor: pointer;
+}
+
+.colorSwatch:not(:disabled):hover {
+  transform: scale(1.2);
+  opacity: 0.85;
+}
+
+.colorSwatchActive {
+  border-color: #fff !important;
+  opacity: 1 !important;
+  transform: scale(1.1);
+}
+
+.colorSwatchTaken {
+  opacity: 0.2;
+  cursor: not-allowed;
 }
 
 .youBadge {
@@ -265,6 +306,7 @@
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+  margin-top: 5px;
 }
 
 .connDotOn {

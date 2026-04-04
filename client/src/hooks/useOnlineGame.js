@@ -82,6 +82,7 @@ export function useOnlineGame() {
     socket.on('player_reconnected', ({ players }) => setRoomPlayers(players))
     socket.on('player_disconnected', ({ players }) => setRoomPlayers(players))
     socket.on('settings_updated', ({ settings: s }) => setSettings(s))
+    socket.on('color_updated', ({ players }) => setRoomPlayers(players))
 
     // ── Game events ───────────────────────────────────────────────────────────
     socket.on('game_start', ({ gameState: raw }) => {
@@ -172,7 +173,7 @@ export function useOnlineGame() {
         setMyToken(res.token)
         setRoomCode(res.roomCode)
         setRoomMode('unknown')
-        setMaxPlayersInRoom(res.players.length > 0 ? res.players[res.players.length - 1].humanId : 4)
+        setMaxPlayersInRoom(res.maxPlayers || (res.players.length > 0 ? res.players[res.players.length - 1].humanId : 4))
         setMyHumanId(res.humanId)
         setIsHostPlayer(res.isHost)
         setRoomPlayers(res.players)
@@ -206,6 +207,14 @@ export function useOnlineGame() {
       else callback?.({ ok: true })
     })
   }, [])
+
+  const selectColorAction = useCallback((color) => {
+    socketRef.current?.emit('select_color', { color: color || null })
+    // Optimistic update
+    setRoomPlayers(prev => prev.map(p =>
+      p.humanId === myHumanId ? { ...p, color: color || null } : p
+    ))
+  }, [myHumanId])
 
   // ── Is it my turn? ──────────────────────────────────────────────────────────
   const isMyTurn = useCallback(() => {
@@ -364,6 +373,8 @@ export function useOnlineGame() {
 
   const disconnect = useCallback(() => {
     socketRef.current?.disconnect()
+    localStorage.removeItem('bt_session_token')
+    setMyToken(null)
     setRoomCode(null)
     setRoomMode('public')
     setMaxPlayersInRoom(4)
@@ -435,6 +446,7 @@ export function useOnlineGame() {
     joinRoom: joinRoomAction,
     updateSettings: updateSettingsAction,
     startGame: startGameAction,
+    selectColor: selectColorAction,
     disconnect,
 
     // Game interface (mirrors useGameState)

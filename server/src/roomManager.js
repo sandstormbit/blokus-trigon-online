@@ -228,6 +228,34 @@ export function getPublicRooms() {
     }))
 }
 
+const DEFAULT_COLORS = ['blue', 'red', 'green', 'yellow']
+
+/**
+ * Update a player's chosen color. Validates the color is not already in use
+ * by another player (by explicit choice or default slot assignment).
+ * Pass color=null to clear (revert to default).
+ */
+export function updatePlayerColor(code, token, color) {
+  const room = rooms.get(code)
+  if (!room) return { error: 'room_not_found' }
+  if (room.phase !== 'waiting') return { error: 'game_already_started' }
+
+  const player = room.players.find(p => p.token === token)
+  if (!player) return { error: 'player_not_found' }
+
+  if (color !== null && color !== undefined) {
+    const taken = room.players.some((p, i) => {
+      if (p.token === token) return false
+      const effective = p.color || DEFAULT_COLORS[i]
+      return effective === color
+    })
+    if (taken) return { error: 'color_taken' }
+  }
+
+  player.color = color || null
+  return { room }
+}
+
 /**
  * Clean up a room and all associated mappings.
  */
