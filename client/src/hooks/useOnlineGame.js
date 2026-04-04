@@ -126,7 +126,7 @@ export function useOnlineGame() {
     const token = myToken
     socket.connect()
 
-    socket.once('connect', () => {
+    const emitCreate = () => {
       socket.emit('create_room', { mode, maxPlayers, playerName, sessionToken: token }, (res) => {
         if (!res.ok) {
           callback?.({ error: res.error })
@@ -145,7 +145,13 @@ export function useOnlineGame() {
         setRoomPhase(res.phase)
         callback?.({ ok: true, roomCode: res.roomCode })
       })
-    })
+    }
+
+    if (socket.connected) {
+      emitCreate()
+    } else {
+      socket.once('connect', emitCreate)
+    }
   }, [myToken])
 
   const joinRoomAction = useCallback((roomCode, playerName, callback) => {
@@ -155,7 +161,7 @@ export function useOnlineGame() {
     const token = myToken
     socket.connect()
 
-    socket.once('connect', () => {
+    const emitJoin = () => {
       socket.emit('join_room', { roomCode, playerName, sessionToken: token }, (res) => {
         if (!res.ok) {
           callback?.({ error: res.error })
@@ -178,7 +184,13 @@ export function useOnlineGame() {
         }
         callback?.({ ok: true, roomCode: res.roomCode })
       })
-    })
+    }
+
+    if (socket.connected) {
+      emitJoin()
+    } else {
+      socket.once('connect', emitJoin)
+    }
   }, [myToken])
 
   // ── Waiting room actions ────────────────────────────────────────────────────
