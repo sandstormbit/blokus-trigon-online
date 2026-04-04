@@ -417,8 +417,8 @@ export default function Board({
             stroke      = ghostIsLegal ? legalGhost.stroke : GHOST_ILLEGAL_STROKE
             strokeWidth = 1.5
           } else if (isRequiredStart) {
-            fill        = 'rgba(234,179,8,0.10)'
-            stroke      = 'rgba(234,179,8,0.45)'
+            fill        = 'rgba(243,232,238,0.45)'
+            stroke      = 'rgba(243,232,238,0.55)'
             strokeWidth = 0.9
           }
 
@@ -443,8 +443,8 @@ export default function Board({
             const cy = cent.y + offsetY
             return (
               <g key={`rs-${cell.id}`} pointerEvents="none">
-                <circle cx={cx} cy={cy} r={5.5} fill="none" stroke="rgba(234,179,8,0.4)" strokeWidth={0.8} />
-                <circle cx={cx} cy={cy} r={3}   fill="rgba(234,179,8,0.85)" />
+                <circle cx={cx} cy={cy} r={5.5} fill="none" stroke="#f3e8ee" strokeWidth={0.8} />
+                <circle cx={cx} cy={cy} r={3}   fill="#f3e8ee" />
               </g>
             )
           })

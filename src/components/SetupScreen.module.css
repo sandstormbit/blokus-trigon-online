@@ -4,10 +4,12 @@
   position: relative;
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 20px 24px;
   overflow: auto;
+  gap: 16px;
 }
 
 .backdrop {
@@ -20,22 +22,33 @@
   z-index: 0;
 }
 
-.wrapper {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 720px;
-  animation: fadeIn 400ms ease forwards;
-}
-
-/* ── Brand header — horizontal logo + title ─────────────────────────────────── */
+/* ── Brand header — always centered, independent of panels ─────────────────── */
 
 .header {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 14px;
-  margin-bottom: 16px;
-  padding-left: 2px;
+  position: relative;
+  z-index: 1;
+  animation: fadeIn 400ms ease forwards;
+  align-self: center;
+  width: fit-content;
+}
+
+/* ── Animated panels wrapper ────────────────────────────────────────────────── */
+
+.wrapper {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 450px;
+  animation: fadeIn 400ms ease forwards;
+  transition: max-width 350ms ease;
+}
+
+.wrapperOpen {
+  max-width: 724px;
 }
 
 .logoMark {
@@ -59,6 +72,7 @@
   letter-spacing: -0.5px;
   color: var(--text-primary);
   line-height: 1;
+  white-space: nowrap;
 }
 
 .subtitle {
@@ -67,13 +81,13 @@
   text-transform: uppercase;
   color: var(--text-muted);
   font-weight: 500;
+  text-align: center;
 }
 
-/* ── Two-column panels ──────────────────────────────────────────────────────── */
+/* ── Panels ─────────────────────────────────────────────────────────────────── */
 
 .panels {
-  display: grid;
-  grid-template-columns: 1fr 216px;
+  display: flex;
   gap: 14px;
   align-items: start;
 }
@@ -89,17 +103,67 @@
 }
 
 .setupCard {
+  flex: 1;
+  position: relative;
   padding: 18px;
 }
 
+/* ── Modes card animated wrapper ────────────────────────────────────────────── */
+
+.modesCardWrapper {
+  flex-shrink: 0;
+  width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: width 350ms ease, opacity 300ms ease 50ms;
+}
+
+.modesCardWrapperOpen {
+  width: 216px;
+  opacity: 1;
+}
+
 .modesCard {
+  width: 216px;
   padding: 16px;
+}
+
+/* ── Game modes toggle button ───────────────────────────────────────────────── */
+
+.modesToggleBtn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.modesToggleBtn:hover {
+  background: var(--bg-card);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
 }
 
 /* ── Section ────────────────────────────────────────────────────────────────── */
 
 .section {
   margin-bottom: 14px;
+}
+
+.sectionPlayerCount {
+  margin-bottom: 22px;
+}
+
+.sectionPlayerCount .sectionLabel {
+  margin-bottom: 16px;
 }
 
 .sectionLabel {
@@ -350,6 +414,10 @@
   transform: translateY(0);
 }
 
+.modesCard .sectionLabel {
+  margin-bottom: 16px;
+}
+
 /* ── Game modes panel ───────────────────────────────────────────────────────── */
 
 .modesList {
@@ -447,6 +515,5 @@
   text-align: center;
   font-size: 10px;
   color: var(--text-muted);
-  margin-top: 10px;
   letter-spacing: 0.03em;
 }
