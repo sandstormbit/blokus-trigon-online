@@ -127,7 +127,7 @@ export default function LandingPage({ onPassAndPlay, onCreateRoom, onJoinRoom })
           <svg viewBox="0 0 20 20" width="18" height="18" fill="none">
             <path d="M5 10.5h10M9 6.5l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          Pass and Play
+          Local Game
         </button>
 
         <button className={`${styles.actionBtn} ${styles.actionBtnGhost}`} onClick={() => openModal('how-to-play')}>
