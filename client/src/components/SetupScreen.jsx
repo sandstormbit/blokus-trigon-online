@@ -85,7 +85,7 @@ export default function SetupScreen({ onStart, onBack }) {
         </div>
         <div className={styles.brand}>
           <h1 className={styles.title}>Blokus Trigon</h1>
-          <p className={styles.subtitle}>Pass and Play</p>
+          <p className={styles.subtitle}>Local Game</p>
         </div>
         {onBack ? (
           <button
@@ -304,7 +304,7 @@ export default function SetupScreen({ onStart, onBack }) {
                     ? '2 × 44 pieces per player · 1 color each · Rules enforced'
                     : playerCount === 2
                       ? '2 × 22 pieces per player · 4 color sets total · Rules enforced'
-                      : `22 pieces per player · Pass and play · Rules enforced`}
+                      : `22 pieces per player · Local game · Rules enforced`}
                 </div>
               </div>
             </div>

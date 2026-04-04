@@ -53,7 +53,7 @@ const BOARD_PARAMS = {
  */
 export function triCentroid(q, r) {
   const isUp = (q + r) % 2 === 0
-  const x = q * (TRI_SIZE / 2) + (TRI_SIZE / 4)
+  const x = q * (TRI_SIZE / 2) + (TRI_SIZE / 2)
   const y = r * TRI_H + (isUp ? TRI_H * 2 / 3 : TRI_H / 3)
   return { x, y }
 }

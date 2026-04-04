@@ -300,7 +300,7 @@ export default function Board({
     const gridX = svgPt.x - boardData.offsetX
     const gridY = svgPt.y - boardData.offsetY
     const rEst = gridY / TRI_H
-    const qEst = (gridX - TRI_SIZE / 4) / (TRI_SIZE / 2)
+    const qEst = (gridX - TRI_SIZE / 2) / (TRI_SIZE / 2)
 
     let best = null
     let bestDist = Infinity

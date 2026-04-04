@@ -128,7 +128,7 @@ export function createGameState(roomPlayers, humanCount, gameModes = {}) {
     ]
   } else if (humanCount === 2) {
     const defaults = ['blue', 'red', 'green', 'yellow']
-    const resolved = playerColors.slice(0, 4).map((c, i) => c || defaults[i])
+    const resolved = Array.from({ length: 4 }, (_, i) => playerColors[i] || defaults[i])
     players = [
       { id: 1, humanId: 1, name: `${playerNames[0] || 'Player 1'} (${PLAYER_COLORS[resolved[0]].label})`, color: resolved[0], pieces: createPlayerPiecesRandom() },
       { id: 2, humanId: 2, name: `${playerNames[1] || 'Player 2'} (${PLAYER_COLORS[resolved[1]].label})`, color: resolved[1], pieces: createPlayerPiecesRandom() },
