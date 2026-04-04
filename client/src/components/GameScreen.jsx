@@ -86,31 +86,6 @@ export default function GameScreen({
 
   return (
     <div className={styles.screen}>
-      {/* Online: waiting-for-turn banner */}
-      {isOnline && !isMyTurn && state.phase === 'playing' && (
-        <div className={styles.waitingBanner}>
-          <div className={styles.waitingSpinner}/>
-          <span>
-            Waiting for <strong style={{ color: currentPlayer ? PLAYER_COLORS[currentPlayer.color]?.bg : 'inherit' }}>
-              {currentPlayer?.name || 'other player'}
-            </strong>…
-          </span>
-          {onlineRoomCode && (
-            <span className={styles.roomCodeBadge}>#{onlineRoomCode}</span>
-          )}
-          {onExit && (
-            <button className={styles.exitGameBtn} onClick={onExit}>Leave</button>
-          )}
-        </div>
-      )}
-
-      {/* Online: exit button when it IS my turn */}
-      {isOnline && isMyTurn && onExit && state.phase === 'playing' && (
-        <button className={styles.exitGameBtnFloat} onClick={onExit} title="Leave game">
-          Leave
-        </button>
-      )}
-
       {viewingFinalBoard ? (
         <div className={styles.finalBoardHud}>
           <div className={styles.finalBoardLeft}>
@@ -150,6 +125,10 @@ export default function GameScreen({
           onEndGame={requestEndGame}
           players={players}
           playerCount={playerCount}
+          isOnline={isOnline}
+          isMyTurn={isMyTurn}
+          onlineRoomCode={onlineRoomCode}
+          onExit={onExit}
         />
       )}
 
