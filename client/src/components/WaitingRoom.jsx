@@ -1,6 +1,9 @@
 import React, { useState, useCallback } from 'react'
 import { GAME_MODES } from '../game/gameModes.js'
+import { PLAYER_COLORS, COLOR_KEYS } from '../hooks/useGameState.js'
 import styles from './WaitingRoom.module.css'
+
+const DEFAULT_COLORS = ['blue', 'red', 'green', 'yellow']
 
 export default function WaitingRoom({
   roomCode,
@@ -12,6 +15,7 @@ export default function WaitingRoom({
   myHumanId,
   onUpdateSettings,
   onStartGame,
+  onSelectColor,
   onExit,
 }) {
   const [copied, setCopied] = useState(false)
@@ -124,6 +128,7 @@ export default function WaitingRoom({
               {Array.from({ length: maxPlayers }, (_, i) => {
                 const player = players[i]
                 const isMe = player?.humanId === myHumanId
+                const activeColor = player ? (player.color || DEFAULT_COLORS[i]) : null
                 return (
                   <div key={i} className={`${styles.playerSlot} ${player ? styles.playerSlotFilled : styles.playerSlotEmpty}`}>
                     <div className={styles.playerSlotNum}>{i + 1}</div>
@@ -135,6 +140,26 @@ export default function WaitingRoom({
                             {isMe && <span className={styles.youBadge}>You</span>}
                             {player.isHost && <span className={styles.hostBadge}>Host</span>}
                           </span>
+                          <div className={styles.colorSwatches}>
+                            {COLOR_KEYS.map(colorKey => {
+                              const isActive = activeColor === colorKey
+                              const takenByOther = players.some((p, j) => {
+                                if (!p || j === i) return false
+                                return (p.color || DEFAULT_COLORS[j]) === colorKey
+                              })
+                              return (
+                                <button
+                                  key={colorKey}
+                                  className={`${styles.colorSwatch} ${isActive ? styles.colorSwatchActive : ''} ${takenByOther && !isActive ? styles.colorSwatchTaken : ''}`}
+                                  style={{ '--swatch-bg': PLAYER_COLORS[colorKey].bg }}
+                                  onClick={isMe ? () => onSelectColor(isActive ? null : colorKey) : undefined}
+                                  disabled={!isMe || (takenByOther && !isActive)}
+                                  title={isMe ? (isActive ? `Deselect ${PLAYER_COLORS[colorKey].label}` : `Select ${PLAYER_COLORS[colorKey].label}`) : PLAYER_COLORS[colorKey].label}
+                                  type="button"
+                                />
+                              )
+                            })}
+                          </div>
                         </div>
                         <div className={`${styles.connDot} ${player.connected ? styles.connDotOn : styles.connDotOff}`} title={player.connected ? 'Connected' : 'Disconnected'}/>
                       </>

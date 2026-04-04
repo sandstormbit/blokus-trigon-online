@@ -67,6 +67,7 @@ function OnlineApp({ onPassAndPlay }) {
         myHumanId={online.myHumanId}
         onUpdateSettings={online.updateSettings}
         onStartGame={online.startGame}
+        onSelectColor={online.selectColor}
         onExit={handleExit}
       />
     )
