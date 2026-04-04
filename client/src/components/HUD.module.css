@@ -22,11 +22,12 @@
 }
 
 .right {
-  flex: 0 0 200px;
+  flex: 0 0 auto;
+  min-width: 200px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 8px;
 }
 
 /* Turn info */
@@ -124,6 +125,60 @@ kbd {
   font-size: 12px;
   color: var(--text-muted);
   font-style: italic;
+}
+
+/* Waiting indicator (online, not my turn) */
+.waitingIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.waitingSpinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.15);
+  border-top-color: #3B82F6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.waitingText {
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  font-style: italic;
+}
+
+/* Room code badge (right section) */
+.roomCodeBadge {
+  font-family: monospace;
+  font-size: 11px;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+/* Leave button */
+.leaveBtn {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm);
+  color: rgba(255,255,255,0.4);
+  font-size: 11px;
+  padding: 5px 9px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.leaveBtn:hover {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.8);
 }
 
 /* Mini scores */

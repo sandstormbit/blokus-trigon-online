@@ -13,6 +13,10 @@ export default function HUD({
   onEndGame,
   playerCount,
   players,
+  isOnline = false,
+  isMyTurn = true,
+  onlineRoomCode = null,
+  onExit = null,
 }) {
   const colorInfo = currentPlayer ? PLAYER_COLORS[currentPlayer.color] : null
 
@@ -36,9 +40,19 @@ export default function HUD({
         )}
       </div>
 
-      {/* Center: piece controls (only when piece selected) */}
+      {/* Center: waiting indicator (online, not my turn) or piece controls */}
       <div className={styles.center}>
-        {selectedPiece ? (
+        {isOnline && !isMyTurn ? (
+          <div className={styles.waitingIndicator}>
+            <div className={styles.waitingSpinner} />
+            <span className={styles.waitingText}>
+              Waiting for{' '}
+              <strong style={{ color: currentPlayer ? PLAYER_COLORS[currentPlayer.color]?.bg : 'inherit' }}>
+                {currentPlayer?.name || 'other player'}
+              </strong>
+            </span>
+          </div>
+        ) : selectedPiece ? (
           <div className={styles.controls}>
             <div className={styles.selectedIndicator}>
               <span className={styles.selectedDot} />
@@ -83,8 +97,11 @@ export default function HUD({
         )}
       </div>
 
-      {/* Right: scores mini + end game */}
+      {/* Right: room code + scores + leave + end game */}
       <div className={styles.right}>
+        {isOnline && onlineRoomCode && (
+          <span className={styles.roomCodeBadge}>#{onlineRoomCode}</span>
+        )}
         <div className={styles.miniScores}>
           {players && players.map(p => (
             <div key={p.id} className={styles.miniScore}>
@@ -96,6 +113,9 @@ export default function HUD({
             </div>
           ))}
         </div>
+        {isOnline && onExit && (
+          <button className={styles.leaveBtn} onClick={onExit}>Leave</button>
+        )}
         <button className={styles.endBtn} onClick={onEndGame}>
           End Game
         </button>
