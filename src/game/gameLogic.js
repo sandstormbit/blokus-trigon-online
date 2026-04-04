@@ -109,6 +109,8 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
   // ── Case B: shared TR/TL between two adjacent same-color DOWN cells ────────
   // vk = TR of DOWN(a-2, b) = TL of DOWN(a, b), with no same-color UP(a-1, b) filling the gap.
   // The gap UP, if present, would make this vertex its own apex (a corner) instead.
+  // Only forbidden if both DOWN cells belong to the same piece — if they are from two different
+  // pieces, vk is a legitimate corner of each piece and may be touched.
   {
     const leftDown  = boardCells[`${a - 2},${b}`]
     const rightDown = boardCells[`${a},${b}`]
@@ -116,13 +118,14 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
         rightDown && rightDown.occupiedBy === playerId && (a     + b) % 2 === 1) {
       const gapUp = boardCells[`${a - 1},${b}`]
       if (!(gapUp && gapUp.occupiedBy === playerId && (a - 1 + b) % 2 === 0)) {
-        return true
+        if (samePiece(boardCells, playerId, `${a - 2},${b}`, `${a},${b}`)) return true
       }
     }
   }
 
   // ── Case C: shared BR/BL between two adjacent same-color UP cells ──────────
   // vk = BR of UP(a-2, b-1) = BL of UP(a, b-1), with no same-color DOWN(a-1, b-1) in the gap.
+  // Only forbidden when both UP cells belong to the same piece.
   {
     const leftUp  = boardCells[`${a - 2},${b - 1}`]
     const rightUp = boardCells[`${a},${b - 1}`]
@@ -130,7 +133,7 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
         rightUp && rightUp.occupiedBy === playerId && (a     + b - 1) % 2 === 0) {
       const gapDown = boardCells[`${a - 1},${b - 1}`]
       if (!(gapDown && gapDown.occupiedBy === playerId && (a - 1 + b - 1) % 2 === 1)) {
-        return true
+        if (samePiece(boardCells, playerId, `${a - 2},${b - 1}`, `${a},${b - 1}`)) return true
       }
     }
   }
@@ -138,6 +141,7 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
   // ── Case D: '/' diagonal — two same-color UP cells sharing a TR/BL diagonal vertex ──
   // vk is the shared vertex between UP(a-1, b) (its TR) and UP(a, b-1) (its BL),
   // with no same-color DOWN(a-1, b-1) bridging them (which would make vk a corner, not midpoint).
+  // Only forbidden when both UP cells belong to the same piece.
   {
     const upLeft  = boardCells[`${a - 1},${b}`]
     const upRight = boardCells[`${a},${b - 1}`]
@@ -145,7 +149,7 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
         upRight && upRight.occupiedBy === playerId && (a     + b - 1) % 2 === 0) {
       const gapDown = boardCells[`${a - 1},${b - 1}`]
       if (!(gapDown && gapDown.occupiedBy === playerId && (a - 1 + b - 1) % 2 === 1)) {
-        return true
+        if (samePiece(boardCells, playerId, `${a - 1},${b}`, `${a},${b - 1}`)) return true
       }
     }
   }
@@ -153,6 +157,7 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
   // ── Case D (symmetric): '/' diagonal — two same-color DOWN cells ───────────
   // vk is the shared vertex between DOWN(a-2, b) (its BR) and DOWN(a-1, b-1) (its TL),
   // with no same-color UP(a-1, b) bridging them.
+  // Only forbidden when both DOWN cells belong to the same piece.
   {
     const downLeft  = boardCells[`${a - 2},${b}`]
     const downRight = boardCells[`${a - 1},${b - 1}`]
@@ -160,7 +165,7 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
         downRight && downRight.occupiedBy === playerId && (a - 1 + b - 1) % 2 === 1) {
       const gapUp = boardCells[`${a - 1},${b}`]
       if (!(gapUp && gapUp.occupiedBy === playerId && (a - 1 + b) % 2 === 0)) {
-        return true
+        if (samePiece(boardCells, playerId, `${a - 2},${b}`, `${a - 1},${b - 1}`)) return true
       }
     }
   }
@@ -169,6 +174,7 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
   // vk is the shared vertex between UP(a-2, b-1) (its TR) and UP(a-1, b) (its BL... wait:
   // UP(a-1, b) TL vertex = vk, UP(a-2, b-1) TR vertex = vk.
   // No bridging DOWN(a-2, b) should be present.
+  // Only forbidden when both UP cells belong to the same piece.
   {
     const upLeft  = boardCells[`${a - 2},${b - 1}`]
     const upRight = boardCells[`${a - 1},${b}`]
@@ -176,7 +182,7 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
         upRight && upRight.occupiedBy === playerId && (a - 1 + b) % 2 === 0) {
       const gapDown = boardCells[`${a - 2},${b}`]
       if (!(gapDown && gapDown.occupiedBy === playerId && (a - 2 + b) % 2 === 1)) {
-        return true
+        if (samePiece(boardCells, playerId, `${a - 2},${b - 1}`, `${a - 1},${b}`)) return true
       }
     }
   }
@@ -184,6 +190,7 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
   // ── Case E (symmetric): '\' diagonal — two same-color DOWN cells ───────────
   // vk is the shared vertex between DOWN(a-1, b-1) (its TR) and DOWN(a, b) (its TL),
   // with no same-color UP(a-1, b) bridging them.
+  // Only forbidden when both DOWN cells belong to the same piece.
   {
     const downLeft  = boardCells[`${a - 1},${b - 1}`]
     const downRight = boardCells[`${a},${b}`]
@@ -191,7 +198,34 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
         downRight && downRight.occupiedBy === playerId && (a     + b) % 2 === 1) {
       const gapUp = boardCells[`${a - 1},${b}`]
       if (!(gapUp && gapUp.occupiedBy === playerId && (a - 1 + b) % 2 === 0)) {
-        return true
+        if (samePiece(boardCells, playerId, `${a - 1},${b - 1}`, `${a},${b}`)) return true
+      }
+    }
+  }
+
+  return false
+}
+
+/**
+ * Return true if the two cells at key1 and key2 are connected by a path of
+ * same-color edge-adjacent cells (i.e. they belong to the same placed piece).
+ */
+function samePiece(boardCells, playerId, key1, key2) {
+  if (!boardCells[key1] || boardCells[key1].occupiedBy !== playerId) return false
+  if (!boardCells[key2] || boardCells[key2].occupiedBy !== playerId) return false
+
+  const visited = new Set([key1])
+  const queue = [key1]
+
+  while (queue.length) {
+    const k = queue.shift()
+    if (k === key2) return true
+    const [q, r] = k.split(',').map(Number)
+    for (const n of getEdgeNeighbors(q, r)) {
+      const nk = `${n.q},${n.r}`
+      if (!visited.has(nk) && boardCells[nk] && boardCells[nk].occupiedBy === playerId) {
+        visited.add(nk)
+        queue.push(nk)
       }
     }
   }
