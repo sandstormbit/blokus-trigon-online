@@ -5,7 +5,7 @@ import styles from './SetupScreen.module.css'
 
 const PLAYER_COUNT_OPTIONS = [2, 3, 4]
 
-export default function SetupScreen({ onStart }) {
+export default function SetupScreen({ onStart, onBack }) {
   const [playerCount, setPlayerCount] = useState(4)
   const [playerNames, setPlayerNames] = useState(['', '', ''])
   const [playerColors, setPlayerColors] = useState([null, null, null, null])
@@ -84,17 +84,31 @@ export default function SetupScreen({ onStart }) {
           </svg>
         </div>
         <div className={styles.brand}>
-          <h1 className={styles.title}>Blokus Trigon Online</h1>
-          <p className={styles.subtitle}>Strategy · Territory · Triangles</p>
+          <h1 className={styles.title}>Blokus Trigon</h1>
+          <p className={styles.subtitle}>Pass and Play</p>
         </div>
-        <div className={styles.logoMark}>
-          <svg viewBox="-6 -6 72 64" width="44" height="38" overflow="visible">
-            <polygon points="30,4 56,48 4,48" fill="none" stroke="#3B82F6" strokeWidth="2.5" strokeLinejoin="round"/>
-            <polygon points="30,16 46,44 14,44" fill="rgba(59,130,246,0.2)" stroke="#3B82F6" strokeWidth="1.5" strokeLinejoin="round"/>
-            <polygon points="20,28 30,44 10,44" fill="rgba(239,68,68,0.3)" stroke="#EF4444" strokeWidth="1" strokeLinejoin="round"/>
-            <polygon points="40,28 50,44 30,44" fill="rgba(234,179,8,0.3)" stroke="#EAB308" strokeWidth="1" strokeLinejoin="round"/>
-          </svg>
-        </div>
+        {onBack ? (
+          <button
+            className={styles.backBtn}
+            onClick={onBack}
+            title="Back to main menu"
+            type="button"
+          >
+            <svg viewBox="0 0 20 20" width="15" height="15" fill="none">
+              <path d="M7 3H4a1 1 0 00-1 1v12a1 1 0 001 1h3M10 10H17M17 10l-3-3M17 10l-3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Menu
+          </button>
+        ) : (
+          <div className={styles.logoMark}>
+            <svg viewBox="-6 -6 72 64" width="44" height="38" overflow="visible">
+              <polygon points="30,4 56,48 4,48" fill="none" stroke="#3B82F6" strokeWidth="2.5" strokeLinejoin="round"/>
+              <polygon points="30,16 46,44 14,44" fill="rgba(59,130,246,0.2)" stroke="#3B82F6" strokeWidth="1.5" strokeLinejoin="round"/>
+              <polygon points="20,28 30,44 10,44" fill="rgba(239,68,68,0.3)" stroke="#EF4444" strokeWidth="1" strokeLinejoin="round"/>
+              <polygon points="40,28 50,44 30,44" fill="rgba(234,179,8,0.3)" stroke="#EAB308" strokeWidth="1" strokeLinejoin="round"/>
+            </svg>
+          </div>
+        )}
       </div>
 
       {/* ── Animated panels wrapper ───────────────────────────── */}

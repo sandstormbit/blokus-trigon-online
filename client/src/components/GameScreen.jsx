@@ -28,6 +28,13 @@ export default function GameScreen({
   confirmEndGame,
   cancelEndGame,
   newGame,
+  // Online-specific props (optional — not used in pass-and-play)
+  isOnline = false,
+  myHumanId = null,
+  isMyTurn = true,
+  onlineRoomCode = null,
+  onlinePlayers = null,
+  onExit = null,
 }) {
   const [viewingFinalBoard, setViewingFinalBoard] = useState(false)
   const [freeHoverEnabled, setFreeHoverEnabled] = useState(true)
@@ -79,6 +86,31 @@ export default function GameScreen({
 
   return (
     <div className={styles.screen}>
+      {/* Online: waiting-for-turn banner */}
+      {isOnline && !isMyTurn && state.phase === 'playing' && (
+        <div className={styles.waitingBanner}>
+          <div className={styles.waitingSpinner}/>
+          <span>
+            Waiting for <strong style={{ color: currentPlayer ? PLAYER_COLORS[currentPlayer.color]?.bg : 'inherit' }}>
+              {currentPlayer?.name || 'other player'}
+            </strong>…
+          </span>
+          {onlineRoomCode && (
+            <span className={styles.roomCodeBadge}>#{onlineRoomCode}</span>
+          )}
+          {onExit && (
+            <button className={styles.exitGameBtn} onClick={onExit}>Leave</button>
+          )}
+        </div>
+      )}
+
+      {/* Online: exit button when it IS my turn */}
+      {isOnline && isMyTurn && onExit && state.phase === 'playing' && (
+        <button className={styles.exitGameBtnFloat} onClick={onExit} title="Leave game">
+          Leave
+        </button>
+      )}
+
       {viewingFinalBoard ? (
         <div className={styles.finalBoardHud}>
           <div className={styles.finalBoardLeft}>
