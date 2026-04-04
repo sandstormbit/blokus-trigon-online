@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import LandingPage from './components/LandingPage.jsx'
 import SetupScreen from './components/SetupScreen.jsx'
 import GameScreen from './components/GameScreen.jsx'
@@ -122,9 +123,14 @@ export default function App() {
   // 'main' = OnlineApp (handles landing + waiting room + online game)
   // 'pass-and-play' = local pass-and-play mode
 
-  if (screen === 'pass-and-play') {
-    return <PassAndPlayApp onExit={() => setScreen('main')} />
-  }
-
-  return <OnlineApp onPassAndPlay={() => setScreen('pass-and-play')} />
+  return (
+    <>
+      {screen === 'pass-and-play' ? (
+        <PassAndPlayApp onExit={() => setScreen('main')} />
+      ) : (
+        <OnlineApp onPassAndPlay={() => setScreen('pass-and-play')} />
+      )}
+      <Analytics />
+    </>
+  )
 }
