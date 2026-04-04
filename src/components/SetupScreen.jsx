@@ -14,6 +14,7 @@ export default function SetupScreen({ onStart }) {
     zenMode: false,
     megaColors: false,
   })
+  const [modesOpen, setModesOpen] = useState(false)
 
   const updateName = (idx, name) => {
     const updated = [...playerNames]
@@ -71,32 +72,57 @@ export default function SetupScreen({ onStart }) {
   return (
     <div className={styles.container}>
       <div className={styles.backdrop} />
-      <div className={styles.wrapper}>
 
-        {/* ── Brand header ─────────────────────────────────────── */}
-        <div className={styles.header}>
-          <div className={styles.logoMark}>
-            <svg viewBox="-6 -6 72 64" width="44" height="38" overflow="visible">
-              <polygon points="30,4 56,48 4,48" fill="none" stroke="#3B82F6" strokeWidth="2.5" strokeLinejoin="round"/>
-              <polygon points="30,16 46,44 14,44" fill="rgba(59,130,246,0.2)" stroke="#3B82F6" strokeWidth="1.5" strokeLinejoin="round"/>
-              <polygon points="20,28 30,44 10,44" fill="rgba(239,68,68,0.3)" stroke="#EF4444" strokeWidth="1" strokeLinejoin="round"/>
-              <polygon points="40,28 50,44 30,44" fill="rgba(234,179,8,0.3)" stroke="#EAB308" strokeWidth="1" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <div className={styles.brand}>
-            <h1 className={styles.title}>Delta Prism</h1>
-            <p className={styles.subtitle}>Strategy · Territory · Triangles</p>
-          </div>
+      {/* ── Brand header — always centered, never moves ───────── */}
+      <div className={styles.header}>
+        <div className={styles.logoMark}>
+          <svg viewBox="-6 -6 72 64" width="44" height="38" overflow="visible">
+            <polygon points="30,4 56,48 4,48" fill="none" stroke="#3B82F6" strokeWidth="2.5" strokeLinejoin="round"/>
+            <polygon points="30,16 46,44 14,44" fill="rgba(59,130,246,0.2)" stroke="#3B82F6" strokeWidth="1.5" strokeLinejoin="round"/>
+            <polygon points="20,28 30,44 10,44" fill="rgba(239,68,68,0.3)" stroke="#EF4444" strokeWidth="1" strokeLinejoin="round"/>
+            <polygon points="40,28 50,44 30,44" fill="rgba(234,179,8,0.3)" stroke="#EAB308" strokeWidth="1" strokeLinejoin="round"/>
+          </svg>
         </div>
+        <div className={styles.brand}>
+          <h1 className={styles.title}>Blokus Trigon Online</h1>
+          <p className={styles.subtitle}>Strategy · Territory · Triangles</p>
+        </div>
+        <div className={styles.logoMark}>
+          <svg viewBox="-6 -6 72 64" width="44" height="38" overflow="visible">
+            <polygon points="30,4 56,48 4,48" fill="none" stroke="#3B82F6" strokeWidth="2.5" strokeLinejoin="round"/>
+            <polygon points="30,16 46,44 14,44" fill="rgba(59,130,246,0.2)" stroke="#3B82F6" strokeWidth="1.5" strokeLinejoin="round"/>
+            <polygon points="20,28 30,44 10,44" fill="rgba(239,68,68,0.3)" stroke="#EF4444" strokeWidth="1" strokeLinejoin="round"/>
+            <polygon points="40,28 50,44 30,44" fill="rgba(234,179,8,0.3)" stroke="#EAB308" strokeWidth="1" strokeLinejoin="round"/>
+          </svg>
+        </div>
+      </div>
 
-        {/* ── Two-column panels ─────────────────────────────────── */}
+      {/* ── Animated panels wrapper ───────────────────────────── */}
+      <div className={`${styles.wrapper} ${modesOpen ? styles.wrapperOpen : ''}`}>
         <div className={styles.panels}>
 
           {/* Left: setup card */}
           <div className={styles.setupCard}>
+            {/* Game modes toggle */}
+            <button
+              className={styles.modesToggleBtn}
+              onClick={() => setModesOpen(o => !o)}
+              title={modesOpen ? 'Close game modes' : 'Open game modes'}
+              type="button"
+            >
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="none">
+                <path
+                  d={modesOpen ? 'M10 3L5 8l5 5' : 'M6 3l5 5-5 5'}
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
 
             {/* Player count */}
-            <div className={styles.section}>
+            <div className={`${styles.section} ${styles.sectionPlayerCount}`}>
               <label className={styles.sectionLabel}>Number of players</label>
               <div className={styles.countSelector}>
                 {PLAYER_COUNT_OPTIONS.map(n => (
@@ -277,48 +303,50 @@ export default function SetupScreen({ onStart }) {
             </button>
           </div>
 
-          {/* Right: game modes panel */}
-          <div className={styles.modesCard}>
-            <label className={styles.sectionLabel}>Game modes</label>
-            <div className={styles.modesList}>
-              {GAME_MODES.map(mode => {
-                const available = mode.availability === 'all' ||
-                  (mode.availability === '2p-only' && playerCount === 2)
-                const active = gameModes[mode.id] && available
-                return (
-                  <button
-                    key={mode.id}
-                    className={`${styles.modeToggle} ${active ? styles.modeToggleActive : ''} ${!available ? styles.modeToggleDisabled : ''}`}
-                    onClick={() => available && toggleMode(mode.id)}
-                    disabled={!available}
-                    type="button"
-                  >
-                    <div className={`${styles.modeToggleCheck} ${active ? styles.modeToggleCheckActive : ''}`}>
-                      {active && (
-                        <svg viewBox="0 0 10 8" width="9" height="9" fill="none">
-                          <path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
-                    </div>
-                    <div className={styles.modeToggleBody}>
-                      <div className={styles.modeToggleNameRow}>
-                        <span className={styles.modeToggleName}>{mode.name}</span>
-                        {mode.availability === '2p-only' && (
-                          <span className={styles.modeBadge}>2p only</span>
+          {/* Right: game modes panel (animated wrapper) */}
+          <div className={`${styles.modesCardWrapper} ${modesOpen ? styles.modesCardWrapperOpen : ''}`}>
+            <div className={styles.modesCard}>
+              <label className={styles.sectionLabel}>Game modes</label>
+              <div className={styles.modesList}>
+                {GAME_MODES.map(mode => {
+                  const available = mode.availability === 'all' ||
+                    (mode.availability === '2p-only' && playerCount === 2)
+                  const active = gameModes[mode.id] && available
+                  return (
+                    <button
+                      key={mode.id}
+                      className={`${styles.modeToggle} ${active ? styles.modeToggleActive : ''} ${!available ? styles.modeToggleDisabled : ''}`}
+                      onClick={() => available && toggleMode(mode.id)}
+                      disabled={!available}
+                      type="button"
+                    >
+                      <div className={`${styles.modeToggleCheck} ${active ? styles.modeToggleCheckActive : ''}`}>
+                        {active && (
+                          <svg viewBox="0 0 10 8" width="9" height="9" fill="none">
+                            <path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
                         )}
                       </div>
-                      <div className={styles.modeToggleDesc}>{mode.description}</div>
-                    </div>
-                  </button>
-                )
-              })}
+                      <div className={styles.modeToggleBody}>
+                        <div className={styles.modeToggleNameRow}>
+                          <span className={styles.modeToggleName}>{mode.name}</span>
+                          {mode.availability === '2p-only' && (
+                            <span className={styles.modeBadge}>2p only</span>
+                          )}
+                        </div>
+                        <div className={styles.modeToggleDesc}>{mode.description}</div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </div>
 
         </div>{/* end .panels */}
+      </div>{/* end .wrapper */}
 
-        <p className={styles.footer}>For educational purposes only. Online adaptation of Blokus Trigon by Mattel.</p>
-      </div>
+      <p className={styles.footer}>For educational purposes only. Online adaptation of Blokus Trigon by Mattel.</p>
     </div>
   )
 }
