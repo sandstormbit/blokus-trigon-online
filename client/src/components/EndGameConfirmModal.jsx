@@ -2,6 +2,13 @@ import React from 'react'
 import Modal from './Modal.jsx'
 import styles from './EndGameConfirmModal.module.css'
 
+function triggerBounce(el) {
+  if (!el) return
+  el.classList.remove('btn-bounce')
+  void el.offsetWidth
+  el.classList.add('btn-bounce')
+}
+
 export default function EndGameConfirmModal({ onConfirm, onCancel }) {
   return (
     <Modal title="End the game?" onClose={onCancel}>
@@ -12,10 +19,10 @@ export default function EndGameConfirmModal({ onConfirm, onCancel }) {
         Make sure all players at the table agree before proceeding.
       </p>
       <div className={styles.actions}>
-        <button className={styles.cancelBtn} onClick={onCancel}>
+        <button className={styles.cancelBtn} onClick={(e) => { triggerBounce(e.currentTarget); onCancel() }}>
           Keep playing
         </button>
-        <button className={styles.confirmBtn} onClick={onConfirm}>
+        <button className={styles.confirmBtn} onClick={(e) => { triggerBounce(e.currentTarget); onConfirm() }}>
           End game
         </button>
       </div>

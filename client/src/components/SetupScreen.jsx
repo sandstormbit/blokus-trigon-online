@@ -3,6 +3,13 @@ import { PLAYER_COLORS, COLOR_KEYS } from '../hooks/useGameState.js'
 import { GAME_MODES } from '../game/gameModes.js'
 import styles from './SetupScreen.module.css'
 
+function triggerBounce(el) {
+  if (!el) return
+  el.classList.remove('btn-bounce')
+  void el.offsetWidth
+  el.classList.add('btn-bounce')
+}
+
 const PLAYER_COUNT_OPTIONS = [2, 3, 4]
 
 export default function SetupScreen({ onStart, onBack }) {
@@ -90,7 +97,7 @@ export default function SetupScreen({ onStart, onBack }) {
         {onBack ? (
           <button
             className={styles.backBtn}
-            onClick={onBack}
+            onClick={(e) => { triggerBounce(e.currentTarget); onBack() }}
             title="Back to main menu"
             type="button"
           >
@@ -309,7 +316,7 @@ export default function SetupScreen({ onStart, onBack }) {
               </div>
             </div>
 
-            <button className={styles.startBtn} onClick={handleStart}>
+            <button className={styles.startBtn} onClick={() => setTimeout(handleStart, 320)} data-traced="">
               <span>Start Game</span>
               <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
                 <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd"/>

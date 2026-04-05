@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useRef, useState } from 'react'
 import Board from './Board.jsx'
 import PlayerPanel from './PlayerPanel.jsx'
 import HUD from './HUD.jsx'
@@ -43,13 +43,19 @@ export default function GameScreen({
   const selectedPiece = getSelectedPiece()
   const { cells: ghostCells, isLegal: ghostIsLegal } = getGhostCells()
 
+  const hudBounceRef = useRef(null)
+  const keyRotate = useCallback(() => { rotatePiece(); hudBounceRef.current?.('rotate') }, [rotatePiece])
+  const keyFlip = useCallback(() => { flipPiece(); hudBounceRef.current?.('flip') }, [flipPiece])
+  const keyHover = useCallback(() => { toggleFreeHover(); hudBounceRef.current?.('hover') }, [toggleFreeHover])
+  const keyDeselect = useCallback(() => { deselectPiece(); hudBounceRef.current?.('deselect') }, [deselectPiece])
+
   useKeyboard({
     selectedPieceId: state.selectedPieceId,
     pendingPlacement: state.pendingPlacement,
-    onRotate: rotatePiece,
-    onFlip: flipPiece,
-    onToggleHover: toggleFreeHover,
-    onDeselect: deselectPiece,
+    onRotate: keyRotate,
+    onFlip: keyFlip,
+    onToggleHover: keyHover,
+    onDeselect: keyDeselect,
     onConfirmPlacement: confirmPlacement,
     onCancelPlacement: cancelPlacement,
     active: state.phase === 'playing',
@@ -129,6 +135,7 @@ export default function GameScreen({
           isMyTurn={isMyTurn}
           onlineRoomCode={onlineRoomCode}
           onExit={onExit}
+          bounceRef={hudBounceRef}
         />
       )}
 
