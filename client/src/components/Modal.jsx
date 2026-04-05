@@ -1,10 +1,22 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
 import styles from './Modal.module.css'
 
+function triggerBounce(el) {
+  if (!el) return
+  el.classList.remove('btn-bounce')
+  void el.offsetWidth
+  el.classList.add('btn-bounce')
+}
+
 export default function Modal({ title, children, onClose, wide }) {
+  const closeBtnRef = useRef()
+
   useEffect(() => {
     const handler = (e) => {
-      if (e.key === 'Escape' && onClose) onClose()
+      if (e.key === 'Escape' && onClose) {
+        triggerBounce(closeBtnRef.current)
+        onClose()
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -17,7 +29,7 @@ export default function Modal({ title, children, onClose, wide }) {
           <div className={styles.header}>
             <h2 className={styles.title}>{title}</h2>
             {onClose && (
-              <button className={styles.closeBtn} onClick={onClose}>
+              <button ref={closeBtnRef} className={styles.closeBtn} onClick={(e) => { triggerBounce(e.currentTarget); onClose() }}>
                 <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
                   <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>
                 </svg>

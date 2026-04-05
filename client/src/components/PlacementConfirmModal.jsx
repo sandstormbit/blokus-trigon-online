@@ -3,6 +3,13 @@ import Modal from './Modal.jsx'
 import { PLAYER_COLORS } from '../hooks/useGameState.js'
 import styles from './PlacementConfirmModal.module.css'
 
+function triggerBounce(el) {
+  if (!el) return
+  el.classList.remove('btn-bounce')
+  void el.offsetWidth
+  el.classList.add('btn-bounce')
+}
+
 export default function PlacementConfirmModal({ currentPlayer, piece, onConfirm, onCancel }) {
   const colorInfo = PLAYER_COLORS[currentPlayer.color]
 
@@ -17,13 +24,13 @@ export default function PlacementConfirmModal({ currentPlayer, piece, onConfirm,
       </p>
       <p className={styles.hint}>This action cannot be undone.</p>
       <div className={styles.actions}>
-        <button className={styles.cancelBtn} onClick={onCancel}>
+        <button className={styles.cancelBtn} onClick={(e) => { triggerBounce(e.currentTarget); onCancel() }}>
           No, go back <kbd>Esc</kbd>
         </button>
         <button
           className={styles.confirmBtn}
           style={{ '--c': colorInfo.bg }}
-          onClick={onConfirm}
+          onClick={(e) => { triggerBounce(e.currentTarget); onConfirm() }}
           autoFocus
         >
           Yes, place it <kbd>Enter</kbd>
