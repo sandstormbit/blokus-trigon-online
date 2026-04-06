@@ -38,6 +38,7 @@ const ACTIONS = {
   CONFIRM_END_GAME:  'CONFIRM_END_GAME',
   CANCEL_END_GAME:   'CANCEL_END_GAME',
   NEW_GAME:          'NEW_GAME',
+  REMOVE_PIECE:      'REMOVE_PIECE',
 }
 
 function createInitialState() {
@@ -57,6 +58,7 @@ function createInitialState() {
     waitingForEndTurn: false,    // true after placing or voluntary skip; requires End Turn to advance
     lastPlacedCells: null,       // cells of the most recently placed piece (for glow/bounce)
     lastPlacedPlayerId: null,    // player who placed it
+    lastPlacedPieceId: null,     // piece id of the most recently placed piece (for removal)
     gameModes: {},               // active game mode flags
     requiredStartCells: null,    // Set<"q,r"> | null — for Required Start mode
   }
@@ -317,6 +319,7 @@ function gameReducer(state, action) {
         waitingForEndTurn: true,
         lastPlacedCells: cells.map(c => ({ q: c.q, r: c.r })),
         lastPlacedPlayerId: state.players[playerIdx].id,
+        lastPlacedPieceId: pieceId,
       }
     }
 
@@ -324,13 +327,52 @@ function gameReducer(state, action) {
       return { ...state, pendingPlacement: null }
 
     case ACTIONS.CONFIRM_SKIP: {
-      // Voluntarily skip this turn — not permanent, just ends current turn without placing
+      // Voluntarily skip this turn — auto-advance to next player immediately
+      const newSkipped = new Set(state.skippedPlayerIds)
+      const advanced = advanceTurn(
+        { ...state, waitingForEndTurn: false },
+        state.board,
+        state.players,
+        newSkipped,
+      )
+      return { ...state, ...advanced }
+    }
+
+    case ACTIONS.REMOVE_PIECE: {
+      // Remove the last placed piece from the board, returning it to the player's hand.
+      if (!state.waitingForEndTurn || !state.lastPlacedCells || !state.lastPlacedPieceId) return state
+
+      const playerIdx = state.currentPlayerIndex
+
+      // Restore board cells
+      const newBoardCells = { ...state.board.cells }
+      for (const cell of state.lastPlacedCells) {
+        const id = `${cell.q},${cell.r}`
+        newBoardCells[id] = { ...newBoardCells[id], occupiedBy: null }
+      }
+      const newBoard = { ...state.board, cells: newBoardCells }
+
+      // Restore piece to unplaced
+      const newPlayers = state.players.map((p, i) => {
+        if (i !== playerIdx) return p
+        const newPieces = p.pieces.map(pc =>
+          pc.id === state.lastPlacedPieceId ? { ...pc, placed: false } : pc
+        )
+        const score = newPieces.filter(pc => !pc.placed).reduce((sum, pc) => sum + pc.size, 0)
+        return { ...p, pieces: newPieces, score }
+      })
+
       return {
         ...state,
-        waitingForEndTurn: true,
+        board: newBoard,
+        players: newPlayers,
+        waitingForEndTurn: false,
         selectedPieceId: null,
         hoverCell: null,
         pendingPlacement: null,
+        lastPlacedCells: null,
+        lastPlacedPlayerId: null,
+        lastPlacedPieceId: null,
       }
     }
 
@@ -394,6 +436,7 @@ export function useGameState() {
   const cancelPlacement  = useCallback(() => dispatch({ type: ACTIONS.CANCEL_PLACEMENT }), [])
   const dismissNoMoves   = useCallback(() => dispatch({ type: ACTIONS.DISMISS_NO_MOVES }), [])
   const confirmSkip      = useCallback(() => dispatch({ type: ACTIONS.CONFIRM_SKIP }), [])
+  const removePiece      = useCallback(() => dispatch({ type: ACTIONS.REMOVE_PIECE }), [])
   const endTurn          = useCallback(() => dispatch({ type: ACTIONS.END_TURN }), [])
   const requestEndGame   = useCallback(() => dispatch({ type: ACTIONS.END_GAME }), [])
   const confirmEndGame   = useCallback(() => dispatch({ type: ACTIONS.CONFIRM_END_GAME }), [])
@@ -439,6 +482,7 @@ export function useGameState() {
     cancelPlacement,
     dismissNoMoves,
     confirmSkip,
+    removePiece,
     endTurn,
     requestEndGame,
     confirmEndGame,

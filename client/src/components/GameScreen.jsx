@@ -7,6 +7,7 @@ import PlacementConfirmModal from './PlacementConfirmModal.jsx'
 import EndGameConfirmModal from './EndGameConfirmModal.jsx'
 import EndGameModal from './EndGameModal.jsx'
 import NoMovesModal from './NoMovesModal.jsx'
+import RemovePieceModal from './RemovePieceModal.jsx'
 import { useKeyboard } from '../hooks/useKeyboard.js'
 import styles from './GameScreen.module.css'
 
@@ -25,6 +26,7 @@ export default function GameScreen({
   cancelPlacement,
   dismissNoMoves,
   confirmSkip,
+  removePiece,
   endTurn,
   requestEndGame,
   confirmEndGame,
@@ -42,6 +44,7 @@ export default function GameScreen({
   const [viewingFinalBoard, setViewingFinalBoard] = useState(false)
   const [freeHoverEnabled, setFreeHoverEnabled] = useState(true)
   const [showSkipConfirm, setShowSkipConfirm] = useState(false)
+  const [showRemovePieceModal, setShowRemovePieceModal] = useState(false)
   const toggleFreeHover = useCallback(() => setFreeHoverEnabled(v => !v), [])
 
   const selectedPiece = getSelectedPiece()
@@ -55,6 +58,13 @@ export default function GameScreen({
   const keyEndTurn = useCallback(() => {
     if (state.waitingForEndTurn) { endTurn(); hudBounceRef.current?.('endTurn') }
   }, [state.waitingForEndTurn, endTurn])
+
+  const handleRemovePieceClick = useCallback(() => setShowRemovePieceModal(true), [])
+  const handleConfirmRemove = useCallback(() => {
+    setShowRemovePieceModal(false)
+    removePiece?.()
+  }, [removePiece])
+  const handleCancelRemove = useCallback(() => setShowRemovePieceModal(false), [])
 
   // Clear skip confirm if the turn changes underneath us (edge case)
   useEffect(() => { setShowSkipConfirm(false) }, [state.currentPlayerIndex])
@@ -101,7 +111,8 @@ export default function GameScreen({
                      : [players[1], players[2]]
 
   const isModalOpen = !!state.pendingPlacement || state.showEndGameConfirm ||
-                      (state.phase === 'ended' && !viewingFinalBoard) || !!state.noMovesModalPlayerId
+                      (state.phase === 'ended' && !viewingFinalBoard) || !!state.noMovesModalPlayerId ||
+                      showRemovePieceModal
   const boardDisabled = isModalOpen || (state.phase === 'ended' && viewingFinalBoard) || state.waitingForEndTurn
 
   // Compute winner for final board bar (lowest score wins; for 2p, use slot level)
@@ -197,6 +208,11 @@ export default function GameScreen({
             otherPlayersGhosts={otherPlayersGhosts}
             lastPlacedCells={state.lastPlacedCells}
             lastPlacedPlayerId={state.lastPlacedPlayerId}
+            onRemovePiece={
+              isMyTurn && state.waitingForEndTurn && state.lastPlacedCells && !showRemovePieceModal
+                ? handleRemovePieceClick
+                : undefined
+            }
           />
         </div>
 
@@ -240,6 +256,10 @@ export default function GameScreen({
 
       {noMovesPlayer && (
         <NoMovesModal player={noMovesPlayer} onDismiss={dismissNoMoves} />
+      )}
+
+      {showRemovePieceModal && (
+        <RemovePieceModal onConfirm={handleConfirmRemove} onCancel={handleCancelRemove} />
       )}
     </div>
   )
