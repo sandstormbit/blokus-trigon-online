@@ -113,6 +113,41 @@ export function useOnlineGame() {
       setPendingPlacement(null)
     })
 
+    // ── Auto-reconnect on mount if session data is stored ───────────────────
+    const storedToken = localStorage.getItem('bt_session_token')
+    const storedRoomCode = localStorage.getItem('bt_room_code')
+
+    if (storedToken && storedRoomCode) {
+      socket.connect()
+      const attemptReconnect = () => {
+        socket.emit('join_room', { roomCode: storedRoomCode, playerName: '', sessionToken: storedToken }, (res) => {
+          if (!res.ok) {
+            localStorage.removeItem('bt_room_code')
+            socket.disconnect()
+            return
+          }
+          localStorage.setItem('bt_session_token', res.token)
+          setMyToken(res.token)
+          setRoomCode(res.roomCode)
+          setRoomMode('unknown')
+          setMaxPlayersInRoom(res.maxPlayers || 4)
+          setMyHumanId(res.humanId)
+          setIsHostPlayer(res.isHost)
+          setRoomPlayers(res.players)
+          setSettings(res.settings)
+          setRoomPhase(res.phase)
+          if (res.gameState) {
+            setGameState(deserializeState(res.gameState))
+          }
+        })
+      }
+      if (socket.connected) {
+        attemptReconnect()
+      } else {
+        socket.once('connect', attemptReconnect)
+      }
+    }
+
     return () => {
       socket.disconnect()
       socket.removeAllListeners()
@@ -135,6 +170,7 @@ export function useOnlineGame() {
         }
         localStorage.setItem('bt_session_token', res.token)
         localStorage.setItem('bt_player_name', playerName)
+        localStorage.setItem('bt_room_code', res.roomCode)
         setMyToken(res.token)
         setRoomCode(res.roomCode)
         setRoomMode(mode)
@@ -170,6 +206,7 @@ export function useOnlineGame() {
         }
         localStorage.setItem('bt_session_token', res.token)
         localStorage.setItem('bt_player_name', playerName)
+        localStorage.setItem('bt_room_code', res.roomCode)
         setMyToken(res.token)
         setRoomCode(res.roomCode)
         setRoomMode('unknown')
@@ -374,6 +411,7 @@ export function useOnlineGame() {
   const disconnect = useCallback(() => {
     socketRef.current?.disconnect()
     localStorage.removeItem('bt_session_token')
+    localStorage.removeItem('bt_room_code')
     setMyToken(null)
     setRoomCode(null)
     setRoomMode('public')

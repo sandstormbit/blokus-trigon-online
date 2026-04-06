@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import PiecePreview from './PiecePreview.jsx'
 import { PLAYER_COLORS } from '../hooks/useGameState.js'
 import styles from './PlayerPanel.module.css'
+import AnimatedScore from './AnimatedScore.jsx'
 
 export default function PlayerPanel({
   player,
@@ -51,7 +52,7 @@ export default function PlayerPanel({
           </div>
         </div>
         <div className={styles.score}>
-          <div className={styles.scoreNum}>{totalRemaining}</div>
+          <div className={styles.scoreNum}><AnimatedScore value={totalRemaining} /></div>
           <div className={styles.scoreLabel}>pts</div>
         </div>
       </div>
