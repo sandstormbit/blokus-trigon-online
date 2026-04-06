@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react'
 import { PLAYER_COLORS } from '../hooks/useGameState.js'
 import styles from './HUD.module.css'
+import AnimatedScore from './AnimatedScore.jsx'
 
 function triggerBounce(el) {
   if (!el) return
@@ -46,7 +47,7 @@ export default function HUD({
       {/* Left: turn indicator */}
       <div className={styles.left}>
         {currentPlayer && colorInfo && (
-          <div className={styles.turnInfo}>
+          <div key={currentPlayer.id} className={styles.turnInfo}>
             <div
               className={styles.turnDot}
               style={{ background: colorInfo.bg, boxShadow: `0 0 10px ${colorInfo.bg}` }}
@@ -137,7 +138,9 @@ export default function HUD({
                 className={styles.miniDot}
                 style={{ background: PLAYER_COLORS[p.color].bg }}
               />
-              <span style={{ color: PLAYER_COLORS[p.color].bg }}>{p.score}</span>
+              <span style={{ color: PLAYER_COLORS[p.color].bg }}>
+                <AnimatedScore value={p.score} />
+              </span>
             </div>
           ))}
         </div>
