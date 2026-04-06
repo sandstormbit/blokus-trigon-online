@@ -32,6 +32,8 @@ const ACTIONS = {
   CONFIRM_PLACEMENT: 'CONFIRM_PLACEMENT',
   CANCEL_PLACEMENT:  'CANCEL_PLACEMENT',
   DISMISS_NO_MOVES:  'DISMISS_NO_MOVES',
+  CONFIRM_SKIP:      'CONFIRM_SKIP',
+  END_TURN:          'END_TURN',
   END_GAME:          'END_GAME',
   CONFIRM_END_GAME:  'CONFIRM_END_GAME',
   CANCEL_END_GAME:   'CANCEL_END_GAME',
@@ -49,9 +51,12 @@ function createInitialState() {
     selectedPieceId: null,
     hoverCell: null,
     pendingPlacement: null,
-    skippedPlayerIds: new Set(), // players with no legal moves left
+    skippedPlayerIds: new Set(), // players with no legal moves left (permanent)
     noMovesModalPlayerId: null,  // show "no moves" modal for this player
     showEndGameConfirm: false,
+    waitingForEndTurn: false,    // true after placing or voluntary skip; requires End Turn to advance
+    lastPlacedCells: null,       // cells of the most recently placed piece (for glow/bounce)
+    lastPlacedPlayerId: null,    // player who placed it
     gameModes: {},               // active game mode flags
     requiredStartCells: null,    // Set<"q,r"> | null — for Required Start mode
   }
@@ -107,6 +112,7 @@ function advanceTurn(state, newBoard, newPlayers, newSkipped) {
       pendingPlacement: null,
       noMovesModalPlayerId: null,
       showEndGameConfirm: false,
+      waitingForEndTurn: false,
       phase: 'ended',
       turnCount: turnCount + 1,
     }
@@ -127,6 +133,7 @@ function advanceTurn(state, newBoard, newPlayers, newSkipped) {
       pendingPlacement: null,
       noMovesModalPlayerId: nextPlayer.id,
       showEndGameConfirm: false,
+      waitingForEndTurn: false,
       turnCount: turnCount + 1,
     }
   }
@@ -141,6 +148,7 @@ function advanceTurn(state, newBoard, newPlayers, newSkipped) {
     pendingPlacement: null,
     noMovesModalPlayerId: null,
     showEndGameConfirm: false,
+    waitingForEndTurn: false,
     turnCount: turnCount + 1,
   }
 }
@@ -298,13 +306,45 @@ function gameReducer(state, action) {
         return { ...p, pieces: newPieces, score }
       })
 
-      const newSkipped = new Set(state.skippedPlayerIds)
-      const advanced = advanceTurn(state, newBoard, newPlayers, newSkipped)
-      return { ...state, ...advanced }
+      // Don't advance turn yet — wait for END_TURN
+      return {
+        ...state,
+        board: newBoard,
+        players: newPlayers,
+        pendingPlacement: null,
+        selectedPieceId: null,
+        hoverCell: null,
+        waitingForEndTurn: true,
+        lastPlacedCells: cells.map(c => ({ q: c.q, r: c.r })),
+        lastPlacedPlayerId: state.players[playerIdx].id,
+      }
     }
 
     case ACTIONS.CANCEL_PLACEMENT:
       return { ...state, pendingPlacement: null }
+
+    case ACTIONS.CONFIRM_SKIP: {
+      // Voluntarily skip this turn — not permanent, just ends current turn without placing
+      return {
+        ...state,
+        waitingForEndTurn: true,
+        selectedPieceId: null,
+        hoverCell: null,
+        pendingPlacement: null,
+      }
+    }
+
+    case ACTIONS.END_TURN: {
+      if (!state.waitingForEndTurn) return state
+      const newSkipped = new Set(state.skippedPlayerIds)
+      const advanced = advanceTurn(
+        { ...state, waitingForEndTurn: false },
+        state.board,
+        state.players,
+        newSkipped,
+      )
+      return { ...state, ...advanced }
+    }
 
     case ACTIONS.DISMISS_NO_MOVES: {
       // Add the no-moves player to skipped set, then advance to next player
@@ -353,6 +393,8 @@ export function useGameState() {
   const confirmPlacement = useCallback(() => dispatch({ type: ACTIONS.CONFIRM_PLACEMENT }), [])
   const cancelPlacement  = useCallback(() => dispatch({ type: ACTIONS.CANCEL_PLACEMENT }), [])
   const dismissNoMoves   = useCallback(() => dispatch({ type: ACTIONS.DISMISS_NO_MOVES }), [])
+  const confirmSkip      = useCallback(() => dispatch({ type: ACTIONS.CONFIRM_SKIP }), [])
+  const endTurn          = useCallback(() => dispatch({ type: ACTIONS.END_TURN }), [])
   const requestEndGame   = useCallback(() => dispatch({ type: ACTIONS.END_GAME }), [])
   const confirmEndGame   = useCallback(() => dispatch({ type: ACTIONS.CONFIRM_END_GAME }), [])
   const cancelEndGame    = useCallback(() => dispatch({ type: ACTIONS.CANCEL_END_GAME }), [])
@@ -396,6 +438,8 @@ export function useGameState() {
     confirmPlacement,
     cancelPlacement,
     dismissNoMoves,
+    confirmSkip,
+    endTurn,
     requestEndGame,
     confirmEndGame,
     cancelEndGame,

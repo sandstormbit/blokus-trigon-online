@@ -19,3 +19,29 @@
 .svgActive {
   cursor: crosshair;
 }
+
+/* Bounce animation for newly placed pieces */
+@keyframes pieceBounce {
+  0%   { transform: scale(1); }
+  25%  { transform: scale(1.12); }
+  55%  { transform: scale(0.93); }
+  75%  { transform: scale(1.05); }
+  90%  { transform: scale(0.98); }
+  100% { transform: scale(1); }
+}
+
+.pieceBounce {
+  animation: pieceBounce 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  transform-origin: 0 0; /* origin is at the translated centroid */
+}
+
+/* Pulsing glow for the last placed piece border */
+@keyframes lastPlacedPulse {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.55; }
+  100% { opacity: 1; }
+}
+
+.lastPlacedGlow {
+  animation: lastPlacedPulse 1.8s ease-in-out infinite;
+}

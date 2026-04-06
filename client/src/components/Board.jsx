@@ -188,9 +188,27 @@ export default function Board({
   onBoardLeave,
   players,
   disabled,
-  requiredStartCells,  // Set<"q,r"> | null — Required Start mode markers
+  requiredStartCells,   // Set<"q,r"> | null — Required Start mode markers
+  otherPlayersGhosts,   // [{ cells, color }] — live cursors from other players
+  lastPlacedCells,      // [{q,r}] | null — most recently placed piece for glow
+  lastPlacedPlayerId,   // player id of who placed it
 }) {
   const svgRef = useRef(null)
+
+  // ── Bounce animation state ─────────────────────────────────────────────────
+  // When lastPlacedCells changes to a new value, trigger a short bounce animation.
+  const [bounceTarget, setBounceTarget] = useState(null)  // { cells, playerId, key }
+  const prevBounceKeyRef = useRef(null)
+
+  useEffect(() => {
+    if (!lastPlacedCells || !lastPlacedPlayerId) return
+    const key = `${lastPlacedPlayerId}-${lastPlacedCells[0]?.q},${lastPlacedCells[0]?.r}`
+    if (key === prevBounceKeyRef.current) return
+    prevBounceKeyRef.current = key
+    setBounceTarget({ cells: lastPlacedCells, playerId: lastPlacedPlayerId, key })
+    const t = setTimeout(() => setBounceTarget(null), 700)
+    return () => clearTimeout(t)
+  }, [lastPlacedCells, lastPlacedPlayerId])
 
   // --- Free hover spring state ---
   const rawSvgPos    = useRef(null)
@@ -247,6 +265,35 @@ export default function Board({
     if (!currentPlayerColor || !PLAYER_COLORS[currentPlayerColor]) return '#ffffff'
     return PLAYER_COLORS[currentPlayerColor].bg
   }, [currentPlayerColor])
+
+  // Hex color of the last placed piece (for glow)
+  const lastPlacedColorHex = useMemo(() => {
+    if (!lastPlacedPlayerId || !playerColorMap[lastPlacedPlayerId]) return '#ffffff'
+    return playerColorMap[lastPlacedPlayerId].bg
+  }, [lastPlacedPlayerId, playerColorMap])
+
+  // Outer edges of the last placed piece (for glow border)
+  const lastPlacedOuterEdges = useMemo(() => {
+    if (!lastPlacedCells || lastPlacedCells.length === 0 || !boardData) return []
+    const { offsetX, offsetY } = boardData
+    const cellKeySet = new Set(lastPlacedCells.map(c => `${c.q},${c.r}`))
+    return getOuterEdges(lastPlacedCells, cellKeySet, offsetX, offsetY)
+  }, [lastPlacedCells, boardData])
+
+  // Centroid of bounce target cells (for transform-origin of scale animation)
+  const bounceCentroid = useMemo(() => {
+    if (!bounceTarget || !boardData) return null
+    const { offsetX, offsetY } = boardData
+    let cx = 0, cy = 0
+    for (const c of bounceTarget.cells) {
+      const cent = triCentroid(c.q, c.r)
+      cx += cent.x + offsetX
+      cy += cent.y + offsetY
+    }
+    cx /= bounceTarget.cells.length
+    cy /= bounceTarget.cells.length
+    return { cx, cy }
+  }, [bounceTarget, boardData])
 
   const outlinePoints = useMemo(() => getBoardOutlinePoints(boardData), [boardData])
 
@@ -377,9 +424,14 @@ export default function Board({
         style={{ maxWidth: '100%', maxHeight: '100%' }}
       >
         <defs>
-          {/* Glow in the player's color for the free hover outline */}
+          {/* Glow for the free hover outline (current player's color) */}
           <filter id="freeHoverGlow" x="-40%" y="-40%" width="180%" height="180%">
             <feDropShadow dx="0" dy="0" stdDeviation="2.5" floodColor={playerColorHex} floodOpacity="0.8" />
+          </filter>
+          {/* Pulsing glow for the last placed piece border */}
+          <filter id="lastPlacedGlow" x="-60%" y="-60%" width="220%" height="220%">
+            <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor={lastPlacedColorHex} floodOpacity="0.9" />
+            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor={lastPlacedColorHex} floodOpacity="0.4" />
           </filter>
         </defs>
 
@@ -467,6 +519,84 @@ export default function Board({
             />
           ))
         )}
+
+        {/*
+          Other players' live cursor ghosts — rendered below the free hover
+          so the current player's hover is always on top.
+        */}
+        {otherPlayersGhosts && otherPlayersGhosts.map((ghost, gi) => {
+          if (!ghost.cells || ghost.cells.length === 0) return null
+          const ghostColors = ghostLegalColors(ghost.color)
+          return (
+            <g key={`ghost-${gi}`} pointerEvents="none">
+              {ghost.cells.map(cell => {
+                const id = `${cell.q},${cell.r}`
+                const alreadyOccupied = boardData.cells[id]?.occupiedBy != null
+                if (alreadyOccupied) return null
+                return (
+                  <polygon
+                    key={id}
+                    points={getTriPointsString(cell.q, cell.r, offsetX, offsetY)}
+                    fill={ghostColors.fill}
+                    stroke={ghostColors.stroke}
+                    strokeWidth={1.2}
+                    strokeLinejoin="round"
+                  />
+                )
+              })}
+            </g>
+          )
+        })}
+
+        {/*
+          Glowing outer border of the last placed piece.
+        */}
+        {lastPlacedOuterEdges.length > 0 && (
+          <g filter="url(#lastPlacedGlow)" pointerEvents="none" className={styles.lastPlacedGlow}>
+            {lastPlacedOuterEdges.map((edge, i) => (
+              <line
+                key={i}
+                x1={edge.x1} y1={edge.y1}
+                x2={edge.x2} y2={edge.y2}
+                stroke={lastPlacedColorHex}
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeOpacity={0.95}
+              />
+            ))}
+          </g>
+        )}
+
+        {/*
+          Bounce animation group for the last placed piece.
+          Rendered with a CSS keyframe animation that scales the piece briefly.
+        */}
+        {bounceTarget && bounceCentroid && (() => {
+          const { cx, cy } = bounceCentroid
+          const bounceColors = playerColorMap[bounceTarget.playerId]
+          return (
+            <g
+              key={bounceTarget.key}
+              transform={`translate(${cx},${cy})`}
+              className={styles.pieceBounce}
+              pointerEvents="none"
+            >
+              {bounceTarget.cells.map(cell => {
+                const verts = getTriPointsString(cell.q, cell.r, offsetX - cx, offsetY - cy)
+                const color = bounceColors ? bounceColors.bg : '#ffffff'
+                return (
+                  <polygon
+                    key={`${cell.q},${cell.r}`}
+                    points={verts}
+                    fill={color}
+                    stroke="rgba(0,0,0,0.2)"
+                    strokeWidth={0.4}
+                  />
+                )
+              })}
+            </g>
+          )
+        })()}
 
         {/*
           Free view hover — spring-follows the mouse.

@@ -239,3 +239,112 @@ kbd {
   border-color: #EF4444;
   color: #EF4444;
 }
+
+/* Skip turn button */
+.skipBtn {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: var(--radius-sm);
+  color: rgba(255,255,255,0.45);
+  font-size: 12px;
+  font-weight: 500;
+  transition: all var(--transition-mid);
+  white-space: nowrap;
+}
+
+.skipBtn:hover {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.3);
+  color: rgba(255,255,255,0.75);
+}
+
+/* End Turn button — prominent, player-colored */
+.endTurnBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  background: rgba(59,130,246,0.15);
+  border: 1px solid rgba(59,130,246,0.5);
+  border-radius: var(--radius-sm);
+  color: #93c5fd;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all var(--transition-mid);
+  white-space: nowrap;
+  animation: endTurnPulse 2s ease-in-out infinite;
+}
+
+.endTurnBtn:hover {
+  background: rgba(59,130,246,0.28);
+  border-color: #3B82F6;
+  color: #bfdbfe;
+}
+
+@keyframes endTurnPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
+  50%  { box-shadow: 0 0 0 4px rgba(59,130,246,0); }
+  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
+}
+
+/* Skip confirm inline UI */
+.skipConfirm {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.skipConfirmText {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.skipConfirmBtns {
+  display: flex;
+  gap: 6px;
+}
+
+.skipCancelBtn {
+  padding: 5px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  transition: all var(--transition-fast);
+}
+
+.skipCancelBtn:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.skipConfirmBtn {
+  padding: 5px 10px;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: var(--radius-sm);
+  color: var(--c, rgba(255,255,255,0.85));
+  font-size: 12px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.skipConfirmBtn:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.4);
+}
+
+/* End turn hint text (shown when waiting for end turn) */
+.endTurnHint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.endTurnHintText {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}

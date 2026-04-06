@@ -19,6 +19,12 @@ export default function HUD({
   freeHoverEnabled,
   onDeselect,
   onEndGame,
+  onSkip,
+  onConfirmSkip,
+  onCancelSkip,
+  showSkipConfirm,
+  onEndTurn,
+  waitingForEndTurn,
   playerCount,
   players,
   isOnline = false,
@@ -32,11 +38,13 @@ export default function HUD({
   const flipRef = useRef()
   const hoverRef = useRef()
   const deselectRef = useRef()
+  const endTurnRef = useRef()
+  const skipRef = useRef()
 
   useEffect(() => {
     if (!bounceRef) return
     bounceRef.current = (action) => {
-      const map = { rotate: rotateRef, flip: flipRef, hover: hoverRef, deselect: deselectRef }
+      const map = { rotate: rotateRef, flip: flipRef, hover: hoverRef, deselect: deselectRef, endTurn: endTurnRef, skip: skipRef }
       triggerBounce(map[action]?.current)
     }
     return () => { if (bounceRef) bounceRef.current = null }
@@ -65,7 +73,13 @@ export default function HUD({
       {/* Center: waiting indicator (online, not my turn) or piece controls */}
       <div className={styles.center}>
         <div
-          key={(isOnline && !isMyTurn) ? 'waiting' : selectedPiece ? 'piece' : 'hint'}
+          key={
+            (isOnline && !isMyTurn) ? 'waiting'
+            : showSkipConfirm ? 'skip-confirm'
+            : waitingForEndTurn ? 'end-turn'
+            : selectedPiece ? 'piece'
+            : 'hint'
+          }
           className={styles.centerContent}
         >
           {isOnline && !isMyTurn ? (
@@ -77,6 +91,27 @@ export default function HUD({
                   {currentPlayer?.name || 'other player'}
                 </strong>
               </span>
+            </div>
+          ) : showSkipConfirm ? (
+            <div className={styles.skipConfirm}>
+              <span className={styles.skipConfirmText}>Skip your turn?</span>
+              <div className={styles.skipConfirmBtns}>
+                <button className={styles.skipCancelBtn} onClick={onCancelSkip}>
+                  No, go back
+                </button>
+                <button
+                  className={styles.skipConfirmBtn}
+                  style={{ '--c': colorInfo?.bg || '#888' }}
+                  onClick={(e) => { triggerBounce(e.currentTarget); onConfirmSkip() }}
+                  autoFocus
+                >
+                  Yes, skip turn
+                </button>
+              </div>
+            </div>
+          ) : waitingForEndTurn ? (
+            <div className={styles.endTurnHint}>
+              <span className={styles.endTurnHintText}>Turn complete — press End Turn to continue</span>
             </div>
           ) : selectedPiece ? (
             <div className={styles.controls}>
@@ -126,7 +161,7 @@ export default function HUD({
         </div>
       </div>
 
-      {/* Right: room code + scores + leave + end game */}
+      {/* Right: room code + scores + leave + skip + end turn + end game */}
       <div className={styles.right}>
         {isOnline && onlineRoomCode && (
           <span className={styles.roomCodeBadge}>#{onlineRoomCode}</span>
@@ -146,6 +181,28 @@ export default function HUD({
         </div>
         {isOnline && onExit && (
           <button className={styles.leaveBtn} onClick={() => setTimeout(onExit, 320)} data-traced="">Leave</button>
+        )}
+        {/* Skip button — only shown when it's your turn and you haven't acted yet */}
+        {isMyTurn && !waitingForEndTurn && !showSkipConfirm && onSkip && (
+          <button
+            ref={skipRef}
+            className={styles.skipBtn}
+            onClick={(e) => { triggerBounce(e.currentTarget); onSkip() }}
+            title="Skip your turn"
+          >
+            Skip
+          </button>
+        )}
+        {/* End Turn button — shown when action is taken, ready to advance */}
+        {isMyTurn && waitingForEndTurn && onEndTurn && (
+          <button
+            ref={endTurnRef}
+            className={styles.endTurnBtn}
+            onClick={(e) => { triggerBounce(e.currentTarget); onEndTurn() }}
+            title="End your turn (Shift+Enter)"
+          >
+            End Turn <kbd>⇧↵</kbd>
+          </button>
         )}
         <button className={styles.endBtn} onClick={(e) => { triggerBounce(e.currentTarget); onEndGame() }}>
           End Game

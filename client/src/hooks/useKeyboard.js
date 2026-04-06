@@ -13,12 +13,14 @@ import { useEffect } from 'react'
 export function useKeyboard({
   selectedPieceId,
   pendingPlacement,
+  waitingForEndTurn,
   onRotate,
   onFlip,
   onToggleHover,
   onDeselect,
   onConfirmPlacement,
   onCancelPlacement,
+  onEndTurn,
   active,
 }) {
   useEffect(() => {
@@ -27,6 +29,13 @@ export function useKeyboard({
     const handler = (e) => {
       // Don't fire if user is typing in an input
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
+
+      // Shift+Enter → End Turn (works any time it's your turn)
+      if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault()
+        onEndTurn?.()
+        return
+      }
 
       if (pendingPlacement) {
         // In confirmation mode: Enter confirms, Escape cancels
@@ -39,6 +48,9 @@ export function useKeyboard({
         }
         return
       }
+
+      // Once waiting for end turn, only allow Shift+Enter (handled above)
+      if (waitingForEndTurn) return
 
       if (!selectedPieceId) return
 
@@ -71,11 +83,13 @@ export function useKeyboard({
     active,
     selectedPieceId,
     pendingPlacement,
+    waitingForEndTurn,
     onRotate,
     onFlip,
     onToggleHover,
     onDeselect,
     onConfirmPlacement,
     onCancelPlacement,
+    onEndTurn,
   ])
 }

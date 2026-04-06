@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Board from './Board.jsx'
 import PlayerPanel from './PlayerPanel.jsx'
 import HUD from './HUD.jsx'
@@ -24,6 +24,8 @@ export default function GameScreen({
   confirmPlacement,
   cancelPlacement,
   dismissNoMoves,
+  confirmSkip,
+  endTurn,
   requestEndGame,
   confirmEndGame,
   cancelEndGame,
@@ -35,9 +37,11 @@ export default function GameScreen({
   onlineRoomCode = null,
   onlinePlayers = null,
   onExit = null,
+  otherPlayersGhosts = null,
 }) {
   const [viewingFinalBoard, setViewingFinalBoard] = useState(false)
   const [freeHoverEnabled, setFreeHoverEnabled] = useState(true)
+  const [showSkipConfirm, setShowSkipConfirm] = useState(false)
   const toggleFreeHover = useCallback(() => setFreeHoverEnabled(v => !v), [])
 
   const selectedPiece = getSelectedPiece()
@@ -48,16 +52,31 @@ export default function GameScreen({
   const keyFlip = useCallback(() => { flipPiece(); hudBounceRef.current?.('flip') }, [flipPiece])
   const keyHover = useCallback(() => { toggleFreeHover(); hudBounceRef.current?.('hover') }, [toggleFreeHover])
   const keyDeselect = useCallback(() => { deselectPiece(); hudBounceRef.current?.('deselect') }, [deselectPiece])
+  const keyEndTurn = useCallback(() => {
+    if (state.waitingForEndTurn) { endTurn(); hudBounceRef.current?.('endTurn') }
+  }, [state.waitingForEndTurn, endTurn])
+
+  // Clear skip confirm if the turn changes underneath us (edge case)
+  useEffect(() => { setShowSkipConfirm(false) }, [state.currentPlayerIndex])
+
+  const handleSkip = useCallback(() => setShowSkipConfirm(true), [])
+  const handleCancelSkip = useCallback(() => setShowSkipConfirm(false), [])
+  const handleConfirmSkip = useCallback(() => {
+    setShowSkipConfirm(false)
+    confirmSkip()
+  }, [confirmSkip])
 
   useKeyboard({
     selectedPieceId: state.selectedPieceId,
     pendingPlacement: state.pendingPlacement,
+    waitingForEndTurn: state.waitingForEndTurn,
     onRotate: keyRotate,
     onFlip: keyFlip,
     onToggleHover: keyHover,
     onDeselect: keyDeselect,
     onConfirmPlacement: confirmPlacement,
     onCancelPlacement: cancelPlacement,
+    onEndTurn: keyEndTurn,
     active: state.phase === 'playing',
   })
 
@@ -83,7 +102,7 @@ export default function GameScreen({
 
   const isModalOpen = !!state.pendingPlacement || state.showEndGameConfirm ||
                       (state.phase === 'ended' && !viewingFinalBoard) || !!state.noMovesModalPlayerId
-  const boardDisabled = isModalOpen || (state.phase === 'ended' && viewingFinalBoard)
+  const boardDisabled = isModalOpen || (state.phase === 'ended' && viewingFinalBoard) || state.waitingForEndTurn
 
   // Compute winner for final board bar (lowest score wins; for 2p, use slot level)
   const finalBoardWinner = viewingFinalBoard
@@ -129,6 +148,12 @@ export default function GameScreen({
           freeHoverEnabled={freeHoverEnabled}
           onDeselect={deselectPiece}
           onEndGame={requestEndGame}
+          onSkip={handleSkip}
+          onConfirmSkip={handleConfirmSkip}
+          onCancelSkip={handleCancelSkip}
+          showSkipConfirm={showSkipConfirm}
+          onEndTurn={endTurn}
+          waitingForEndTurn={state.waitingForEndTurn}
           players={players}
           playerCount={playerCount}
           isOnline={isOnline}
@@ -169,6 +194,9 @@ export default function GameScreen({
             players={players}
             disabled={!!boardDisabled}
             requiredStartCells={state.gameModes?.requiredStart ? state.requiredStartCells : null}
+            otherPlayersGhosts={otherPlayersGhosts}
+            lastPlacedCells={state.lastPlacedCells}
+            lastPlacedPlayerId={state.lastPlacedPlayerId}
           />
         </div>
 
