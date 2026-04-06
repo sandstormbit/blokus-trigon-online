@@ -32,6 +32,8 @@ function PassAndPlayApp({ onExit }) {
       confirmPlacement={game.confirmPlacement}
       cancelPlacement={game.cancelPlacement}
       dismissNoMoves={game.dismissNoMoves}
+      confirmSkip={game.confirmSkip}
+      endTurn={game.endTurn}
       requestEndGame={game.requestEndGame}
       confirmEndGame={game.confirmEndGame}
       cancelEndGame={game.cancelEndGame}
@@ -90,6 +92,8 @@ function OnlineApp({ onPassAndPlay }) {
         confirmPlacement={online.confirmPlacement}
         cancelPlacement={online.cancelPlacement}
         dismissNoMoves={online.dismissNoMoves}
+        confirmSkip={online.confirmSkip}
+        endTurn={online.endTurn}
         requestEndGame={online.requestEndGame}
         confirmEndGame={online.confirmEndGame}
         cancelEndGame={online.cancelEndGame}
@@ -100,6 +104,7 @@ function OnlineApp({ onPassAndPlay }) {
         onlineRoomCode={online.roomCode}
         onlinePlayers={online.roomPlayers}
         onExit={handleExit}
+        otherPlayersGhosts={online.otherPlayersGhosts}
       />
     )
   }

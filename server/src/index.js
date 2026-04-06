@@ -268,6 +268,28 @@ io.on('connection', (socket) => {
     broadcastGameState(getRoom(roomCode))
   })
 
+  // ── Live cursor relay (ephemeral — not stored in game state) ─────────────
+  socket.on('cursor_update', (data) => {
+    const roomCode = [...socket.rooms].find(r => r !== socket.id)
+    if (!roomCode) return
+    const token = getTokenFromSocket(socket.id)
+    const room = getRoom(roomCode)
+    if (!room || room.phase !== 'playing') return
+    const player = getPlayerByToken(room, token)
+    if (!player) return
+    socket.to(roomCode).emit('player_cursor_update', { humanId: player.humanId, ...data })
+  })
+
+  // ── Voluntary skip (current player skips their turn, not permanent) ───────
+  socket.on('voluntary_skip', (_, ack) => {
+    handleSimpleAction(socket, 'VOLUNTARY_SKIP', ack)
+  })
+
+  // ── End turn (finalizes turn and advances to next player) ─────────────────
+  socket.on('end_turn', (_, ack) => {
+    handleSimpleAction(socket, 'END_TURN', ack)
+  })
+
   // ── End game actions (current player only) ────────────────────────────────
   socket.on('request_end_game', (_, ack) => {
     handleSimpleAction(socket, 'REQUEST_END_GAME', ack)

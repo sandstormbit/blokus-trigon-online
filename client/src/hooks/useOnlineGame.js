@@ -8,7 +8,7 @@
  * then committed via the server.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { io } from 'socket.io-client'
 import { getPieceOrientation, placePieceCells } from '../game/pieces.js'
 import { isLegalPlacement } from '../game/gameLogic.js'
@@ -64,6 +64,14 @@ export function useOnlineGame() {
   const [hoverCell, setHoverCell] = useState(null)
   const [pendingPlacement, setPendingPlacement] = useState(null)
 
+  // Live cursors for other players: { [humanId]: { hoverCell, selectedPieceId, rotIndex, flipped } }
+  const [otherPlayersCursors, setOtherPlayersCursors] = useState({})
+
+  // Cursor emission refs — track latest state without re-creating the interval
+  const cursorStateRef = useRef(null)
+  const cursorVersionRef = useRef(0)
+  const lastEmittedCursorVersionRef = useRef(-1)
+
   // ── Socket initialization ───────────────────────────────────────────────────
   useEffect(() => {
     const socket = io(SERVER_URL, {
@@ -92,6 +100,7 @@ export function useOnlineGame() {
       setSelectedPieceId(null)
       setHoverCell(null)
       setPendingPlacement(null)
+      setOtherPlayersCursors({})
     })
 
     socket.on('game_state_update', ({ gameState: raw }) => {
@@ -111,6 +120,15 @@ export function useOnlineGame() {
       setSelectedPieceId(null)
       setHoverCell(null)
       setPendingPlacement(null)
+      setOtherPlayersCursors({})
+    })
+
+    // ── Live cursor from another player ───────────────────────────────────────
+    socket.on('player_cursor_update', ({ humanId, hoverCell, selectedPieceId, rotIndex, flipped }) => {
+      setOtherPlayersCursors(prev => ({
+        ...prev,
+        [humanId]: { hoverCell, selectedPieceId, rotIndex, flipped },
+      }))
     })
 
     // ── Auto-reconnect on mount if session data is stored ───────────────────
@@ -152,6 +170,35 @@ export function useOnlineGame() {
       socket.disconnect()
       socket.removeAllListeners()
     }
+  }, [])
+
+  // ── Update cursor state ref (for emission) ──────────────────────────────────
+  // Runs whenever my hover/selection/rotation/flip changes
+  useEffect(() => {
+    if (!gameState) return
+    const currentPlayer = gameState.players[gameState.currentPlayerIndex]
+    if (currentPlayer?.humanId !== myHumanId) return
+
+    const piece = currentPlayer.pieces.find(p => p.id === selectedPieceId)
+    cursorStateRef.current = {
+      hoverCell: hoverCell || null,
+      selectedPieceId: selectedPieceId || null,
+      rotIndex: piece?.rotIndex ?? 0,
+      flipped: piece?.flipped ?? false,
+    }
+    cursorVersionRef.current++
+  }, [hoverCell, selectedPieceId, gameState, myHumanId])
+
+  // ── Emit cursor at ~20fps ───────────────────────────────────────────────────
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const socket = socketRef.current
+      if (!socket || !cursorStateRef.current) return
+      if (cursorVersionRef.current === lastEmittedCursorVersionRef.current) return
+      lastEmittedCursorVersionRef.current = cursorVersionRef.current
+      socket.emit('cursor_update', cursorStateRef.current)
+    }, 50)
+    return () => clearInterval(interval)
   }, [])
 
   // ── Connect and create/join room ────────────────────────────────────────────
@@ -384,6 +431,18 @@ export function useOnlineGame() {
     })
   }, [])
 
+  const confirmSkip = useCallback(() => {
+    socketRef.current?.emit('voluntary_skip', {}, (res) => {
+      if (!res.ok) console.warn('voluntary_skip rejected:', res.error)
+    })
+  }, [])
+
+  const endTurn = useCallback(() => {
+    socketRef.current?.emit('end_turn', {}, (res) => {
+      if (!res.ok) console.warn('end_turn rejected:', res.error)
+    })
+  }, [])
+
   const requestEndGame = useCallback(() => {
     socketRef.current?.emit('request_end_game', {}, (res) => {
       if (!res.ok) console.warn('request_end_game rejected:', res.error)
@@ -433,6 +492,39 @@ export function useOnlineGame() {
     hoverCell,
     pendingPlacement,
   } : null
+
+  // ── Ghost pieces for other players' live cursors ───────────────────────────
+  const otherPlayersGhosts = useMemo(() => {
+    if (!gameState || !otherPlayersCursors) return []
+    const currentPlayer = gameState.players[gameState.currentPlayerIndex]
+    if (!currentPlayer) return []
+
+    const result = []
+    for (const [humanIdStr, cursor] of Object.entries(otherPlayersCursors)) {
+      const humanId = parseInt(humanIdStr)
+      // Only show cursor for whoever is currently playing
+      if (currentPlayer.humanId !== humanId) continue
+      if (humanId === myHumanId) continue // don't show our own cursor back to us
+      if (!cursor.hoverCell || cursor.selectedPieceId == null) continue
+
+      const piece = currentPlayer.pieces.find(p => p.id === cursor.selectedPieceId)
+      if (!piece || piece.placed) continue
+
+      const pieceCopy = { ...piece, rotIndex: cursor.rotIndex ?? 0, flipped: cursor.flipped ?? false }
+      const oriented = getPieceOrientation(pieceCopy, pieceCopy.rotIndex, pieceCopy.flipped)
+
+      // Parity-aware anchor
+      const hoverParity = ((cursor.hoverCell.q + cursor.hoverCell.r) % 2 + 2) % 2
+      const matchCell = oriented.find(c => ((c.dq + c.dr) % 2 + 2) % 2 === hoverParity)
+      const anchor = matchCell || oriented[0]
+      const anchorQ = cursor.hoverCell.q - anchor.dq
+      const anchorR = cursor.hoverCell.r - anchor.dr
+
+      const cells = placePieceCells(oriented, anchorQ, anchorR)
+      result.push({ cells, color: currentPlayer.color, humanId })
+    }
+    return result
+  }, [gameState, otherPlayersCursors, myHumanId])
 
   const currentPlayer = gameState
     ? gameState.players[gameState.currentPlayerIndex] || null
@@ -501,10 +593,13 @@ export function useOnlineGame() {
     confirmPlacement,
     cancelPlacement,
     dismissNoMoves,
+    confirmSkip,
+    endTurn,
     requestEndGame,
     confirmEndGame,
     cancelEndGame,
     newGame,
     isMyTurn,
+    otherPlayersGhosts,
   }
 }

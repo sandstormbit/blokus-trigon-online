@@ -71,6 +71,7 @@ function advanceTurn(state, newBoard, newPlayers, newSkipped) {
       pendingPlacement: null,
       noMovesModalPlayerId: null,
       showEndGameConfirm: false,
+      waitingForEndTurn: false,
       phase: 'ended',
       turnCount: turnCount + 1,
     }
@@ -91,6 +92,7 @@ function advanceTurn(state, newBoard, newPlayers, newSkipped) {
       pendingPlacement: null,
       noMovesModalPlayerId: nextPlayer.id,
       showEndGameConfirm: false,
+      waitingForEndTurn: false,
       turnCount: turnCount + 1,
     }
   }
@@ -105,6 +107,7 @@ function advanceTurn(state, newBoard, newPlayers, newSkipped) {
     pendingPlacement: null,
     noMovesModalPlayerId: null,
     showEndGameConfirm: false,
+    waitingForEndTurn: false,
     turnCount: turnCount + 1,
   }
 }
@@ -166,6 +169,9 @@ export function createGameState(roomPlayers, humanCount, gameModes = {}) {
     skippedPlayerIds: new Set(),
     noMovesModalPlayerId: null,
     showEndGameConfirm: false,
+    waitingForEndTurn: false,
+    lastPlacedCells: null,
+    lastPlacedPlayerId: null,
     gameModes,
     requiredStartCells,
   }
@@ -226,8 +232,45 @@ export function processAction(state, action, humanId) {
         return { ...p, pieces: newPieces, score }
       })
 
+      return {
+        ok: true,
+        state: {
+          ...state,
+          board: newBoard,
+          players: newPlayers,
+          pendingPlacement: null,
+          selectedPieceId: null,
+          hoverCell: null,
+          waitingForEndTurn: true,
+          lastPlacedCells: boardCells.map(c => ({ q: c.q, r: c.r })),
+          lastPlacedPlayerId: currentPlayer.id,
+        }
+      }
+    }
+
+    case 'VOLUNTARY_SKIP': {
+      if (state.waitingForEndTurn) return { ok: false, error: 'already_waiting_for_end_turn' }
+      return {
+        ok: true,
+        state: {
+          ...state,
+          waitingForEndTurn: true,
+          selectedPieceId: null,
+          hoverCell: null,
+          pendingPlacement: null,
+        }
+      }
+    }
+
+    case 'END_TURN': {
+      if (!state.waitingForEndTurn) return { ok: false, error: 'not_waiting_for_end_turn' }
       const newSkipped = new Set(state.skippedPlayerIds)
-      const advanced = advanceTurn(state, newBoard, newPlayers, newSkipped)
+      const advanced = advanceTurn(
+        { ...state, waitingForEndTurn: false },
+        state.board,
+        state.players,
+        newSkipped,
+      )
       return { ok: true, state: { ...state, ...advanced } }
     }
 
@@ -273,5 +316,6 @@ export function serializeState(state) {
     ...state,
     skippedPlayerIds: [...state.skippedPlayerIds],
     requiredStartCells: state.requiredStartCells ? [...state.requiredStartCells] : null,
+    lastPlacedCells: state.lastPlacedCells || null,
   }
 }
