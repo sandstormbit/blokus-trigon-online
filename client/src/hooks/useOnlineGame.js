@@ -437,6 +437,12 @@ export function useOnlineGame() {
     })
   }, [])
 
+  const removePiece = useCallback(() => {
+    socketRef.current?.emit('remove_piece', {}, (res) => {
+      if (!res?.ok) console.warn('remove_piece rejected:', res?.error)
+    })
+  }, [])
+
   const endTurn = useCallback(() => {
     socketRef.current?.emit('end_turn', {}, (res) => {
       if (!res.ok) console.warn('end_turn rejected:', res.error)
@@ -594,6 +600,7 @@ export function useOnlineGame() {
     cancelPlacement,
     dismissNoMoves,
     confirmSkip,
+    removePiece,
     endTurn,
     requestEndGame,
     confirmEndGame,

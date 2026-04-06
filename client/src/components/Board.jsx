@@ -192,11 +192,13 @@ export default function Board({
   otherPlayersGhosts,   // [{ cells, color }] — live cursors from other players
   lastPlacedCells,      // [{q,r}] | null — most recently placed piece for glow
   lastPlacedPlayerId,   // player id of who placed it
+  onRemovePiece,        // callback — when defined, last placed piece cells are clickable to remove
 }) {
   const svgRef = useRef(null)
 
   // ── Bounce animation state ─────────────────────────────────────────────────
   // When lastPlacedCells changes to a new value, trigger a short bounce animation.
+  // Delayed 120ms so the placement-confirm modal fully closes first.
   const [bounceTarget, setBounceTarget] = useState(null)  // { cells, playerId, key }
   const prevBounceKeyRef = useRef(null)
 
@@ -205,9 +207,12 @@ export default function Board({
     const key = `${lastPlacedPlayerId}-${lastPlacedCells[0]?.q},${lastPlacedCells[0]?.r}`
     if (key === prevBounceKeyRef.current) return
     prevBounceKeyRef.current = key
-    setBounceTarget({ cells: lastPlacedCells, playerId: lastPlacedPlayerId, key })
-    const t = setTimeout(() => setBounceTarget(null), 700)
-    return () => clearTimeout(t)
+    let clearT
+    const startT = setTimeout(() => {
+      setBounceTarget({ cells: lastPlacedCells, playerId: lastPlacedPlayerId, key })
+      clearT = setTimeout(() => setBounceTarget(null), 700)
+    }, 120)
+    return () => { clearTimeout(startT); clearTimeout(clearT) }
   }, [lastPlacedCells, lastPlacedPlayerId])
 
   // --- Free hover spring state ---
@@ -279,21 +284,6 @@ export default function Board({
     const cellKeySet = new Set(lastPlacedCells.map(c => `${c.q},${c.r}`))
     return getOuterEdges(lastPlacedCells, cellKeySet, offsetX, offsetY)
   }, [lastPlacedCells, boardData])
-
-  // Centroid of bounce target cells (for transform-origin of scale animation)
-  const bounceCentroid = useMemo(() => {
-    if (!bounceTarget || !boardData) return null
-    const { offsetX, offsetY } = boardData
-    let cx = 0, cy = 0
-    for (const c of bounceTarget.cells) {
-      const cent = triCentroid(c.q, c.r)
-      cx += cent.x + offsetX
-      cy += cent.y + offsetY
-    }
-    cx /= bounceTarget.cells.length
-    cy /= bounceTarget.cells.length
-    return { cx, cy }
-  }, [bounceTarget, boardData])
 
   const outlinePoints = useMemo(() => getBoardOutlinePoints(boardData), [boardData])
 
@@ -571,18 +561,16 @@ export default function Board({
           Bounce animation group for the last placed piece.
           Rendered with a CSS keyframe animation that scales the piece briefly.
         */}
-        {bounceTarget && bounceCentroid && (() => {
-          const { cx, cy } = bounceCentroid
+        {bounceTarget && (() => {
           const bounceColors = playerColorMap[bounceTarget.playerId]
           return (
             <g
               key={bounceTarget.key}
-              transform={`translate(${cx},${cy})`}
               className={styles.pieceBounce}
               pointerEvents="none"
             >
               {bounceTarget.cells.map(cell => {
-                const verts = getTriPointsString(cell.q, cell.r, offsetX - cx, offsetY - cy)
+                const verts = getTriPointsString(cell.q, cell.r, offsetX, offsetY)
                 const color = bounceColors ? bounceColors.bg : '#ffffff'
                 return (
                   <polygon
@@ -597,6 +585,22 @@ export default function Board({
             </g>
           )
         })()}
+
+        {/*
+          Invisible click targets over the last placed piece cells.
+          Only rendered when onRemovePiece is provided (i.e., waitingForEndTurn).
+          Clicking any of these cells opens the "Remove piece?" modal.
+        */}
+        {onRemovePiece && lastPlacedCells && lastPlacedCells.map(cell => (
+          <polygon
+            key={`remove-target-${cell.q},${cell.r}`}
+            points={getTriPointsString(cell.q, cell.r, offsetX, offsetY)}
+            fill="rgba(0,0,0,0)"
+            stroke="none"
+            style={{ cursor: 'pointer' }}
+            onClick={(e) => { e.stopPropagation(); onRemovePiece() }}
+          />
+        ))}
 
         {/*
           Free view hover — spring-follows the mouse.

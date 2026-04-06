@@ -33,6 +33,7 @@ function PassAndPlayApp({ onExit }) {
       cancelPlacement={game.cancelPlacement}
       dismissNoMoves={game.dismissNoMoves}
       confirmSkip={game.confirmSkip}
+      removePiece={game.removePiece}
       endTurn={game.endTurn}
       requestEndGame={game.requestEndGame}
       confirmEndGame={game.confirmEndGame}
@@ -93,6 +94,7 @@ function OnlineApp({ onPassAndPlay }) {
         cancelPlacement={online.cancelPlacement}
         dismissNoMoves={online.dismissNoMoves}
         confirmSkip={online.confirmSkip}
+        removePiece={online.removePiece}
         endTurn={online.endTurn}
         requestEndGame={online.requestEndGame}
         confirmEndGame={online.confirmEndGame}

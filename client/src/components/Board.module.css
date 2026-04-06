@@ -32,16 +32,19 @@
 
 .pieceBounce {
   animation: pieceBounce 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-  transform-origin: 0 0; /* origin is at the translated centroid */
+  transform-box: fill-box;
+  transform-origin: center center;
 }
 
 /* Pulsing glow for the last placed piece border */
 @keyframes lastPlacedPulse {
-  0%   { opacity: 1; }
-  50%  { opacity: 0.55; }
-  100% { opacity: 1; }
+  0%   { opacity: 1; transform: scale(1); }
+  50%  { opacity: 0.6; transform: scale(1.22); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 .lastPlacedGlow {
   animation: lastPlacedPulse 1.8s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center center;
 }

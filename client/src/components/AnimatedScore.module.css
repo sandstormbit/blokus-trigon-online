@@ -7,7 +7,7 @@
 
 .enter {
   display: block;
-  animation: scoreEnter 2000ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: scoreEnter 3000ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .exit {
@@ -16,13 +16,15 @@
   top: 0;
   left: 0;
   white-space: nowrap;
-  animation: scoreExit 2000ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: scoreExit 3000ms cubic-bezier(0.16, 1, 0.3, 1) both;
   pointer-events: none;
 }
 
 @keyframes scoreEnter {
-  from { transform: translateY(-100%); opacity: 0; }
-  to   { transform: translateY(0);     opacity: 1; }
+  0%   { transform: translateY(-100%) scale(1.3); opacity: 0; }
+  20%  { transform: translateY(0) scale(1.3);     opacity: 1; }
+  40%  { transform: translateY(0) scale(1);       opacity: 1; }
+  100% { transform: translateY(0) scale(1);       opacity: 1; }
 }
 
 @keyframes scoreExit {
