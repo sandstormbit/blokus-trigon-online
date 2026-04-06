@@ -14,7 +14,7 @@ export default function AnimatedScore({ value }) {
       const old = prevRef.current
       prevRef.current = value
       setState(s => ({ curr: value, prev: old, key: s.key + 1 }))
-      const t = setTimeout(() => setState(s => ({ ...s, prev: null })), 700)
+      const t = setTimeout(() => setState(s => ({ ...s, prev: null })), 2000)
       return () => clearTimeout(t)
     }
   }, [value])
