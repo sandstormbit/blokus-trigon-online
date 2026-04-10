@@ -39,7 +39,7 @@
 /* Pulsing glow for the last placed piece border */
 @keyframes lastPlacedPulse {
   0%   { opacity: 1; transform: scale(1); }
-  50%  { opacity: 0.6; transform: scale(1.22); }
+  50%  { opacity: 0.6; transform: scale(1.10); }
   100% { opacity: 1; transform: scale(1); }
 }
 

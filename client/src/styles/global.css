@@ -159,14 +159,24 @@ button[data-action="hover-toggle"]:hover:not(:disabled) svg {
 /* ── Click / keyboard bounce ── */
 @keyframes btnBounce {
   0%   { transform: scale(1); }
-  28%  { transform: scale(0.95); }
-  58%  { transform: scale(1.03); }
-  78%  { transform: scale(0.99); }
+  25%  { transform: scale(0.94); }
+  62%  { transform: scale(1.05); }
   100% { transform: scale(1); }
 }
 
 .btn-bounce {
-  animation: btnBounce 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: btnBounce 0.48s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ── Keyboard key-active glow (control buttons: Rotate, Flip, Hover, Deselect) ── */
+@keyframes btnKeyGlow {
+  0%   { filter: brightness(1.45) drop-shadow(0 0 5px rgba(255,255,255,0.45)); }
+  55%  { filter: brightness(1.15) drop-shadow(0 0 2px rgba(255,255,255,0.15)); }
+  100% { filter: brightness(1); }
+}
+
+.btn-key-highlight {
+  animation: btnKeyGlow 0.6s ease-out forwards;
 }
 
 input {

@@ -7,7 +7,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 20px 24px;
+  padding: 24px;
   overflow: auto;
   gap: 16px;
 }
@@ -371,6 +371,29 @@
   color: var(--text-muted);
   min-width: 34px;
   flex-shrink: 0;
+}
+
+/* ── Player count → content transition ─────────────────────────────────────── */
+
+@keyframes playerContentFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes playerContentFadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-5px); }
+}
+
+/* Applied to the wrapper on every mount (key change) — fades in the new content */
+.playerContent {
+  animation: playerContentFadeIn 200ms ease both;
+}
+
+/* Applied while the old content is fading out, before key change remounts it */
+.playerContentOut {
+  animation: playerContentFadeOut 150ms ease both !important;
+  pointer-events: none;
 }
 
 /* ── Board info strip ───────────────────────────────────────────────────────── */

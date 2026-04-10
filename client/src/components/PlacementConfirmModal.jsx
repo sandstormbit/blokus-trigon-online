@@ -24,13 +24,13 @@ export default function PlacementConfirmModal({ currentPlayer, piece, onConfirm,
       </p>
       <p className={styles.hint}>This action cannot be undone.</p>
       <div className={styles.actions}>
-        <button className={styles.cancelBtn} onClick={(e) => { triggerBounce(e.currentTarget); onCancel() }}>
+        <button className={styles.cancelBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onCancel, 350) }}>
           No, go back <kbd>Esc</kbd>
         </button>
         <button
           className={styles.confirmBtn}
           style={{ '--c': colorInfo.bg }}
-          onClick={(e) => { triggerBounce(e.currentTarget); onConfirm() }}
+          onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onConfirm, 350) }}
           autoFocus
         >
           Yes, place it <kbd>Enter</kbd>

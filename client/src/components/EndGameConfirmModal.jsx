@@ -19,10 +19,10 @@ export default function EndGameConfirmModal({ onConfirm, onCancel }) {
         Make sure all players at the table agree before proceeding.
       </p>
       <div className={styles.actions}>
-        <button className={styles.cancelBtn} onClick={(e) => { triggerBounce(e.currentTarget); onCancel() }}>
+        <button className={styles.cancelBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onCancel, 350) }}>
           Keep playing
         </button>
-        <button className={styles.confirmBtn} onClick={(e) => { triggerBounce(e.currentTarget); onConfirm() }}>
+        <button className={styles.confirmBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onConfirm, 350) }}>
           End game
         </button>
       </div>
