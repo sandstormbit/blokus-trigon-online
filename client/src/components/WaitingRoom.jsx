@@ -5,6 +5,13 @@ import styles from './WaitingRoom.module.css'
 
 const DEFAULT_COLORS = ['blue', 'red', 'green', 'yellow']
 
+function triggerBounce(el) {
+  if (!el) return
+  el.classList.remove('btn-bounce')
+  void el.offsetWidth
+  el.classList.add('btn-bounce')
+}
+
 export default function WaitingRoom({
   roomCode,
   roomMode,
@@ -178,7 +185,7 @@ export default function WaitingRoom({
               {startError && <div className={styles.startError}>{startError}</div>}
               <button
                 className={`${styles.startBtn} ${!canStart ? styles.startBtnDisabled : ''}`}
-                onClick={handleStart}
+                onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(handleStart, 350) }}
                 disabled={!canStart || starting}
               >
                 {starting ? 'Starting…' : (
@@ -220,7 +227,7 @@ export default function WaitingRoom({
                   <button
                     key={mode.id}
                     className={`${styles.modeToggle} ${active ? styles.modeToggleActive : ''} ${!available ? styles.modeToggleDisabled : ''}`}
-                    onClick={() => available && toggleMode(mode.id)}
+                    onClick={(e) => { if (available) { triggerBounce(e.currentTarget); toggleMode(mode.id) } }}
                     disabled={!available}
                     type="button"
                   >

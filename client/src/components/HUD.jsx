@@ -10,6 +10,13 @@ function triggerBounce(el) {
   el.classList.add('btn-bounce')
 }
 
+function triggerKeyHighlight(el) {
+  if (!el) return
+  el.classList.remove('btn-key-highlight')
+  void el.offsetWidth
+  el.classList.add('btn-key-highlight')
+}
+
 export default function HUD({
   currentPlayer,
   selectedPiece,
@@ -36,17 +43,22 @@ export default function HUD({
 }) {
   const colorInfo = currentPlayer ? PLAYER_COLORS[currentPlayer.color] : null
   const rotateRef = useRef()
+  const rotateReverseRef = useRef()
   const flipRef = useRef()
   const hoverRef = useRef()
   const deselectRef = useRef()
   const endTurnRef = useRef()
   const skipRef = useRef()
 
+  const controlHighlightActions = new Set(['rotate', 'rotateReverse', 'flip', 'hover', 'deselect'])
+
   useEffect(() => {
     if (!bounceRef) return
     bounceRef.current = (action) => {
-      const map = { rotate: rotateRef, flip: flipRef, hover: hoverRef, deselect: deselectRef, endTurn: endTurnRef, skip: skipRef }
-      triggerBounce(map[action]?.current)
+      const map = { rotate: rotateRef, rotateReverse: rotateReverseRef, flip: flipRef, hover: hoverRef, deselect: deselectRef, endTurn: endTurnRef, skip: skipRef }
+      const el = map[action]?.current
+      triggerBounce(el)
+      if (controlHighlightActions.has(action)) triggerKeyHighlight(el)
     }
     return () => { if (bounceRef) bounceRef.current = null }
   })
@@ -127,7 +139,7 @@ export default function HUD({
                   </svg>
                   Rotate <kbd>R</kbd>
                 </button>
-                <button className={styles.controlBtn} onClick={onRotateReverse} title="Rotate 60° CCW (Shift+R)" data-action="rotate-reverse">
+                <button ref={rotateReverseRef} className={styles.controlBtn} onClick={onRotateReverse} title="Rotate 60° CCW (Shift+R)" data-action="rotate-reverse">
                   <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
                     <path fillRule="evenodd" d="M16 2a1 1 0 00-1 1v2.101a7.002 7.002 0 00-11.601 2.566 1 1 0 001.885.666A5.002 5.002 0 0114.001 7H11a1 1 0 000 2h5a1 1 0 001-1V3a1 1 0 00-1-1zm-.008 9.057a1 1 0 00-1.276.61A5.002 5.002 0 015.999 13H9a1 1 0 110-2H4a1 1 0 00-1 1v5a1 1 0 102 0v-2.101a7.002 7.002 0 0011.601-2.566 1 1 0 00-.61-1.276z" clipRule="evenodd"/>
                   </svg>
@@ -187,7 +199,7 @@ export default function HUD({
           ))}
         </div>
         {isOnline && onExit && (
-          <button className={styles.leaveBtn} onClick={() => setTimeout(onExit, 320)} data-traced="">Leave</button>
+          <button className={styles.leaveBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onExit, 350) }}>Leave</button>
         )}
         {/* Skip button — only shown when it's your turn and you haven't acted yet */}
         {isMyTurn && !waitingForEndTurn && !showSkipConfirm && onSkip && (
@@ -211,7 +223,7 @@ export default function HUD({
             End Turn <kbd>⇧↵</kbd>
           </button>
         )}
-        <button className={styles.endBtn} onClick={(e) => { triggerBounce(e.currentTarget); onEndGame() }}>
+        <button className={styles.endBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onEndGame, 350) }}>
           End Game
         </button>
       </div>

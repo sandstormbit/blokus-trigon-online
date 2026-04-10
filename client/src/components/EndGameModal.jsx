@@ -4,6 +4,13 @@ import PiecePreview from './PiecePreview.jsx'
 import { PLAYER_COLORS } from '../hooks/useGameState.js'
 import styles from './EndGameModal.module.css'
 
+function triggerBounce(el) {
+  if (!el) return
+  el.classList.remove('btn-bounce')
+  void el.offsetWidth
+  el.classList.add('btn-bounce')
+}
+
 function CrownIcon() {
   return (
     <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
@@ -12,7 +19,7 @@ function CrownIcon() {
   )
 }
 
-export default function EndGameModal({ players, playerCount, onNewGame, onViewBoard }) {
+export default function EndGameModal({ players, playerCount, onNewGame, onViewBoard, onClose }) {
   // For 2-player mode, consolidate by humanId
   const ranked = useMemo(() => {
     if (playerCount === 2) {
@@ -47,7 +54,7 @@ export default function EndGameModal({ players, playerCount, onNewGame, onViewBo
     : winner.color
 
   return (
-    <Modal title="Game over" wide>
+    <Modal title="Game over" wide onClose={onClose}>
       {/* Winner announcement */}
       <div className={styles.winnerBanner}>
         {isTie ? (
@@ -216,7 +223,7 @@ export default function EndGameModal({ players, playerCount, onNewGame, onViewBo
 
       <div className={styles.btnRow}>
         {onViewBoard && (
-          <button className={styles.viewBoardBtn} onClick={onViewBoard}>
+          <button className={styles.viewBoardBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onViewBoard, 350) }}>
             <svg viewBox="0 0 20 20" width="15" height="15" fill="currentColor">
               <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
               <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/>
@@ -224,7 +231,7 @@ export default function EndGameModal({ players, playerCount, onNewGame, onViewBo
             View board
           </button>
         )}
-        <button className={styles.newGameBtn} onClick={onNewGame}>
+        <button className={styles.newGameBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onNewGame, 350) }}>
           <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
             <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1z" clipRule="evenodd"/>
           </svg>

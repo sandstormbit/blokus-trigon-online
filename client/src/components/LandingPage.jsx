@@ -9,6 +9,17 @@ function triggerBounce(el) {
   el.classList.add('btn-bounce')
 }
 
+// For buttons whose className React will re-overwrite on state change (stripping btn-bounce),
+// drive the animation via inline style instead — React won't touch it unless the component has
+// an explicit `style` prop, which these buttons don't.
+function triggerBounceInline(el) {
+  if (!el) return
+  el.style.animation = 'none'
+  void el.offsetWidth
+  el.style.animation = 'btnBounce 0.48s cubic-bezier(0.34, 1.56, 0.64, 1) both'
+  setTimeout(() => { el.style.animation = '' }, 520)
+}
+
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || ''
 
 export default function LandingPage({ onPassAndPlay, onCreateRoom, onJoinRoom }) {
@@ -116,14 +127,14 @@ export default function LandingPage({ onPassAndPlay, onCreateRoom, onJoinRoom })
 
       {/* Actions */}
       <div className={styles.actions}>
-        <button className={`${styles.actionBtn} ${styles.actionBtnPrimary}`} onClick={(e) => { triggerBounce(e.currentTarget); openModal('create') }} data-traced="">
+        <button className={`${styles.actionBtn} ${styles.actionBtnPrimary}`} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => openModal('create'), 320) }} data-traced="">
           <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor">
             <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd"/>
           </svg>
           Create Game
         </button>
 
-        <button className={`${styles.actionBtn} ${styles.actionBtnSecondary}`} onClick={(e) => { triggerBounce(e.currentTarget); openModal('join') }} data-traced="">
+        <button className={`${styles.actionBtn} ${styles.actionBtnSecondary}`} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => openModal('join'), 320) }} data-traced="">
           <svg viewBox="0 0 20 20" width="18" height="18" fill="none">
             <path d="M4 10h12M10 4l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
@@ -137,7 +148,7 @@ export default function LandingPage({ onPassAndPlay, onCreateRoom, onJoinRoom })
           Local Game
         </button>
 
-        <button className={`${styles.actionBtn} ${styles.actionBtnGhost}`} onClick={() => openModal('how-to-play')}>
+        <button className={`${styles.actionBtn} ${styles.actionBtnGhost}`} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => openModal('how-to-play'), 320) }}>
           <svg viewBox="0 0 20 20" width="18" height="18" fill="none">
             <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.8"/>
             <path d="M10 9v5M10 7v.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -154,7 +165,7 @@ export default function LandingPage({ onPassAndPlay, onCreateRoom, onJoinRoom })
           <div className={styles.modalCard} onClick={e => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <span className={styles.modalTitle}>Create Game</span>
-              <button className={styles.modalClose} onClick={(e) => { triggerBounce(e.currentTarget); setModal(null) }}>
+              <button className={styles.modalClose} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => setModal(null), 350) }}>
                 <svg viewBox="0 0 14 14" width="13" height="13" fill="none">
                   <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
@@ -179,7 +190,7 @@ export default function LandingPage({ onPassAndPlay, onCreateRoom, onJoinRoom })
                   <button
                     key={n}
                     className={`${styles.countBtn} ${createCount === n ? styles.countBtnActive : ''}`}
-                    onClick={() => setCreateCount(n)}
+                    onClick={(e) => { triggerBounceInline(e.currentTarget); setCreateCount(n) }}
                   >{n}</button>
                 ))}
               </div>
@@ -190,7 +201,7 @@ export default function LandingPage({ onPassAndPlay, onCreateRoom, onJoinRoom })
                   <button
                     key={val}
                     className={`${styles.modeBtn} ${createMode === val ? styles.modeBtnActive : ''}`}
-                    onClick={() => setCreateMode(val)}
+                    onClick={(e) => { triggerBounceInline(e.currentTarget); setCreateMode(val) }}
                   >
                     <span className={styles.modeBtnLabel}>{label}</span>
                     <span className={styles.modeBtnDesc}>{desc}</span>
@@ -202,7 +213,7 @@ export default function LandingPage({ onPassAndPlay, onCreateRoom, onJoinRoom })
             </div>
 
             <div className={styles.modalFooter}>
-              <button className={styles.modalCancelBtn} onClick={(e) => { triggerBounce(e.currentTarget); setModal(null) }}>Cancel</button>
+              <button className={styles.modalCancelBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => setModal(null), 350) }}>Cancel</button>
               <button className={styles.modalPrimaryBtn} onClick={(e) => { triggerBounce(e.currentTarget); handleCreate() }} disabled={creating} data-traced="">
                 {creating ? 'Creating…' : 'Create Room'}
               </button>
@@ -217,7 +228,7 @@ export default function LandingPage({ onPassAndPlay, onCreateRoom, onJoinRoom })
           <div className={styles.modalCard} onClick={e => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <span className={styles.modalTitle}>Join Game</span>
-              <button className={styles.modalClose} onClick={(e) => { triggerBounce(e.currentTarget); setModal(null) }}>
+              <button className={styles.modalClose} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => setModal(null), 350) }}>
                 <svg viewBox="0 0 14 14" width="13" height="13" fill="none">
                   <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
@@ -287,7 +298,7 @@ export default function LandingPage({ onPassAndPlay, onCreateRoom, onJoinRoom })
             </div>
 
             <div className={styles.modalFooter}>
-              <button className={styles.modalCancelBtn} onClick={(e) => { triggerBounce(e.currentTarget); setModal(null) }}>Cancel</button>
+              <button className={styles.modalCancelBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => setModal(null), 350) }}>Cancel</button>
               <button className={styles.modalPrimaryBtn} onClick={(e) => { triggerBounce(e.currentTarget); handleJoin() }} disabled={joining} data-traced="">
                 {joining ? 'Joining…' : 'Join Room'}
               </button>

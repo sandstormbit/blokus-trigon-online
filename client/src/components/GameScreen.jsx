@@ -1,4 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+
+function triggerBounce(el) {
+  if (!el) return
+  el.classList.remove('btn-bounce')
+  void el.offsetWidth
+  el.classList.add('btn-bounce')
+}
 import Board from './Board.jsx'
 import PlayerPanel from './PlayerPanel.jsx'
 import HUD from './HUD.jsx'
@@ -53,7 +60,7 @@ export default function GameScreen({
 
   const hudBounceRef = useRef(null)
   const keyRotate = useCallback(() => { rotatePiece(); hudBounceRef.current?.('rotate') }, [rotatePiece])
-  const keyRotateReverse = useCallback(() => { rotatePieceReverse?.(); hudBounceRef.current?.('rotate') }, [rotatePieceReverse])
+  const keyRotateReverse = useCallback(() => { rotatePieceReverse?.(); hudBounceRef.current?.('rotateReverse') }, [rotatePieceReverse])
   const keyFlip = useCallback(() => { flipPiece(); hudBounceRef.current?.('flip') }, [flipPiece])
   const keyHover = useCallback(() => { toggleFreeHover(); hudBounceRef.current?.('hover') }, [toggleFreeHover])
   const keyDeselect = useCallback(() => { deselectPiece(); hudBounceRef.current?.('deselect') }, [deselectPiece])
@@ -141,10 +148,10 @@ export default function GameScreen({
             })()}
           </div>
           <div className={styles.finalBoardRight}>
-            <button className={styles.backToResultsBtn} onClick={() => setViewingFinalBoard(false)}>
+            <button className={styles.backToResultsBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => setViewingFinalBoard(false), 350) }}>
               Back to results
             </button>
-            <button className={styles.finalNewGameBtn} onClick={newGame}>
+            <button className={styles.finalNewGameBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(newGame, 350) }}>
               <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
                 <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1z" clipRule="evenodd"/>
               </svg>
@@ -255,6 +262,7 @@ export default function GameScreen({
           playerCount={playerCount}
           onNewGame={newGame}
           onViewBoard={() => setViewingFinalBoard(true)}
+          onClose={() => setViewingFinalBoard(true)}
         />
       )}
 

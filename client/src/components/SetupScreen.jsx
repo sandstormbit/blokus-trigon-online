@@ -13,7 +13,9 @@ function triggerBounce(el) {
 const PLAYER_COUNT_OPTIONS = [2, 3, 4]
 
 export default function SetupScreen({ onStart, onBack }) {
-  const [playerCount, setPlayerCount] = useState(4)
+  const [playerCount, setPlayerCount] = useState(4)  // drives button active state (immediate)
+  const [shownCount, setShownCount] = useState(4)    // drives player list rendering (animated)
+  const [hiding, setHiding] = useState(false)        // true during the fade-out phase
   const [playerNames, setPlayerNames] = useState(['', '', ''])
   const [playerColors, setPlayerColors] = useState([null, null, null, null])
   const [gameModes, setGameModes] = useState({
@@ -45,6 +47,16 @@ export default function SetupScreen({ onStart, onBack }) {
     setGameModes(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
+  const handleCountChange = (n) => {
+    if (n === playerCount) return
+    setPlayerCount(n)      // update active button immediately
+    setHiding(true)
+    setTimeout(() => {
+      setShownCount(n)     // swap content while faded out
+      setHiding(false)     // key change + class removal → new element fades in
+    }, 160)
+  }
+
   const slotColor = (idx) => playerColors[idx] || 'blue'
 
   const handleStart = () => {
@@ -74,7 +86,7 @@ export default function SetupScreen({ onStart, onBack }) {
     }
   }
 
-  const boardSize = playerCount === 3 ? 384 : 486
+  const boardSize = shownCount === 3 ? 384 : 486
 
   return (
     <div className={styles.container}>
@@ -97,7 +109,7 @@ export default function SetupScreen({ onStart, onBack }) {
         {onBack ? (
           <button
             className={styles.backBtn}
-            onClick={(e) => { triggerBounce(e.currentTarget); onBack() }}
+            onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onBack, 350) }}
             title="Back to main menu"
             type="button"
           >
@@ -150,7 +162,7 @@ export default function SetupScreen({ onStart, onBack }) {
                   <button
                     key={n}
                     className={`${styles.countBtn} ${playerCount === n ? styles.countBtnActive : ''}`}
-                    onClick={() => setPlayerCount(n)}
+                    onClick={() => handleCountChange(n)}
                   >
                     <span className={styles.countNum}>{n}</span>
                     <span className={styles.countLabel}>players</span>
@@ -160,12 +172,16 @@ export default function SetupScreen({ onStart, onBack }) {
               </div>
             </div>
 
-            {/* Player setup */}
+            {/* Player setup + board info — animated when count changes */}
+            <div
+              key={shownCount}
+              className={`${styles.playerContent} ${hiding ? styles.playerContentOut : ''}`}
+            >
             <div className={styles.section}>
               <label className={styles.sectionLabel}>Players</label>
               <div className={styles.playerList}>
 
-                {playerCount === 2 && gameModes.megaColors ? (
+                {shownCount === 2 && gameModes.megaColors ? (
                   // Mega Colors 2p: one color per player, gets 2 alpha sets
                   [0, 1].map(humanIdx => (
                     <div key={humanIdx} className={styles.playerRow}>
@@ -205,7 +221,7 @@ export default function SetupScreen({ onStart, onBack }) {
                       </div>
                     </div>
                   ))
-                ) : playerCount === 2 ? (
+                ) : shownCount === 2 ? (
                   // Standard 2p: 2 players each pick 2 color sets
                   [0, 1].map(humanIdx => (
                     <div key={humanIdx} className={styles.twoPlayerGroup}>
@@ -259,7 +275,7 @@ export default function SetupScreen({ onStart, onBack }) {
                   ))
                 ) : (
                   // 3 or 4 players: one color per player
-                  Array.from({ length: playerCount }, (_, i) => (
+                  Array.from({ length: shownCount }, (_, i) => (
                     <div key={i} className={styles.playerRow}>
                       <div
                         className={styles.playerNumber}
@@ -279,7 +295,7 @@ export default function SetupScreen({ onStart, onBack }) {
                       />
                       <div className={styles.colorPicker}>
                         {COLOR_KEYS.map(colorKey => {
-                          const isUsed = playerColors.slice(0, playerCount).some((c, j) => c === colorKey && j !== i)
+                          const isUsed = playerColors.slice(0, shownCount).some((c, j) => c === colorKey && j !== i)
                           const isSelected = playerColors[i] === colorKey
                           return (
                             <button
@@ -304,17 +320,18 @@ export default function SetupScreen({ onStart, onBack }) {
               <div className={styles.boardInfoIcon}>⬡</div>
               <div>
                 <div className={styles.boardInfoTitle}>
-                  {playerCount === 2 ? '2-player board' : `${playerCount}-player board`} — {boardSize} triangles
+                  {shownCount === 2 ? '2-player board' : `${shownCount}-player board`} — {boardSize} triangles
                 </div>
                 <div className={styles.boardInfoDesc}>
-                  {playerCount === 2 && gameModes.megaColors
+                  {shownCount === 2 && gameModes.megaColors
                     ? '2 × 44 pieces per player · 1 color each · Rules enforced'
-                    : playerCount === 2
+                    : shownCount === 2
                       ? '2 × 22 pieces per player · 4 color sets total · Rules enforced'
                       : `22 pieces per player · Local game · Rules enforced`}
                 </div>
               </div>
             </div>
+            </div>{/* end animated playerContent wrapper */}
 
             <button className={styles.startBtn} onClick={() => setTimeout(handleStart, 320)} data-traced="">
               <span>Start Game</span>

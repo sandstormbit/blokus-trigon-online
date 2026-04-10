@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import styles from './HowToPlayModal.module.css'
 
+function triggerBounce(el) {
+  if (!el) return
+  el.classList.remove('btn-bounce')
+  void el.offsetWidth
+  el.classList.add('btn-bounce')
+}
+
 const FRAMES = [
   {
     title: 'Welcome to Blokus Trigon',
@@ -101,7 +108,7 @@ export default function HowToPlayModal({ onClose }) {
         {/* Header */}
         <div className={styles.header}>
           <span className={styles.headerTitle}>How to Play</span>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
+          <button className={styles.closeBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onClose, 350) }} aria-label="Close">
             <svg viewBox="0 0 14 14" width="14" height="14" fill="none">
               <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
@@ -171,7 +178,7 @@ export default function HowToPlayModal({ onClose }) {
         <div className={styles.nav}>
           <button
             className={`${styles.navBtn} ${frame === 0 ? styles.navBtnDisabled : ''}`}
-            onClick={prev}
+            onClick={(e) => { triggerBounce(e.currentTarget); prev() }}
             disabled={frame === 0}
           >
             ← Prev
@@ -189,9 +196,9 @@ export default function HowToPlayModal({ onClose }) {
           </div>
 
           {frame < total - 1 ? (
-            <button className={styles.navBtn} onClick={next}>Next →</button>
+            <button className={styles.navBtn} onClick={(e) => { triggerBounce(e.currentTarget); next() }}>Next →</button>
           ) : (
-            <button className={`${styles.navBtn} ${styles.navBtnDone}`} onClick={onClose}>Got it!</button>
+            <button className={`${styles.navBtn} ${styles.navBtnDone}`} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onClose, 350) }}>Got it!</button>
           )}
         </div>
       </div>
