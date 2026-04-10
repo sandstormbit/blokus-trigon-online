@@ -15,6 +15,7 @@ export function useKeyboard({
   pendingPlacement,
   waitingForEndTurn,
   onRotate,
+  onRotateReverse,
   onFlip,
   onToggleHover,
   onDeselect,
@@ -58,7 +59,11 @@ export function useKeyboard({
         case 'r':
         case 'R':
           e.preventDefault()
-          onRotate()
+          if (e.shiftKey) {
+            onRotateReverse?.()
+          } else {
+            onRotate()
+          }
           break
         case 'f':
         case 'F':
@@ -85,6 +90,7 @@ export function useKeyboard({
     pendingPlacement,
     waitingForEndTurn,
     onRotate,
+    onRotateReverse,
     onFlip,
     onToggleHover,
     onDeselect,

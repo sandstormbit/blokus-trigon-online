@@ -26,6 +26,7 @@ function PassAndPlayApp({ onExit }) {
       selectPiece={game.selectPiece}
       deselectPiece={game.deselectPiece}
       rotatePiece={game.rotatePiece}
+      rotatePieceReverse={game.rotatePieceReverse}
       flipPiece={game.flipPiece}
       setHover={game.setHover}
       placePiece={game.placePiece}
@@ -87,6 +88,7 @@ function OnlineApp({ onPassAndPlay }) {
         selectPiece={online.selectPiece}
         deselectPiece={online.deselectPiece}
         rotatePiece={online.rotatePiece}
+        rotatePieceReverse={online.rotatePieceReverse}
         flipPiece={online.flipPiece}
         setHover={online.setHover}
         placePiece={online.placePiece}

@@ -349,6 +349,28 @@ export function useOnlineGame() {
     setPendingPlacement(null)
   }, [isMyTurn, selectedPieceId, gameState])
 
+  const rotatePieceReverse = useCallback(() => {
+    if (!isMyTurn() || !selectedPieceId || !gameState) return
+    setGameState(prev => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        players: prev.players.map((p, i) => {
+          if (i !== prev.currentPlayerIndex) return p
+          return {
+            ...p,
+            pieces: p.pieces.map(pc =>
+              pc.id === selectedPieceId
+                ? { ...pc, rotIndex: (pc.rotIndex + 5) % 6 }
+                : pc
+            ),
+          }
+        }),
+      }
+    })
+    setPendingPlacement(null)
+  }, [isMyTurn, selectedPieceId, gameState])
+
   const flipPiece = useCallback(() => {
     if (!isMyTurn() || !selectedPieceId || !gameState) return
     setGameState(prev => {
@@ -593,6 +615,7 @@ export function useOnlineGame() {
     selectPiece,
     deselectPiece,
     rotatePiece,
+    rotatePieceReverse,
     flipPiece,
     setHover,
     placePiece,

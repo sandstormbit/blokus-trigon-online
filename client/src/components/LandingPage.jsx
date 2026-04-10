@@ -168,7 +168,7 @@ export default function LandingPage({ onPassAndPlay, onCreateRoom, onJoinRoom })
                 placeholder="Enter your name"
                 value={createName}
                 onChange={e => setCreateName(e.target.value)}
-                maxLength={16}
+                maxLength={20}
                 autoFocus
                 onKeyDown={e => e.key === 'Enter' && handleCreate()}
               />
@@ -231,7 +231,7 @@ export default function LandingPage({ onPassAndPlay, onCreateRoom, onJoinRoom })
                 placeholder="Enter your name"
                 value={joinName}
                 onChange={e => setJoinName(e.target.value)}
-                maxLength={16}
+                maxLength={20}
                 autoFocus
               />
 
