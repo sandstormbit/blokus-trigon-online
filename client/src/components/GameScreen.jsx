@@ -19,6 +19,7 @@ export default function GameScreen({
   selectPiece,
   deselectPiece,
   rotatePiece,
+  rotatePieceReverse,
   flipPiece,
   setHover,
   placePiece,
@@ -52,6 +53,7 @@ export default function GameScreen({
 
   const hudBounceRef = useRef(null)
   const keyRotate = useCallback(() => { rotatePiece(); hudBounceRef.current?.('rotate') }, [rotatePiece])
+  const keyRotateReverse = useCallback(() => { rotatePieceReverse?.(); hudBounceRef.current?.('rotate') }, [rotatePieceReverse])
   const keyFlip = useCallback(() => { flipPiece(); hudBounceRef.current?.('flip') }, [flipPiece])
   const keyHover = useCallback(() => { toggleFreeHover(); hudBounceRef.current?.('hover') }, [toggleFreeHover])
   const keyDeselect = useCallback(() => { deselectPiece(); hudBounceRef.current?.('deselect') }, [deselectPiece])
@@ -81,6 +83,7 @@ export default function GameScreen({
     pendingPlacement: state.pendingPlacement,
     waitingForEndTurn: state.waitingForEndTurn,
     onRotate: keyRotate,
+    onRotateReverse: keyRotateReverse,
     onFlip: keyFlip,
     onToggleHover: keyHover,
     onDeselect: keyDeselect,
@@ -154,6 +157,7 @@ export default function GameScreen({
           currentPlayer={currentPlayer}
           selectedPiece={selectedPiece}
           onRotate={rotatePiece}
+          onRotateReverse={rotatePieceReverse}
           onFlip={flipPiece}
           onToggleHover={toggleFreeHover}
           freeHoverEnabled={freeHoverEnabled}

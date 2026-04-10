@@ -14,6 +14,7 @@ export default function HUD({
   currentPlayer,
   selectedPiece,
   onRotate,
+  onRotateReverse,
   onFlip,
   onToggleHover,
   freeHoverEnabled,
@@ -125,6 +126,12 @@ export default function HUD({
                     <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd"/>
                   </svg>
                   Rotate <kbd>R</kbd>
+                </button>
+                <button className={styles.controlBtn} onClick={onRotateReverse} title="Rotate 60° CCW (Shift+R)" data-action="rotate-reverse">
+                  <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
+                    <path fillRule="evenodd" d="M16 2a1 1 0 00-1 1v2.101a7.002 7.002 0 00-11.601 2.566 1 1 0 001.885.666A5.002 5.002 0 0114.001 7H11a1 1 0 000 2h5a1 1 0 001-1V3a1 1 0 00-1-1zm-.008 9.057a1 1 0 00-1.276.61A5.002 5.002 0 015.999 13H9a1 1 0 110-2H4a1 1 0 00-1 1v5a1 1 0 102 0v-2.101a7.002 7.002 0 0011.601-2.566 1 1 0 00-.61-1.276z" clipRule="evenodd"/>
+                  </svg>
+                  Reverse Rotate <kbd>⇧R</kbd>
                 </button>
                 <button ref={flipRef} className={styles.controlBtn} onClick={onFlip} title="Flip (F)" data-action="flip">
                   <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">

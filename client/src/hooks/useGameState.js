@@ -22,11 +22,12 @@ export const PLAYER_COLORS = {
 export const COLOR_KEYS = ['blue', 'red', 'green', 'yellow']
 
 const ACTIONS = {
-  START_GAME:        'START_GAME',
-  SELECT_PIECE:      'SELECT_PIECE',
-  DESELECT_PIECE:    'DESELECT_PIECE',
-  ROTATE_PIECE:      'ROTATE_PIECE',
-  FLIP_PIECE:        'FLIP_PIECE',
+  START_GAME:           'START_GAME',
+  SELECT_PIECE:         'SELECT_PIECE',
+  DESELECT_PIECE:       'DESELECT_PIECE',
+  ROTATE_PIECE:         'ROTATE_PIECE',
+  ROTATE_PIECE_REVERSE: 'ROTATE_PIECE_REVERSE',
+  FLIP_PIECE:           'FLIP_PIECE',
   SET_HOVER:         'SET_HOVER',
   PLACE_PIECE:       'PLACE_PIECE',
   CONFIRM_PLACEMENT: 'CONFIRM_PLACEMENT',
@@ -190,6 +191,12 @@ function gameReducer(state, action) {
         }))
       }
 
+      // Randomize player order
+      for (let i = players.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        const tmp = players[i]; players[i] = players[j]; players[j] = tmp
+      }
+
       players.forEach(p => {
         p.score = p.pieces.reduce((sum, pc) => sum + pc.size, 0)
       })
@@ -235,6 +242,21 @@ function gameReducer(state, action) {
           pieces: p.pieces.map(pc => {
             if (pc.id !== state.selectedPieceId) return pc
             return { ...pc, rotIndex: (pc.rotIndex + 1) % 6 }
+          })
+        }
+      })
+      return { ...state, players }
+    }
+
+    case ACTIONS.ROTATE_PIECE_REVERSE: {
+      if (!state.selectedPieceId) return state
+      const players = state.players.map((p, i) => {
+        if (i !== state.currentPlayerIndex) return p
+        return {
+          ...p,
+          pieces: p.pieces.map(pc => {
+            if (pc.id !== state.selectedPieceId) return pc
+            return { ...pc, rotIndex: (pc.rotIndex + 5) % 6 }
           })
         }
       })
@@ -428,7 +450,8 @@ export function useGameState() {
   }, [])
   const selectPiece    = useCallback(id  => dispatch({ type: ACTIONS.SELECT_PIECE,   payload: { pieceId: id } }), [])
   const deselectPiece  = useCallback(()  => dispatch({ type: ACTIONS.DESELECT_PIECE }), [])
-  const rotatePiece    = useCallback(()  => dispatch({ type: ACTIONS.ROTATE_PIECE }), [])
+  const rotatePiece         = useCallback(()  => dispatch({ type: ACTIONS.ROTATE_PIECE }), [])
+  const rotatePieceReverse  = useCallback(()  => dispatch({ type: ACTIONS.ROTATE_PIECE_REVERSE }), [])
   const flipPiece      = useCallback(()  => dispatch({ type: ACTIONS.FLIP_PIECE }), [])
   const setHover       = useCallback(c   => dispatch({ type: ACTIONS.SET_HOVER, payload: { cell: c } }), [])
   const placePiece     = useCallback((q, r) => dispatch({ type: ACTIONS.PLACE_PIECE, payload: { hoverQ: q, hoverR: r } }), [])
@@ -475,6 +498,7 @@ export function useGameState() {
     selectPiece,
     deselectPiece,
     rotatePiece,
+    rotatePieceReverse,
     flipPiece,
     setHover,
     placePiece,
