@@ -109,8 +109,9 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
   // ── Case B: shared TR/TL between two adjacent same-color DOWN cells ────────
   // vk = TR of DOWN(a-2, b) = TL of DOWN(a, b), with no same-color UP(a-1, b) filling the gap.
   // The gap UP, if present, would make this vertex its own apex (a corner) instead.
-  // Only forbidden if both DOWN cells belong to the same piece — if they are from two different
-  // pieces, vk is a legitimate corner of each piece and may be touched.
+  // Forbidden regardless of whether the two DOWN cells are from the same placed piece or
+  // different placed pieces — the combined flat top edge of two adjacent same-color cells
+  // always has vk as its interior midpoint, making any touch illegal.
   {
     const leftDown  = boardCells[`${a - 2},${b}`]
     const rightDown = boardCells[`${a},${b}`]
@@ -118,14 +119,14 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
         rightDown && rightDown.occupiedBy === playerId && (a     + b) % 2 === 1) {
       const gapUp = boardCells[`${a - 1},${b}`]
       if (!(gapUp && gapUp.occupiedBy === playerId && (a - 1 + b) % 2 === 0)) {
-        if (samePiece(boardCells, playerId, `${a - 2},${b}`, `${a},${b}`)) return true
+        return true
       }
     }
   }
 
   // ── Case C: shared BR/BL between two adjacent same-color UP cells ──────────
   // vk = BR of UP(a-2, b-1) = BL of UP(a, b-1), with no same-color DOWN(a-1, b-1) in the gap.
-  // Only forbidden when both UP cells belong to the same piece.
+  // Forbidden regardless of same/different placed pieces — combined flat bottom always has vk interior.
   {
     const leftUp  = boardCells[`${a - 2},${b - 1}`]
     const rightUp = boardCells[`${a},${b - 1}`]
@@ -133,7 +134,7 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
         rightUp && rightUp.occupiedBy === playerId && (a     + b - 1) % 2 === 0) {
       const gapDown = boardCells[`${a - 1},${b - 1}`]
       if (!(gapDown && gapDown.occupiedBy === playerId && (a - 1 + b - 1) % 2 === 1)) {
-        if (samePiece(boardCells, playerId, `${a - 2},${b - 1}`, `${a},${b - 1}`)) return true
+        return true
       }
     }
   }
@@ -141,7 +142,7 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
   // ── Case D: '/' diagonal — two same-color UP cells sharing a TR/BL diagonal vertex ──
   // vk is the shared vertex between UP(a-1, b) (its TR) and UP(a, b-1) (its BL),
   // with no same-color DOWN(a-1, b-1) bridging them (which would make vk a corner, not midpoint).
-  // Only forbidden when both UP cells belong to the same piece.
+  // Forbidden regardless of same/different placed pieces.
   {
     const upLeft  = boardCells[`${a - 1},${b}`]
     const upRight = boardCells[`${a},${b - 1}`]
@@ -149,7 +150,7 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
         upRight && upRight.occupiedBy === playerId && (a     + b - 1) % 2 === 0) {
       const gapDown = boardCells[`${a - 1},${b - 1}`]
       if (!(gapDown && gapDown.occupiedBy === playerId && (a - 1 + b - 1) % 2 === 1)) {
-        if (samePiece(boardCells, playerId, `${a - 1},${b}`, `${a},${b - 1}`)) return true
+        return true
       }
     }
   }
@@ -157,7 +158,7 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
   // ── Case D (symmetric): '/' diagonal — two same-color DOWN cells ───────────
   // vk is the shared vertex between DOWN(a-2, b) (its BR) and DOWN(a-1, b-1) (its TL),
   // with no same-color UP(a-1, b) bridging them.
-  // Only forbidden when both DOWN cells belong to the same piece.
+  // Forbidden regardless of same/different placed pieces.
   {
     const downLeft  = boardCells[`${a - 2},${b}`]
     const downRight = boardCells[`${a - 1},${b - 1}`]
@@ -165,24 +166,29 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
         downRight && downRight.occupiedBy === playerId && (a - 1 + b - 1) % 2 === 1) {
       const gapUp = boardCells[`${a - 1},${b}`]
       if (!(gapUp && gapUp.occupiedBy === playerId && (a - 1 + b) % 2 === 0)) {
-        if (samePiece(boardCells, playerId, `${a - 2},${b}`, `${a - 1},${b - 1}`)) return true
+        return true
       }
     }
   }
 
-  // ── Case E: '\' diagonal — two same-color UP cells sharing a TL/BR diagonal vertex ──
-  // vk is the shared vertex between UP(a-2, b-1) (its TR) and UP(a-1, b) (its BL... wait:
-  // UP(a-1, b) TL vertex = vk, UP(a-2, b-1) TR vertex = vk.
-  // No bridging DOWN(a-2, b) should be present.
-  // Only forbidden when both UP cells belong to the same piece.
+  // ── Case E: '\' diagonal — two same-color UP cells sharing a BR/apex diagonal vertex ──
+  // vk is the BR of UP(a-2, b-1) and the apex of UP(a-1, b).
+  // Their right-diagonal edges are parallel (\) and meet at vk, making vk an interior midpoint.
+  // The true gap-filler is DOWN(a-1, b-1): it is edge-adjacent to UP(a-2, b-1) (blocking
+  // upLeft's right-diagonal) and has its own apex at vk. When present, the boundary arrives
+  // at vk from DOWN(a-1, b-1)'s right edge instead of upLeft's right edge, changing direction
+  // and making vk a genuine corner rather than a midpoint.
+  // NOTE: the previously used gap cell DOWN(a-2, b) was wrong — it connects to upLeft via a
+  // flat face and is always interior when upRight is also present, so it never makes vk a corner.
+  // Forbidden regardless of same/different placed pieces.
   {
     const upLeft  = boardCells[`${a - 2},${b - 1}`]
     const upRight = boardCells[`${a - 1},${b}`]
     if (upLeft  && upLeft.occupiedBy  === playerId && (a - 2 + b - 1) % 2 === 0 &&
         upRight && upRight.occupiedBy === playerId && (a - 1 + b) % 2 === 0) {
-      const gapDown = boardCells[`${a - 2},${b}`]
-      if (!(gapDown && gapDown.occupiedBy === playerId && (a - 2 + b) % 2 === 1)) {
-        if (samePiece(boardCells, playerId, `${a - 2},${b - 1}`, `${a - 1},${b}`)) return true
+      const gapDown = boardCells[`${a - 1},${b - 1}`]
+      if (!(gapDown && gapDown.occupiedBy === playerId && (a - 1 + b - 1) % 2 === 1)) {
+        return true
       }
     }
   }
@@ -190,7 +196,7 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
   // ── Case E (symmetric): '\' diagonal — two same-color DOWN cells ───────────
   // vk is the shared vertex between DOWN(a-1, b-1) (its TR) and DOWN(a, b) (its TL),
   // with no same-color UP(a-1, b) bridging them.
-  // Only forbidden when both DOWN cells belong to the same piece.
+  // Forbidden regardless of same/different placed pieces.
   {
     const downLeft  = boardCells[`${a - 1},${b - 1}`]
     const downRight = boardCells[`${a},${b}`]
@@ -198,35 +204,36 @@ function isFlatEdgeMidpoint(a, b, boardCells, playerId) {
         downRight && downRight.occupiedBy === playerId && (a     + b) % 2 === 1) {
       const gapUp = boardCells[`${a - 1},${b}`]
       if (!(gapUp && gapUp.occupiedBy === playerId && (a - 1 + b) % 2 === 0)) {
-        if (samePiece(boardCells, playerId, `${a - 1},${b - 1}`, `${a},${b}`)) return true
+        return true
       }
     }
   }
 
-  return false
-}
+  // ── Case F: horizontal flat edge — DOWN-left TR meets UP-right BL ──────────
+  // vk is the shared TR of DOWN(a-2, b) and BL of UP(a, b-1).
+  // DOWN(a-2,b) contributes flat top segment (a-2,b)→(a,b); UP(a,b-1) contributes
+  // flat bottom segment (a,b)→(a+2,b). Combined flat edge at height b makes vk interior.
+  // These cells are not edge-adjacent, so edge_touch never blocks this — no gap check needed.
+  {
+    const downLeft = boardCells[`${a - 2},${b}`]
+    const upRight  = boardCells[`${a},${b - 1}`]
+    if (downLeft && downLeft.occupiedBy === playerId && (a - 2 + b) % 2 === 1 &&
+        upRight  && upRight.occupiedBy  === playerId && (a     + b - 1) % 2 === 0) {
+      return true
+    }
+  }
 
-/**
- * Return true if the two cells at key1 and key2 are connected by a path of
- * same-color edge-adjacent cells (i.e. they belong to the same placed piece).
- */
-function samePiece(boardCells, playerId, key1, key2) {
-  if (!boardCells[key1] || boardCells[key1].occupiedBy !== playerId) return false
-  if (!boardCells[key2] || boardCells[key2].occupiedBy !== playerId) return false
-
-  const visited = new Set([key1])
-  const queue = [key1]
-
-  while (queue.length) {
-    const k = queue.shift()
-    if (k === key2) return true
-    const [q, r] = k.split(',').map(Number)
-    for (const n of getEdgeNeighbors(q, r)) {
-      const nk = `${n.q},${n.r}`
-      if (!visited.has(nk) && boardCells[nk] && boardCells[nk].occupiedBy === playerId) {
-        visited.add(nk)
-        queue.push(nk)
-      }
+  // ── Case F (symmetric): horizontal flat edge — UP-left BR meets DOWN-right TL ─
+  // vk is the shared BR of UP(a-2, b-1) and TL of DOWN(a, b).
+  // UP(a-2,b-1) contributes flat bottom segment (a-2,b)→(a,b); DOWN(a,b) contributes
+  // flat top segment (a,b)→(a+2,b). Combined flat edge at height b makes vk interior.
+  // These cells are not edge-adjacent, so edge_touch never blocks this — no gap check needed.
+  {
+    const upLeft    = boardCells[`${a - 2},${b - 1}`]
+    const downRight = boardCells[`${a},${b}`]
+    if (upLeft    && upLeft.occupiedBy    === playerId && (a - 2 + b - 1) % 2 === 0 &&
+        downRight && downRight.occupiedBy === playerId && (a     + b) % 2 === 1) {
+      return true
     }
   }
 
