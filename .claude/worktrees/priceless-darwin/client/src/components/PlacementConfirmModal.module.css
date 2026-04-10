@@ -1,0 +1,67 @@
+.message {
+  font-size: 15px;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.cancelBtn {
+  flex: 1;
+  height: 40px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all var(--transition-fast);
+}
+
+.cancelBtn:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.confirmBtn {
+  flex: 1;
+  height: 40px;
+  background: var(--c);
+  border: none;
+  border-radius: var(--radius-md);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transition: all var(--transition-fast);
+}
+
+.confirmBtn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+kbd {
+  font-family: var(--font-body);
+  font-size: 9px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 3px;
+  padding: 1px 4px;
+}
