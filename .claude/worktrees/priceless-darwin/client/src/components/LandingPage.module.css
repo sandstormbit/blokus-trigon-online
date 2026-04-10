@@ -1,0 +1,419 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #0f1117;
+  color: #fff;
+  position: relative;
+  padding: 32px 16px;
+  gap: 40px;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 25% 20%, rgba(59,130,246,0.08) 0%, transparent 55%),
+    radial-gradient(ellipse at 75% 80%, rgba(139,92,246,0.05) 0%, transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.logoWrap {
+  margin-bottom: 4px;
+}
+
+.title {
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+  background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.tagline {
+  font-size: 14px;
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+/* ── Action buttons ─── */
+.actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.actionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+}
+
+.actionBtnPrimary {
+  background: #3B82F6;
+  border-color: #3B82F6;
+  color: #fff;
+}
+
+.actionBtnPrimary:hover {
+  background: #2563EB;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(59,130,246,0.35);
+}
+
+.actionBtnSecondary {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.85);
+}
+
+.actionBtnSecondary:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.25);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.actionBtnGhost {
+  background: transparent;
+  border-color: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.5);
+}
+
+.actionBtnGhost:hover {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.8);
+}
+
+.footer {
+  position: relative;
+  z-index: 1;
+  font-size: 11px;
+  color: rgba(255,255,255,0.2);
+  text-align: center;
+}
+
+/* ── Modal overlay ─── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 16px;
+}
+
+.modalCard {
+  background: #1a1f2e;
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.7);
+  overflow: hidden;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.modalTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.modalClose {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+
+.modalClose:hover { color: rgba(255,255,255,0.9); }
+
+.modalBody {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.modalFooter {
+  display: flex;
+  gap: 8px;
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+
+/* ── Form elements ─── */
+.formLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 6px;
+  display: block;
+}
+
+.formInput {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.formInput:focus {
+  border-color: rgba(59,130,246,0.6);
+  background: rgba(255,255,255,0.08);
+}
+
+.formInput::placeholder { color: rgba(255,255,255,0.25); }
+
+.codeInput {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.formError {
+  font-size: 12px;
+  color: #F87171;
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+/* ── Player count ─── */
+.countRow {
+  display: flex;
+  gap: 8px;
+}
+
+.countBtn {
+  flex: 1;
+  padding: 9px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.6);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.countBtn:hover { background: rgba(255,255,255,0.09); color: #fff; }
+
+.countBtnActive {
+  background: rgba(59,130,246,0.15) !important;
+  border-color: rgba(59,130,246,0.5) !important;
+  color: #60A5FA !important;
+}
+
+/* ── Room mode ─── */
+.modeRow {
+  display: flex;
+  gap: 8px;
+}
+
+.modeBtn {
+  flex: 1;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.modeBtn:hover { background: rgba(255,255,255,0.07); }
+
+.modeBtnActive {
+  background: rgba(59,130,246,0.1) !important;
+  border-color: rgba(59,130,246,0.4) !important;
+}
+
+.modeBtnLabel {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+  margin-bottom: 2px;
+}
+
+.modeBtnDesc {
+  display: block;
+  font-size: 11px;
+  color: rgba(255,255,255,0.35);
+  line-height: 1.3;
+}
+
+/* ── Modal buttons ─── */
+.modalCancelBtn {
+  flex: 1;
+  padding: 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.6);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.modalCancelBtn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+.modalPrimaryBtn {
+  flex: 2;
+  padding: 10px;
+  background: #3B82F6;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.modalPrimaryBtn:hover:not(:disabled) { background: #2563EB; }
+.modalPrimaryBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Public rooms ─── */
+.publicSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.publicHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.refreshBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: rgba(59,130,246,0.7);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.refreshBtn:hover { color: #3B82F6; }
+
+.publicLoading, .publicEmpty {
+  font-size: 12px;
+  color: rgba(255,255,255,0.3);
+  text-align: center;
+  padding: 12px;
+}
+
+.publicList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.publicRoom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  width: 100%;
+  text-align: left;
+}
+
+.publicRoom:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); }
+
+.publicRoomCode {
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.1em;
+  flex: 1;
+}
+
+.publicRoomInfo {
+  font-size: 12px;
+  color: rgba(255,255,255,0.4);
+}
+
+.publicRoomJoin {
+  font-size: 12px;
+  color: #60A5FA;
+  font-weight: 600;
+}

@@ -1,0 +1,356 @@
+.hud {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  height: 56px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  z-index: 10;
+  overflow: hidden;
+}
+
+.left {
+  flex: 0 0 200px;
+}
+
+/* Absolutely centered so it's always in the middle of the HUD
+   regardless of how wide the left or right sections are. */
+.center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.centerContent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: hudSlideIn 3000ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  pointer-events: auto;
+}
+
+@keyframes hudSlideIn {
+  0%   { opacity: 0; transform: translateY(-40%); }
+  18%  { opacity: 1; transform: translateY(0) scale(1.3); }
+  38%  { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.right {
+  flex: 0 0 auto;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Turn info */
+.turnInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: hudSlideIn 3000ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.turnDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.turnLabel {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.turnName {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.selectedIndicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.selectedDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.controlBtns {
+  display: flex;
+  gap: 4px;
+}
+
+.controlBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  transition: all var(--transition-fast);
+}
+
+.controlBtn:hover {
+  background: var(--bg-card);
+  border-color: var(--border-mid);
+  color: var(--text-primary);
+}
+
+.controlBtnGhost {
+  composes: controlBtn;
+  color: var(--text-muted);
+}
+
+kbd {
+  font-family: var(--font-body);
+  font-size: 9px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-mid);
+  border-radius: 3px;
+  padding: 1px 4px;
+  color: var(--text-muted);
+  margin-left: 2px;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Waiting indicator (online, not my turn) */
+.waitingIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.waitingSpinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.15);
+  border-top-color: #3B82F6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.waitingText {
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  font-style: italic;
+}
+
+/* Room code badge (right section) */
+.roomCodeBadge {
+  font-family: monospace;
+  font-size: 11px;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+/* Leave button */
+.leaveBtn {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm);
+  color: rgba(255,255,255,0.4);
+  font-size: 11px;
+  padding: 5px 9px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.leaveBtn:hover {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.8);
+}
+
+/* Mini scores */
+.miniScores {
+  display: flex;
+  gap: 8px;
+}
+
+.miniScore {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.miniDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+/* End game button */
+.endBtn {
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid rgba(239,68,68,0.35);
+  border-radius: var(--radius-sm);
+  color: rgba(239,68,68,0.7);
+  font-size: 12px;
+  font-weight: 500;
+  transition: all var(--transition-mid);
+}
+
+.endBtn:hover {
+  background: rgba(239,68,68,0.1);
+  border-color: #EF4444;
+  color: #EF4444;
+}
+
+/* Skip turn button */
+.skipBtn {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: var(--radius-sm);
+  color: rgba(255,255,255,0.45);
+  font-size: 12px;
+  font-weight: 500;
+  transition: all var(--transition-mid);
+  white-space: nowrap;
+}
+
+.skipBtn:hover {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.3);
+  color: rgba(255,255,255,0.75);
+}
+
+/* End Turn button — prominent, player-colored */
+.endTurnBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  background: rgba(59,130,246,0.15);
+  border: 1px solid rgba(59,130,246,0.5);
+  border-radius: var(--radius-sm);
+  color: #93c5fd;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background var(--transition-mid), border-color var(--transition-mid), color var(--transition-mid);
+  white-space: nowrap;
+  animation: endTurnHeartbeat 2s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+.endTurnBtn:hover {
+  background: rgba(59,130,246,0.28);
+  border-color: #3B82F6;
+  color: #bfdbfe;
+}
+
+@keyframes endTurnHeartbeat {
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(59,130,246,0.5); }
+  20%  { transform: scale(1.3);  box-shadow: 0 0 0 8px rgba(59,130,246,0); }
+  35%  { transform: scale(0.97); box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+  50%  { transform: scale(1);    box-shadow: 0 0 0 0 rgba(59,130,246,0.5); }
+  100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(59,130,246,0.5); }
+}
+
+/* Skip confirm inline UI */
+.skipConfirm {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.skipConfirmText {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.skipConfirmBtns {
+  display: flex;
+  gap: 6px;
+}
+
+.skipCancelBtn {
+  padding: 5px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  transition: all var(--transition-fast);
+}
+
+.skipCancelBtn:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.skipConfirmBtn {
+  padding: 5px 10px;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: var(--radius-sm);
+  color: var(--c, rgba(255,255,255,0.85));
+  font-size: 12px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.skipConfirmBtn:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.4);
+}
+
+/* End turn hint text (shown when waiting for end turn) */
+.endTurnHint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.endTurnHintText {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
