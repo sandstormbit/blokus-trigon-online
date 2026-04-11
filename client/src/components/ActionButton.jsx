@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useCallback } from 'react'
 import styles from './ActionButton.module.css'
 
 const COLORS = ['#ffffff', '#38bdf8', '#00bcd4', '#bae6fd', '#0284c7', '#e0f7fa', '#7dd3fc']
-const POOL_SIZE = 20      // max particles alive at once
+const POOL_SIZE = 6       // max particles alive at once
 const SPAWN_INTERVAL = 180 // ms between top-up spawns while hovering
 
 // Spawn spread across the button area with a random drift direction
