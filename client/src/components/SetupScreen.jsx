@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useLayoutEffect } from 'react'
 import { PLAYER_COLORS, COLOR_KEYS } from '../hooks/useGameState.js'
 import { GAME_MODES } from '../game/gameModes.js'
 import styles from './SetupScreen.module.css'
@@ -24,6 +24,9 @@ export default function SetupScreen({ onStart, onBack }) {
     megaColors: false,
   })
   const [modesOpen, setModesOpen] = useState(false)
+  const [shownMegaColors, setShownMegaColors] = useState(false) // drives layout (animated)
+  const playerContentRef = useRef(null)
+  const isFirstMount = useRef(true)
 
   const updateName = (idx, name) => {
     const updated = [...playerNames]
@@ -47,15 +50,66 @@ export default function SetupScreen({ onStart, onBack }) {
     setGameModes(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
+  const handleMegaColorsToggle = () => {
+    const newVal = !gameModes.megaColors
+    setGameModes(prev => ({ ...prev, megaColors: newVal })) // immediate for button active state
+
+    const outer = playerContentRef.current
+    if (outer) {
+      outer.style.transition = 'none'
+      outer.style.height = outer.offsetHeight + 'px'
+    }
+
+    setHiding(true)
+    setTimeout(() => {
+      setShownMegaColors(newVal)
+      setHiding(false)
+    }, 1000)
+  }
+
   const handleCountChange = (n) => {
     if (n === playerCount) return
     setPlayerCount(n)      // update active button immediately
+
+    // Pin current height so it doesn't snap when content swaps
+    const outer = playerContentRef.current
+    if (outer) {
+      outer.style.transition = 'none'
+      outer.style.height = outer.offsetHeight + 'px'
+    }
+
     setHiding(true)
     setTimeout(() => {
       setShownCount(n)     // swap content while faded out
       setHiding(false)     // key change + class removal → new element fades in
-    }, 160)
+    }, 1000)
   }
+
+  // After content swaps, animate height from pinned old value to new natural height
+  useLayoutEffect(() => {
+    if (isFirstMount.current) { isFirstMount.current = false; return }
+    const outer = playerContentRef.current
+    if (!outer) return
+
+    // Briefly measure the outer's true natural height (includes child margins
+    // captured by the BFC that overflow:hidden creates — inner.offsetHeight
+    // would miss collapsed margins and land at the wrong target)
+    const pinnedH = outer.style.height
+    outer.style.transition = 'none'
+    outer.style.height = 'auto'
+    const newH = outer.offsetHeight
+    outer.style.height = pinnedH  // restore pin before paint
+
+    requestAnimationFrame(() => {
+      outer.style.transition = 'height 1000ms ease'
+      outer.style.height = newH + 'px'
+    })
+    const timer = setTimeout(() => {
+      outer.style.height = ''
+      outer.style.transition = ''
+    }, 1200)
+    return () => clearTimeout(timer)
+  }, [shownCount, shownMegaColors])
 
   const slotColor = (idx) => playerColors[idx] || 'blue'
 
@@ -173,15 +227,16 @@ export default function SetupScreen({ onStart, onBack }) {
             </div>
 
             {/* Player setup + board info — animated when count changes */}
+            <div ref={playerContentRef} className={styles.playerContentOuter}>
             <div
-              key={shownCount}
+              key={`${shownCount}-${shownMegaColors}`}
               className={`${styles.playerContent} ${hiding ? styles.playerContentOut : ''}`}
             >
             <div className={styles.section}>
               <label className={styles.sectionLabel}>Players</label>
               <div className={styles.playerList}>
 
-                {shownCount === 2 && gameModes.megaColors ? (
+                {shownCount === 2 && shownMegaColors ? (
                   // Mega Colors 2p: one color per player, gets 2 alpha sets
                   [0, 1].map(humanIdx => (
                     <div key={humanIdx} className={styles.playerRow}>
@@ -323,7 +378,7 @@ export default function SetupScreen({ onStart, onBack }) {
                   {shownCount === 2 ? '2-player board' : `${shownCount}-player board`} — {boardSize} triangles
                 </div>
                 <div className={styles.boardInfoDesc}>
-                  {shownCount === 2 && gameModes.megaColors
+                  {shownCount === 2 && shownMegaColors
                     ? '2 × 44 pieces per player · 1 color each · Rules enforced'
                     : shownCount === 2
                       ? '2 × 22 pieces per player · 4 color sets total · Rules enforced'
@@ -331,7 +386,8 @@ export default function SetupScreen({ onStart, onBack }) {
                 </div>
               </div>
             </div>
-            </div>{/* end animated playerContent wrapper */}
+            </div>{/* end animated playerContent inner */}
+            </div>{/* end playerContentOuter */}
 
             <button className={styles.startBtn} onClick={() => setTimeout(handleStart, 320)} data-traced="">
               <span>Start Game</span>
@@ -354,7 +410,11 @@ export default function SetupScreen({ onStart, onBack }) {
                     <button
                       key={mode.id}
                       className={`${styles.modeToggle} ${active ? styles.modeToggleActive : ''} ${!available ? styles.modeToggleDisabled : ''}`}
-                      onClick={() => available && toggleMode(mode.id)}
+                      onClick={() => {
+                        if (!available) return
+                        if (mode.id === 'megaColors' && shownCount === 2) handleMegaColorsToggle()
+                        else toggleMode(mode.id)
+                      }}
                       disabled={!available}
                       type="button"
                     >

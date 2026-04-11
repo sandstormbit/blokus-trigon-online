@@ -6,8 +6,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 24px;
+  padding-top: clamp(32px, calc(50vh - 290px), 200px);
   overflow: auto;
   gap: 16px;
 }
@@ -385,14 +386,19 @@
   to   { opacity: 0; transform: translateY(-5px); }
 }
 
+/* Stable outer wrapper — height is JS-animated; clips content during transition */
+.playerContentOuter {
+  overflow: hidden;
+}
+
 /* Applied to the wrapper on every mount (key change) — fades in the new content */
 .playerContent {
-  animation: playerContentFadeIn 200ms ease both;
+  animation: playerContentFadeIn 1000ms ease both;
 }
 
 /* Applied while the old content is fading out, before key change remounts it */
 .playerContentOut {
-  animation: playerContentFadeOut 150ms ease both !important;
+  animation: playerContentFadeOut 1000ms ease both !important;
   pointer-events: none;
 }
 
