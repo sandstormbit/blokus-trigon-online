@@ -12,6 +12,22 @@ function triggerBounce(el) {
   el.classList.add('btn-bounce')
 }
 
+function triggerBounceInline(el) {
+  if (!el) return
+  el.style.animation = 'none'
+  void el.offsetWidth
+  el.style.animation = 'btnBounce 0.48s cubic-bezier(0.34, 1.56, 0.64, 1) both'
+  setTimeout(() => { el.style.animation = '' }, 520)
+}
+
+function triggerBounceInlineMd(el) {
+  if (!el) return
+  el.style.animation = 'none'
+  void el.offsetWidth
+  el.style.animation = 'btnBounceMd 0.48s cubic-bezier(0.34, 1.56, 0.64, 1) both'
+  setTimeout(() => { el.style.animation = '' }, 520)
+}
+
 export default function WaitingRoom({
   roomCode,
   roomMode,
@@ -23,6 +39,7 @@ export default function WaitingRoom({
   onUpdateSettings,
   onStartGame,
   onSelectColor,
+  onSelectColorSlot,
   onExit,
 }) {
   const [copied, setCopied] = useState(false)
@@ -31,6 +48,7 @@ export default function WaitingRoom({
 
   const shareUrl = `${window.location.origin}?join=${roomCode}`
   const gameModes = settings?.gameModes || {}
+  const isTwoPlayerStandard = maxPlayers === 2 && !gameModes.megaColors
 
   const copyCode = useCallback(() => {
     navigator.clipboard.writeText(roomCode).then(() => {
@@ -87,7 +105,7 @@ export default function WaitingRoom({
             {roomMode === 'private' ? 'Private Room' : 'Public Room'} · {maxPlayers} players
           </p>
         </div>
-        <button className={styles.exitBtn} onClick={onExit} title="Leave room">
+        <button className={styles.exitBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onExit, 350) }} title="Leave room">
           <svg viewBox="0 0 20 20" width="16" height="16" fill="none">
             <path d="M7 3H4a1 1 0 00-1 1v12a1 1 0 001 1h3M10 10H17M17 10l-3-3M17 10l-3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
@@ -135,7 +153,6 @@ export default function WaitingRoom({
               {Array.from({ length: maxPlayers }, (_, i) => {
                 const player = players[i]
                 const isMe = player?.humanId === myHumanId
-                const activeColor = player ? (player.color || DEFAULT_COLORS[i]) : null
                 return (
                   <div key={i} className={`${styles.playerSlot} ${player ? styles.playerSlotFilled : styles.playerSlotEmpty}`}>
                     <div className={styles.playerSlotNum}>{i + 1}</div>
@@ -147,26 +164,67 @@ export default function WaitingRoom({
                             {isMe && <span className={styles.youBadge}>You</span>}
                             {player.isHost && <span className={styles.hostBadge}>Host</span>}
                           </span>
-                          <div className={styles.colorSwatches}>
-                            {COLOR_KEYS.map(colorKey => {
-                              const isActive = activeColor === colorKey
-                              const takenByOther = players.some((p, j) => {
-                                if (!p || j === i) return false
-                                return (p.color || DEFAULT_COLORS[j]) === colorKey
-                              })
-                              return (
-                                <button
-                                  key={colorKey}
-                                  className={`${styles.colorSwatch} ${isActive ? styles.colorSwatchActive : ''} ${takenByOther && !isActive ? styles.colorSwatchTaken : ''}`}
-                                  style={{ '--swatch-bg': PLAYER_COLORS[colorKey].bg }}
-                                  onClick={isMe ? () => onSelectColor(isActive ? null : colorKey) : undefined}
-                                  disabled={!isMe || (takenByOther && !isActive)}
-                                  title={isMe ? (isActive ? `Deselect ${PLAYER_COLORS[colorKey].label}` : `Select ${PLAYER_COLORS[colorKey].label}`) : PLAYER_COLORS[colorKey].label}
-                                  type="button"
-                                />
-                              )
-                            })}
-                          </div>
+                          {isTwoPlayerStandard ? (
+                            // 2p standard mode: two color set rows per player
+                            <div className={styles.colorSets}>
+                              {[0, 1].map(setIdx => {
+                                const slotColor = setIdx === 0 ? player.color : player.color2
+                                return (
+                                  <div key={setIdx} className={styles.colorSetRow}>
+                                    <span className={styles.colorSetLabel}>Set {setIdx + 1}</span>
+                                    <div className={styles.colorSwatches}>
+                                      {COLOR_KEYS.map(colorKey => {
+                                        const isActive = slotColor === colorKey
+                                        const takenByOther = players.some(p => {
+                                          if (!p) return false
+                                          if (p.humanId === player.humanId) {
+                                            // Same player: block the other slot
+                                            return (setIdx === 0 ? p.color2 : p.color) === colorKey
+                                          }
+                                          // Different player: block both their slots
+                                          return p.color === colorKey || p.color2 === colorKey
+                                        })
+                                        return (
+                                          <button
+                                            key={colorKey}
+                                            className={`${styles.colorSwatch} ${isActive ? styles.colorSwatchActive : ''} ${takenByOther && !isActive ? styles.colorSwatchTaken : ''}`}
+                                            style={{ '--swatch-bg': PLAYER_COLORS[colorKey].bg }}
+                                            onClick={isMe ? () => onSelectColorSlot(setIdx, isActive ? null : colorKey) : undefined}
+                                            disabled={!isMe || (takenByOther && !isActive)}
+                                            title={isMe ? (isActive ? `Deselect ${PLAYER_COLORS[colorKey].label}` : `Select ${PLAYER_COLORS[colorKey].label}`) : PLAYER_COLORS[colorKey].label}
+                                            type="button"
+                                          />
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            // Standard single-color row
+                            <div className={styles.colorSwatches}>
+                              {COLOR_KEYS.map(colorKey => {
+                                const activeColor = player.color || DEFAULT_COLORS[i]
+                                const isActive = activeColor === colorKey
+                                const takenByOther = players.some((p, j) => {
+                                  if (!p || j === i) return false
+                                  return (p.color || DEFAULT_COLORS[j]) === colorKey
+                                })
+                                return (
+                                  <button
+                                    key={colorKey}
+                                    className={`${styles.colorSwatch} ${isActive ? styles.colorSwatchActive : ''} ${takenByOther && !isActive ? styles.colorSwatchTaken : ''}`}
+                                    style={{ '--swatch-bg': PLAYER_COLORS[colorKey].bg }}
+                                    onClick={isMe ? () => onSelectColor(isActive ? null : colorKey) : undefined}
+                                    disabled={!isMe || (takenByOther && !isActive)}
+                                    title={isMe ? (isActive ? `Deselect ${PLAYER_COLORS[colorKey].label}` : `Select ${PLAYER_COLORS[colorKey].label}`) : PLAYER_COLORS[colorKey].label}
+                                    type="button"
+                                  />
+                                )
+                              })}
+                            </div>
+                          )}
                         </div>
                         <div className={`${styles.connDot} ${player.connected ? styles.connDotOn : styles.connDotOff}`} title={player.connected ? 'Connected' : 'Disconnected'}/>
                       </>
@@ -227,9 +285,10 @@ export default function WaitingRoom({
                   <button
                     key={mode.id}
                     className={`${styles.modeToggle} ${active ? styles.modeToggleActive : ''} ${!available ? styles.modeToggleDisabled : ''}`}
-                    onClick={(e) => { if (available) { triggerBounce(e.currentTarget); toggleMode(mode.id) } }}
+                    onClick={(e) => { if (available) { triggerBounceInlineMd(e.currentTarget); toggleMode(mode.id) } }}
                     disabled={!available}
                     type="button"
+                    data-no-bounce
                   >
                     <div className={`${styles.modeCheck} ${active ? styles.modeCheckActive : ''}`}>
                       {active && (

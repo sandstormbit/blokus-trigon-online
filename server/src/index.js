@@ -54,6 +54,7 @@ function getRoomPlayers(room) {
     connected: p.connected,
     isHost: p.token === room.hostToken,
     color: p.color || null,
+    color2: p.color2 || null,
   }))
 }
 
@@ -326,14 +327,14 @@ io.on('connection', (socket) => {
   })
 
   // ── Select color (player chooses their color in waiting room) ─────────────
-  socket.on('select_color', ({ color }) => {
+  socket.on('select_color', ({ color, slotIdx = 0 }) => {
     const token = getTokenFromSocket(socket.id)
     if (!token) return
 
     const roomCode = [...socket.rooms].find(r => r !== socket.id)
     if (!roomCode) return
 
-    const result = updatePlayerColor(roomCode, token, color || null)
+    const result = updatePlayerColor(roomCode, token, color || null, slotIdx)
     if (result.error) return
 
     io.to(roomCode).emit('color_updated', { players: getRoomPlayers(result.room) })

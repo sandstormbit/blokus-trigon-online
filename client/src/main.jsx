@@ -14,7 +14,7 @@ function triggerBounce(btn) {
 
 document.addEventListener('click', e => {
   const btn = e.target.closest('button:not([disabled])')
-  if (btn) triggerBounce(btn)
+  if (btn && !btn.hasAttribute('data-no-bounce')) triggerBounce(btn)
 })
 
 document.addEventListener('keydown', e => {

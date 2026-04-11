@@ -10,6 +10,14 @@ function triggerBounce(el) {
   el.classList.add('btn-bounce')
 }
 
+function triggerBounceInline(el) {
+  if (!el) return
+  el.style.animation = 'none'
+  void el.offsetWidth
+  el.style.animation = 'btnBounce 0.48s cubic-bezier(0.34, 1.56, 0.64, 1) both'
+  setTimeout(() => { el.style.animation = '' }, 520)
+}
+
 const PLAYER_COUNT_OPTIONS = [2, 3, 4]
 
 export default function SetupScreen({ onStart, onBack }) {
@@ -410,13 +418,15 @@ export default function SetupScreen({ onStart, onBack }) {
                     <button
                       key={mode.id}
                       className={`${styles.modeToggle} ${active ? styles.modeToggleActive : ''} ${!available ? styles.modeToggleDisabled : ''}`}
-                      onClick={() => {
+                      onClick={(e) => {
                         if (!available) return
+                        triggerBounceInline(e.currentTarget)
                         if (mode.id === 'megaColors' && shownCount === 2) handleMegaColorsToggle()
                         else toggleMode(mode.id)
                       }}
                       disabled={!available}
                       type="button"
+                      data-no-bounce
                     >
                       <div className={`${styles.modeToggleCheck} ${active ? styles.modeToggleCheckActive : ''}`}>
                         {active && (
