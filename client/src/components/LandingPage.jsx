@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import HowToPlayModal from './HowToPlayModal.jsx'
+import ActionButton from './ActionButton.jsx'
 import styles from './LandingPage.module.css'
 
 function triggerBounce(el) {
@@ -127,26 +128,38 @@ export default function LandingPage({ onPassAndPlay, onCreateRoom, onJoinRoom })
 
       {/* Actions */}
       <div className={styles.actions}>
-        <button className={`${styles.actionBtn} ${styles.actionBtnPrimary}`} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => openModal('create'), 320) }} data-traced="">
+        <ActionButton
+          className={`${styles.actionBtn} ${styles.actionBtnPrimary}`}
+          onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => openModal('create'), 320) }}
+          circleColor="rgba(255,255,255,0.14)"
+        >
           <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor">
             <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd"/>
           </svg>
           Create Game
-        </button>
+        </ActionButton>
 
-        <button className={`${styles.actionBtn} ${styles.actionBtnSecondary}`} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => openModal('join'), 320) }} data-traced="">
+        <ActionButton
+          className={`${styles.actionBtn} ${styles.actionBtnSecondary}`}
+          onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => openModal('join'), 320) }}
+          circleColor="rgba(255,255,255,0.10)"
+        >
           <svg viewBox="0 0 20 20" width="18" height="18" fill="none">
             <path d="M4 10h12M10 4l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           Join Game
-        </button>
+        </ActionButton>
 
-        <button className={`${styles.actionBtn} ${styles.actionBtnGhost}`} onClick={() => setTimeout(onPassAndPlay, 320)} data-traced="">
+        <ActionButton
+          className={`${styles.actionBtn} ${styles.actionBtnGhost}`}
+          onClick={() => setTimeout(onPassAndPlay, 320)}
+          circleColor="rgba(255,255,255,0.07)"
+        >
           <svg viewBox="0 0 20 20" width="18" height="18" fill="none">
             <path d="M5 10.5h10M9 6.5l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           Local Game
-        </button>
+        </ActionButton>
 
         <button className={`${styles.actionBtn} ${styles.actionBtnGhost}`} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => openModal('how-to-play'), 320) }}>
           <svg viewBox="0 0 20 20" width="18" height="18" fill="none">
