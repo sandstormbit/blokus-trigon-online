@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import styles from './HowToPlayModal.module.css'
 
 function triggerBounce(el) {
@@ -86,6 +86,8 @@ const FRAMES = [
 export default function HowToPlayModal({ onClose }) {
   const [frame, setFrame] = useState(0)
   const total = FRAMES.length
+  const prevBtnRef = useRef(null)
+  const nextBtnRef = useRef(null)
 
   const prev = useCallback(() => setFrame(f => Math.max(0, f - 1)), [])
   const next = useCallback(() => setFrame(f => Math.min(total - 1, f + 1)), [total])
@@ -93,8 +95,8 @@ export default function HowToPlayModal({ onClose }) {
   useEffect(() => {
     const handler = (e) => {
       if (e.key === 'Escape') onClose()
-      if (e.key === 'ArrowRight') next()
-      if (e.key === 'ArrowLeft') prev()
+      if (e.key === 'ArrowRight') { triggerBounce(nextBtnRef.current); next() }
+      if (e.key === 'ArrowLeft') { triggerBounce(prevBtnRef.current); prev() }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -177,6 +179,7 @@ export default function HowToPlayModal({ onClose }) {
         {/* Navigation */}
         <div className={styles.nav}>
           <button
+            ref={prevBtnRef}
             className={`${styles.navBtn} ${frame === 0 ? styles.navBtnDisabled : ''}`}
             onClick={(e) => { triggerBounce(e.currentTarget); prev() }}
             disabled={frame === 0}
@@ -196,9 +199,9 @@ export default function HowToPlayModal({ onClose }) {
           </div>
 
           {frame < total - 1 ? (
-            <button className={styles.navBtn} onClick={(e) => { triggerBounce(e.currentTarget); next() }}>Next →</button>
+            <button ref={nextBtnRef} className={styles.navBtn} onClick={(e) => { triggerBounce(e.currentTarget); next() }}>Next →</button>
           ) : (
-            <button className={`${styles.navBtn} ${styles.navBtnDone}`} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onClose, 350) }}>Got it!</button>
+            <button ref={nextBtnRef} className={`${styles.navBtn} ${styles.navBtnDone}`} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onClose, 350) }}>Got it!</button>
           )}
         </div>
       </div>
