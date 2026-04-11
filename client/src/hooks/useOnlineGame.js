@@ -293,11 +293,21 @@ export function useOnlineGame() {
   }, [])
 
   const selectColorAction = useCallback((color) => {
-    socketRef.current?.emit('select_color', { color: color || null })
+    socketRef.current?.emit('select_color', { color: color || null, slotIdx: 0 })
     // Optimistic update
     setRoomPlayers(prev => prev.map(p =>
       p.humanId === myHumanId ? { ...p, color: color || null } : p
     ))
+  }, [myHumanId])
+
+  const selectColorSlotAction = useCallback((slotIdx, color) => {
+    socketRef.current?.emit('select_color', { color: color || null, slotIdx })
+    // Optimistic update
+    setRoomPlayers(prev => prev.map(p => {
+      if (p.humanId !== myHumanId) return p
+      if (slotIdx === 1) return { ...p, color2: color || null }
+      return { ...p, color: color || null }
+    }))
   }, [myHumanId])
 
   // ── Is it my turn? ──────────────────────────────────────────────────────────
@@ -605,6 +615,7 @@ export function useOnlineGame() {
     updateSettings: updateSettingsAction,
     startGame: startGameAction,
     selectColor: selectColorAction,
+    selectColorSlot: selectColorSlotAction,
     disconnect,
 
     // Game interface (mirrors useGameState)

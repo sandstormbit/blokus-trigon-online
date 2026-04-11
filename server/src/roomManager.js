@@ -50,6 +50,8 @@ export function createRoom(mode, maxPlayers, hostName, socketId) {
     token,
     socketId,
     connected: true,
+    color: null,
+    color2: null,
   }
 
   const room = {
@@ -88,6 +90,8 @@ export function joinRoom(code, playerName, socketId) {
     token,
     socketId,
     connected: true,
+    color: null,
+    color2: null,
   }
 
   room.players.push(player)
@@ -235,7 +239,7 @@ const DEFAULT_COLORS = ['blue', 'red', 'green', 'yellow']
  * by another player (by explicit choice or default slot assignment).
  * Pass color=null to clear (revert to default).
  */
-export function updatePlayerColor(code, token, color) {
+export function updatePlayerColor(code, token, color, slotIdx = 0) {
   const room = rooms.get(code)
   if (!room) return { error: 'room_not_found' }
   if (room.phase !== 'waiting') return { error: 'game_already_started' }
@@ -245,14 +249,23 @@ export function updatePlayerColor(code, token, color) {
 
   if (color !== null && color !== undefined) {
     const taken = room.players.some((p, i) => {
-      if (p.token === token) return false
-      const effective = p.color || DEFAULT_COLORS[i]
-      return effective === color
+      if (p.token === token) {
+        // Can't use the same color for both own slots
+        const myOtherColor = slotIdx === 0 ? p.color2 : p.color
+        return myOtherColor === color
+      }
+      // Check slot 0 (with positional default) and slot 1 (explicit only)
+      const effectiveSlot0 = p.color || DEFAULT_COLORS[i]
+      return effectiveSlot0 === color || p.color2 === color
     })
     if (taken) return { error: 'color_taken' }
   }
 
-  player.color = color || null
+  if (slotIdx === 1) {
+    player.color2 = color || null
+  } else {
+    player.color = color || null
+  }
   return { room }
 }
 

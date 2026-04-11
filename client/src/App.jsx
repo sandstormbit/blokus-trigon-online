@@ -72,6 +72,7 @@ function OnlineApp({ onPassAndPlay }) {
         onUpdateSettings={online.updateSettings}
         onStartGame={online.startGame}
         onSelectColor={online.selectColor}
+        onSelectColorSlot={online.selectColorSlot}
         onExit={handleExit}
       />
     )
