@@ -85,7 +85,10 @@ export default function WaitingRoom({
   }, [onStartGame, maxPlayers, players.length])
 
   const filledSlots = players.length
-  const canStart = isHost && filledSlots >= maxPlayers
+  const allColorsReady = isTwoPlayerStandard
+    ? filledSlots === maxPlayers && players.every(p => p && p.color && p.color2)
+    : true
+  const canStart = isHost && filledSlots >= maxPlayers && allColorsReady
 
   return (
     <div className={styles.container}>
@@ -257,7 +260,9 @@ export default function WaitingRoom({
               </button>
               {!canStart && (
                 <p className={styles.startHint}>
-                  Waiting for {maxPlayers - filledSlots} more player{maxPlayers - filledSlots !== 1 ? 's' : ''}…
+                  {filledSlots < maxPlayers
+                    ? `Waiting for ${maxPlayers - filledSlots} more player${maxPlayers - filledSlots !== 1 ? 's' : ''}…`
+                    : 'All players must select both color sets before starting.'}
                 </p>
               )}
             </div>

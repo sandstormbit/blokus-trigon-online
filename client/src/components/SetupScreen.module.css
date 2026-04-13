@@ -463,6 +463,12 @@
   transform: translateY(0);
 }
 
+.startBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .modesCard .sectionLabel {
   margin-bottom: 16px;
 }

@@ -121,6 +121,16 @@ export default function SetupScreen({ onStart, onBack }) {
 
   const slotColor = (idx) => playerColors[idx] || 'blue'
 
+  const allColorsSelected = (() => {
+    if (playerCount === 2 && gameModes.megaColors) {
+      return playerColors[0] !== null && playerColors[1] !== null
+    } else if (playerCount === 2) {
+      return playerColors.slice(0, 4).every(c => c !== null)
+    } else {
+      return playerColors.slice(0, playerCount).every(c => c !== null)
+    }
+  })()
+
   const handleStart = () => {
     if (playerCount === 2 && gameModes.megaColors) {
       const names = [
@@ -397,7 +407,7 @@ export default function SetupScreen({ onStart, onBack }) {
             </div>{/* end animated playerContent inner */}
             </div>{/* end playerContentOuter */}
 
-            <button className={styles.startBtn} onClick={() => setTimeout(handleStart, 320)} data-traced="">
+            <button className={styles.startBtn} onClick={() => setTimeout(handleStart, 320)} data-traced="" disabled={!allColorsSelected}>
               <span>Start Game</span>
               <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
                 <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd"/>
