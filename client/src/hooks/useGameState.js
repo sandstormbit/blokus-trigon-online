@@ -192,9 +192,18 @@ function gameReducer(state, action) {
       }
 
       // Randomize player order
-      for (let i = players.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1))
-        const tmp = players[i]; players[i] = players[j]; players[j] = tmp
+      if (humanCount === 2 && !gameModes.megaColors) {
+        // For 2p standard (4 slots): only randomize who goes first, preserving P1/P2 alternation
+        if (Math.random() < 0.5) {
+          const tmp = players[0]; players[0] = players[1]; players[1] = tmp
+          const tmp2 = players[2]; players[2] = players[3]; players[3] = tmp2
+        }
+      } else {
+        // For 3p, 4p, and 2p MegaColors: full Fisher-Yates shuffle
+        for (let i = players.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1))
+          const tmp = players[i]; players[i] = players[j]; players[j] = tmp
+        }
       }
 
       players.forEach(p => {

@@ -153,6 +153,21 @@ export function createGameState(roomPlayers, humanCount, gameModes = {}) {
     }))
   }
 
+  // Randomize player order
+  if (humanCount === 2 && !gameModes.megaColors) {
+    // For 2p standard (4 slots): only randomize who goes first, preserving P1/P2 alternation
+    if (Math.random() < 0.5) {
+      const tmp = players[0]; players[0] = players[1]; players[1] = tmp
+      const tmp2 = players[2]; players[2] = players[3]; players[3] = tmp2
+    }
+  } else {
+    // For 3p, 4p, and 2p MegaColors: full Fisher-Yates shuffle
+    for (let i = players.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      const tmp = players[i]; players[i] = players[j]; players[j] = tmp
+    }
+  }
+
   players.forEach(p => {
     p.score = p.pieces.reduce((sum, pc) => sum + pc.size, 0)
   })
@@ -177,6 +192,7 @@ export function createGameState(roomPlayers, humanCount, gameModes = {}) {
     waitingForEndTurn: false,
     lastPlacedCells: null,
     lastPlacedPlayerId: null,
+    lastPlacedPieceId: null,
     gameModes,
     requiredStartCells,
   }
@@ -249,6 +265,49 @@ export function processAction(state, action, humanId) {
           waitingForEndTurn: true,
           lastPlacedCells: boardCells.map(c => ({ q: c.q, r: c.r })),
           lastPlacedPlayerId: currentPlayer.id,
+          lastPlacedPieceId: pieceId,
+        }
+      }
+    }
+
+    case 'REMOVE_PIECE': {
+      if (!state.waitingForEndTurn || !state.lastPlacedCells || !state.lastPlacedPieceId) {
+        return { ok: false, error: 'cannot_remove_piece' }
+      }
+
+      const playerIdx = state.currentPlayerIndex
+
+      // Restore board cells
+      const newBoardCells = { ...state.board.cells }
+      for (const cell of state.lastPlacedCells) {
+        const id = `${cell.q},${cell.r}`
+        newBoardCells[id] = { ...newBoardCells[id], occupiedBy: null }
+      }
+      const newBoard = { ...state.board, cells: newBoardCells }
+
+      // Restore piece to unplaced
+      const newPlayers = state.players.map((p, i) => {
+        if (i !== playerIdx) return p
+        const newPieces = p.pieces.map(pc =>
+          pc.id === state.lastPlacedPieceId ? { ...pc, placed: false } : pc
+        )
+        const score = newPieces.filter(pc => !pc.placed).reduce((sum, pc) => sum + pc.size, 0)
+        return { ...p, pieces: newPieces, score }
+      })
+
+      return {
+        ok: true,
+        state: {
+          ...state,
+          board: newBoard,
+          players: newPlayers,
+          waitingForEndTurn: false,
+          selectedPieceId: null,
+          hoverCell: null,
+          pendingPlacement: null,
+          lastPlacedCells: null,
+          lastPlacedPlayerId: null,
+          lastPlacedPieceId: null,
         }
       }
     }

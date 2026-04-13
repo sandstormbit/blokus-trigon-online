@@ -232,12 +232,10 @@ export function getPublicRooms() {
     }))
 }
 
-const DEFAULT_COLORS = ['blue', 'red', 'green', 'yellow']
-
 /**
  * Update a player's chosen color. Validates the color is not already in use
- * by another player (by explicit choice or default slot assignment).
- * Pass color=null to clear (revert to default).
+ * by another player's explicit selection.
+ * Pass color=null to clear.
  */
 export function updatePlayerColor(code, token, color, slotIdx = 0) {
   const room = rooms.get(code)
@@ -254,9 +252,8 @@ export function updatePlayerColor(code, token, color, slotIdx = 0) {
         const myOtherColor = slotIdx === 0 ? p.color2 : p.color
         return myOtherColor === color
       }
-      // Check slot 0 (with positional default) and slot 1 (explicit only)
-      const effectiveSlot0 = p.color || DEFAULT_COLORS[i]
-      return effectiveSlot0 === color || p.color2 === color
+      // Check only explicitly selected colors (no defaults — defaults are applied at game start)
+      return p.color === color || p.color2 === color
     })
     if (taken) return { error: 'color_taken' }
   }

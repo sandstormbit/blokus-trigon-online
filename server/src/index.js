@@ -281,6 +281,11 @@ io.on('connection', (socket) => {
     socket.to(roomCode).emit('player_cursor_update', { humanId: player.humanId, ...data })
   })
 
+  // ── Remove piece (undo last placement before ending turn) ─────────────────
+  socket.on('remove_piece', (_, ack) => {
+    handleSimpleAction(socket, 'REMOVE_PIECE', ack)
+  })
+
   // ── Voluntary skip (current player skips their turn, not permanent) ───────
   socket.on('voluntary_skip', (_, ack) => {
     handleSimpleAction(socket, 'VOLUNTARY_SKIP', ack)
