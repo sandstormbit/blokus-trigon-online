@@ -42,6 +42,7 @@ export default function GameScreen({
   newGame,
   // Online-specific props (optional — not used in pass-and-play)
   isOnline = false,
+  isHostPlayer = true,
   myHumanId = null,
   isMyTurn = true,
   onlineRoomCode = null,
@@ -53,6 +54,7 @@ export default function GameScreen({
   const [freeHoverEnabled, setFreeHoverEnabled] = useState(true)
   const [showSkipConfirm, setShowSkipConfirm] = useState(false)
   const [showRemovePieceModal, setShowRemovePieceModal] = useState(false)
+  const [noMovesLocallyDismissed, setNoMovesLocallyDismissed] = useState(false)
   const toggleFreeHover = useCallback(() => setFreeHoverEnabled(v => !v), [])
 
   const selectedPiece = getSelectedPiece()
@@ -77,6 +79,9 @@ export default function GameScreen({
 
   // Clear skip confirm if the turn changes underneath us (edge case)
   useEffect(() => { setShowSkipConfirm(false) }, [state.currentPlayerIndex])
+
+  // Reset local no-moves dismissal whenever a new no-moves modal appears
+  useEffect(() => { setNoMovesLocallyDismissed(false) }, [state.noMovesModalPlayerId])
 
   const handleSkip = useCallback(() => setShowSkipConfirm(true), [])
   const handleCancelSkip = useCallback(() => setShowSkipConfirm(false), [])
@@ -105,9 +110,12 @@ export default function GameScreen({
   const { players, playerCount } = state
 
   // No-moves modal player
-  const noMovesPlayer = state.noMovesModalPlayerId
+  const noMovesPlayer = (state.noMovesModalPlayerId && !noMovesLocallyDismissed)
     ? players.find(p => p.id === state.noMovesModalPlayerId)
     : null
+  // In online games, only the player who ran out of moves triggers the server dismiss.
+  // Other players just close the modal locally and wait for the game state to update.
+  const isNoMovesPlayer = !isOnline || (noMovesPlayer?.humanId === myHumanId)
 
   // Mega Colors 2p has only 2 player slots instead of 4
   const isMegaColors2p = state.gameModes?.megaColors && playerCount === 2
@@ -151,12 +159,19 @@ export default function GameScreen({
             <button className={styles.backToResultsBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => setViewingFinalBoard(false), 350) }}>
               Back to results
             </button>
-            <button className={styles.finalNewGameBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(newGame, 350) }}>
-              <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
-                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1z" clipRule="evenodd"/>
-              </svg>
-              New game
-            </button>
+            {(!isOnline || isHostPlayer) ? (
+              <button className={styles.finalNewGameBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(newGame, 350) }}>
+                <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
+                  <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1z" clipRule="evenodd"/>
+                </svg>
+                New game
+              </button>
+            ) : (
+              <button className={styles.finalWaitingBtn} disabled>
+                <div className={styles.finalWaitingSpinner} />
+                Waiting for host…
+              </button>
+            )}
           </div>
         </div>
       ) : (
@@ -263,11 +278,15 @@ export default function GameScreen({
           onNewGame={newGame}
           onViewBoard={() => setViewingFinalBoard(true)}
           onClose={() => setViewingFinalBoard(true)}
+          isHost={!isOnline || isHostPlayer}
         />
       )}
 
       {noMovesPlayer && (
-        <NoMovesModal player={noMovesPlayer} onDismiss={dismissNoMoves} />
+        <NoMovesModal
+          player={noMovesPlayer}
+          onDismiss={isNoMovesPlayer ? dismissNoMoves : () => setNoMovesLocallyDismissed(true)}
+        />
       )}
 
       {showRemovePieceModal && (

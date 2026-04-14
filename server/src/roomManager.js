@@ -129,8 +129,12 @@ export function reconnectPlayer(token, socketId) {
 }
 
 /**
- * Handle a socket disconnecting. Marks the player as disconnected.
- * Returns { room, player } if found, or null.
+ * Handle a socket disconnecting.
+ * - During 'waiting' phase: removes the player entirely from the room.
+ *   If the leaving player was the host, host is transferred to the next player.
+ *   If the room becomes empty it is deleted (room returned as null).
+ * - During 'playing'/'ended': marks the player disconnected for reconnection.
+ * Returns { room, player } if found, or null. room may be null if deleted.
  */
 export function handleDisconnect(socketId) {
   const token = socketToToken.get(socketId)
@@ -145,7 +149,24 @@ export function handleDisconnect(socketId) {
   if (!room) return null
 
   const player = room.players.find(p => p.token === token)
-  if (player) {
+  if (!player) return { room, player: null }
+
+  if (room.phase === 'waiting') {
+    // Fully remove player from the waiting room
+    room.players = room.players.filter(p => p.token !== token)
+    tokenToRoom.delete(token)
+
+    // If room is now empty, clean it up
+    if (room.players.length === 0) {
+      rooms.delete(code)
+      return { room: null, player }
+    }
+
+    // Transfer host if the leaving player was the host
+    if (room.hostToken === token) {
+      room.hostToken = room.players[0].token
+    }
+  } else {
     player.connected = false
     player.socketId = null
   }

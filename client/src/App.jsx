@@ -104,6 +104,7 @@ function OnlineApp({ onPassAndPlay }) {
         cancelEndGame={online.cancelEndGame}
         newGame={online.newGame}
         isOnline={true}
+        isHostPlayer={online.isHostPlayer}
         myHumanId={online.myHumanId}
         isMyTurn={online.isMyTurn()}
         onlineRoomCode={online.roomCode}
