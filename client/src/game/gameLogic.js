@@ -286,6 +286,21 @@ export function isLegalPlacement(boardCells, newCells, playerId, isFirstPiece, g
   const hasVertexTouch = [...newVertexKeys].some(vk => colorVertexSet.has(vk))
   if (!hasVertexTouch) return { legal: false, reason: 'no_vertex_touch' }
 
+  // Build per-piece data once — used by both Rule 2b and Rule 4.
+  // Checking flat-edge midpoints must be done per piece; cells from two
+  // different pieces can accidentally match a midpoint pattern even though
+  // no flat edge actually spans them (e.g. three pieces meeting at one vertex).
+  const existingPieces = getColorPieces(boardCells, playerId)
+  const existingPieceData = existingPieces.map(pieceCells => {
+    const cellsMap = {}
+    const vertexSet = new Set()
+    for (const { q, r } of pieceCells) {
+      cellsMap[`${q},${r}`] = { q, r, occupiedBy: playerId }
+      for (const vk of getCellVertexKeys(q, r)) vertexSet.add(vk)
+    }
+    return { cellsMap, vertexSet }
+  })
+
   // Rule 2b: flat-edge midpoint constraint.
   const NEW_PIECE_PID = 999
   const newPieceCellsMap = {}
@@ -296,8 +311,10 @@ export function isLegalPlacement(boardCells, newCells, playerId, isFirstPiece, g
   for (const vk of newVertexKeys) {
     if (!colorVertexSet.has(vk)) continue
     const [a, b] = vk.split(',').map(Number)
-    if (isFlatEdgeMidpoint(a, b, boardCells, playerId)) {
-      return { legal: false, reason: 'flat_edge_midpoint_touch' }
+    for (const { cellsMap } of existingPieceData) {
+      if (isFlatEdgeMidpoint(a, b, cellsMap, playerId)) {
+        return { legal: false, reason: 'flat_edge_midpoint_touch' }
+      }
     }
     if (isFlatEdgeMidpoint(a, b, newPieceCellsMap, NEW_PIECE_PID)) {
       return { legal: false, reason: 'flat_edge_midpoint_touch' }
@@ -305,12 +322,7 @@ export function isLegalPlacement(boardCells, newCells, playerId, isFirstPiece, g
   }
 
   // Rule 4: no single existing same-color piece may be touched at >1 vertex
-  const existingPieces = getColorPieces(boardCells, playerId)
-  for (const pieceCells of existingPieces) {
-    const pieceVertexSet = new Set()
-    for (const { q, r } of pieceCells) {
-      for (const vk of getCellVertexKeys(q, r)) pieceVertexSet.add(vk)
-    }
+  for (const { vertexSet: pieceVertexSet } of existingPieceData) {
     const touchCount = [...newVertexKeys].filter(vk => pieceVertexSet.has(vk)).length
     if (touchCount > 1) return { legal: false, reason: 'multi_vertex_touch' }
   }
