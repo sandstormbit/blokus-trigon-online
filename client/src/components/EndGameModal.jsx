@@ -19,7 +19,7 @@ function CrownIcon() {
   )
 }
 
-export default function EndGameModal({ players, playerCount, onNewGame, onViewBoard, onClose }) {
+export default function EndGameModal({ players, playerCount, onNewGame, onViewBoard, onClose, isHost = true }) {
   // For 2-player mode, consolidate by humanId
   const ranked = useMemo(() => {
     if (playerCount === 2) {
@@ -231,12 +231,19 @@ export default function EndGameModal({ players, playerCount, onNewGame, onViewBo
             View board
           </button>
         )}
-        <button className={styles.newGameBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onNewGame, 350) }}>
-          <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
-            <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1z" clipRule="evenodd"/>
-          </svg>
-          New game
-        </button>
+        {isHost ? (
+          <button className={styles.newGameBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onNewGame, 350) }}>
+            <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
+              <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1z" clipRule="evenodd"/>
+            </svg>
+            New game
+          </button>
+        ) : (
+          <button className={styles.waitingNewGameBtn} disabled>
+            <div className={styles.waitingSpinner} />
+            Waiting for host to start a new game…
+          </button>
+        )}
       </div>
     </Modal>
   )

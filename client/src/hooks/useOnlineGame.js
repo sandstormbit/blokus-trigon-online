@@ -67,6 +67,10 @@ export function useOnlineGame() {
   // Live cursors for other players: { [humanId]: { hoverCell, selectedPieceId, rotIndex, flipped } }
   const [otherPlayersCursors, setOtherPlayersCursors] = useState({})
 
+  // Ref to access latest myHumanId inside socket event handlers (which are bound once)
+  const myHumanIdRef = useRef(myHumanId)
+  useEffect(() => { myHumanIdRef.current = myHumanId }, [myHumanId])
+
   // Cursor emission refs — track latest state without re-creating the interval
   const cursorStateRef = useRef(null)
   const cursorVersionRef = useRef(0)
@@ -88,7 +92,12 @@ export function useOnlineGame() {
     // ── Waiting room events ───────────────────────────────────────────────────
     socket.on('player_joined', ({ players }) => setRoomPlayers(players))
     socket.on('player_reconnected', ({ players }) => setRoomPlayers(players))
-    socket.on('player_disconnected', ({ players }) => setRoomPlayers(players))
+    socket.on('player_disconnected', ({ players }) => {
+      setRoomPlayers(players)
+      // Update host status in case the host left and it was transferred to us
+      const me = players.find(p => p.humanId === myHumanIdRef.current)
+      if (me) setIsHostPlayer(me.isHost)
+    })
     socket.on('settings_updated', ({ settings: s }) => setSettings(s))
     socket.on('color_updated', ({ players }) => setRoomPlayers(players))
 
