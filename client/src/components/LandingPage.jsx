@@ -227,7 +227,7 @@ export default function LandingPage({ onPassAndPlay, onCreateRoom, onJoinRoom })
 
             <div className={styles.modalFooter}>
               <button className={styles.modalCancelBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => setModal(null), 350) }}>Cancel</button>
-              <button className={styles.modalPrimaryBtn} onClick={(e) => { triggerBounceInline(e.currentTarget); setTimeout(handleCreate, 350) }} disabled={creating} data-traced="">
+              <button className={styles.modalPrimaryBtn} onClick={(e) => { triggerBounceInline(e.currentTarget); setTimeout(handleCreate, 350) }} disabled={creating}>
                 {creating ? 'Creating…' : 'Create Room'}
               </button>
             </div>
@@ -312,7 +312,7 @@ export default function LandingPage({ onPassAndPlay, onCreateRoom, onJoinRoom })
 
             <div className={styles.modalFooter}>
               <button className={styles.modalCancelBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => setModal(null), 350) }}>Cancel</button>
-              <button className={styles.modalPrimaryBtn} onClick={(e) => { triggerBounce(e.currentTarget); handleJoin() }} disabled={joining} data-traced="">
+              <button className={styles.modalPrimaryBtn} onClick={(e) => { triggerBounce(e.currentTarget); handleJoin() }} disabled={joining}>
                 {joining ? 'Joining…' : 'Join Room'}
               </button>
             </div>

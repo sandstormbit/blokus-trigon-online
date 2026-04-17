@@ -313,17 +313,20 @@
 
 .aiToggle {
   flex-shrink: 0;
-  width: 30px;
   height: 30px;
+  padding: 0 9px;
   border-radius: 8px;
-  border: 1.5px solid var(--border-base);
+  border: 1.5px solid var(--border-mid);
   background: var(--bg-card);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
 
 .aiToggle:hover {
@@ -334,6 +337,7 @@
 .aiToggleActive {
   border-color: #3B82F6;
   background: rgba(59, 130, 246, 0.12);
+  color: #3B82F6;
 }
 
 .aiLabel {
@@ -341,6 +345,7 @@
   height: 30px;
   display: flex;
   align-items: center;
+  gap: 6px;
   padding: 0 10px;
   font-size: 12px;
   font-weight: 500;
@@ -349,7 +354,17 @@
   border: 1.5px solid rgba(59, 130, 246, 0.3);
   border-radius: 8px;
   min-width: 0;
-  white-space: nowrap;
+  overflow: hidden;
+}
+
+.aiDiffBadge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(59, 130, 246, 0.7);
+  background: rgba(59, 130, 246, 0.15);
+  border-radius: 4px;
+  padding: 1px 5px;
 }
 
 .colorSwatch {

@@ -143,14 +143,21 @@ export function addAIPlayer(code, difficulty = 'normal') {
   if (room.players.length >= room.maxPlayers) return { error: 'room_full' }
 
   const validDifficulty = difficulty === 'hard' ? 'hard' : 'normal'
+  const allColors = ['blue', 'red', 'green', 'yellow']
+  const takenColors = new Set(room.players.flatMap(p => [p.color, p.color2]).filter(Boolean))
+  const available = allColors.filter(c => !takenColors.has(c))
+  const isTwoPlayerStandard = room.maxPlayers === 2 && !room.settings?.gameModes?.megaColors
+  const aiColor = available[0] || null
+  const aiColor2 = isTwoPlayerStandard ? (available[1] || null) : null
+
   const aiPlayer = {
     humanId: room.players.length + 1,
     name: generateAIName(),
     token: null,
     socketId: null,
     connected: true,
-    color: null,
-    color2: null,
+    color: aiColor,
+    color2: aiColor2,
     isAI: true,
     aiDifficulty: validDifficulty,
   }

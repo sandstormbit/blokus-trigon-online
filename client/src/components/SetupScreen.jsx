@@ -23,6 +23,25 @@ const PLAYER_COUNT_OPTIONS = [2, 3, 4]
 const AI_CYCLE = [null, { isAI: true, difficulty: 'normal' }, { isAI: true, difficulty: 'hard' }]
 const AI_LABELS = { null: 'Human', normal: 'AI (Normal)', hard: 'AI (Hard)' }
 
+const AI_ADJECTIVES = [
+  'Bouncy', 'Breezy', 'Bubbly', 'Cheerful', 'Cozy', 'Dapper', 'Dazzling', 'Dizzy', 'Dreamy',
+  'Fizzy', 'Fluffy', 'Frosty', 'Fuzzy', 'Giddy', 'Gleaming', 'Golden', 'Jolly', 'Jovial',
+  'Lively', 'Mellow', 'Mighty', 'Minty', 'Nimble', 'Perky', 'Plucky', 'Radiant', 'Rowdy',
+  'Sassy', 'Shiny', 'Sleepy', 'Snappy', 'Snazzy', 'Speedy', 'Spunky', 'Starry', 'Sunny',
+  'Tiny', 'Wiggly', 'Wobbly', 'Zany', 'Zippy',
+]
+const AI_NOUNS = [
+  'Axolotl', 'Badger', 'Bunny', 'Capybara', 'Chameleon', 'Chipmunk', 'Dragon', 'Dragonfly',
+  'Fox', 'Frog', 'Gecko', 'Hamster', 'Hedgehog', 'Iguana', 'Jellyfish', 'Koala',
+  'Lemur', 'Llama', 'Narwhal', 'Octopus', 'Otter', 'Penguin', 'Platypus', 'Puffin',
+  'Quokka', 'Sloth', 'Snail', 'Squirrel', 'Unicorn', 'Wombat', 'Yeti',
+]
+function generateAIName() {
+  const adj = AI_ADJECTIVES[Math.floor(Math.random() * AI_ADJECTIVES.length)]
+  const noun = AI_NOUNS[Math.floor(Math.random() * AI_NOUNS.length)]
+  return `${adj} ${noun}`
+}
+
 export default function SetupScreen({ onStart, onBack }) {
   const [playerCount, setPlayerCount] = useState(4)  // drives button active state (immediate)
   const [shownCount, setShownCount] = useState(4)    // drives player list rendering (animated)
@@ -48,18 +67,37 @@ export default function SetupScreen({ onStart, onBack }) {
   }
 
   const cycleAI = (idx) => {
-    // At least one player must remain human
-    const updated = [...playerAI]
+    const updatedAI = [...playerAI]
+    const updatedColors = [...playerColors]
+    const updatedNames = [...playerNames]
+
     const currentCycleIdx = AI_CYCLE.findIndex(a =>
-      a === null ? updated[idx] === null : (updated[idx]?.difficulty === a?.difficulty)
+      a === null ? updatedAI[idx] === null : (updatedAI[idx]?.difficulty === a?.difficulty)
     )
     const nextCycleIdx = (currentCycleIdx + 1) % AI_CYCLE.length
     const next = AI_CYCLE[nextCycleIdx]
+    const wasHuman = updatedAI[idx] === null
     // Prevent all slots being AI
-    const humanCount = updated.filter((a, i) => i !== idx && a === null).length
+    const humanCount = updatedAI.filter((a, i) => i !== idx && a === null).length
     if (next !== null && humanCount === 0) return
-    updated[idx] = next
-    setPlayerAI(updated)
+
+    if (next !== null && wasHuman) {
+      // Transitioning human → AI: auto-assign an available color and generate a name
+      const taken = updatedColors.slice(0, shownCount).filter((c, i) => i !== idx && c !== null)
+      const available = COLOR_KEYS.filter(c => !taken.includes(c))
+      updatedColors[idx] = available[0] || COLOR_KEYS[idx % COLOR_KEYS.length]
+      updatedNames[idx] = generateAIName()
+    } else if (next === null) {
+      // Transitioning AI → human: clear the auto-assigned values
+      updatedColors[idx] = null
+      updatedNames[idx] = ''
+    }
+    // Normal → Hard: keep existing name and color
+
+    updatedAI[idx] = next
+    setPlayerAI(updatedAI)
+    setPlayerColors(updatedColors)
+    setPlayerNames(updatedNames)
   }
 
   const updateColor = (slotIdx, color) => {
@@ -156,24 +194,19 @@ export default function SetupScreen({ onStart, onBack }) {
   })()
 
   const handleStart = () => {
-    const AI_NAMES = { normal: 'AI (Normal)', hard: 'AI (Hard)' }
     if (playerCount === 2 && gameModes.megaColors) {
-      const names = [0, 1].map(i =>
-        playerAI[i]?.isAI ? AI_NAMES[playerAI[i].difficulty] : (playerNames[i].trim() || `Player ${i + 1}`)
-      )
+      const names = [0, 1].map(i => playerNames[i].trim() || `Player ${i + 1}`)
       const defaults = ['blue', 'red']
       const resolved = [playerColors[0] || defaults[0], playerColors[1] || defaults[1]]
       onStart(2, names, resolved, gameModes, playerAI.slice(0, 2))
     } else if (playerCount === 2) {
-      const names = [0, 1].map(i =>
-        playerAI[i]?.isAI ? AI_NAMES[playerAI[i].difficulty] : (playerNames[i].trim() || `Player ${i + 1}`)
-      )
+      const names = [0, 1].map(i => playerNames[i].trim() || `Player ${i + 1}`)
       const defaults = ['blue', 'red', 'green', 'yellow']
       const resolved = playerColors.slice(0, 4).map((c, i) => c || defaults[i])
       onStart(2, names, resolved, gameModes, playerAI.slice(0, 2))
     } else {
       const names = Array.from({ length: playerCount }, (_, i) =>
-        playerAI[i]?.isAI ? AI_NAMES[playerAI[i].difficulty] : (playerNames[i].trim() || `Player ${i + 1}`)
+        playerNames[i].trim() || (playerAI[i]?.isAI ? generateAIName() : `Player ${i + 1}`)
       )
       const defaults = ['blue', 'red', 'green', 'yellow']
       const resolved = playerColors.slice(0, playerCount).map((c, i) => c || defaults[i])
@@ -385,7 +418,10 @@ export default function SetupScreen({ onStart, onBack }) {
                         <span style={{ color: PLAYER_COLORS[slotColor(i)].bg }}>{i + 1}</span>
                       </div>
                       {isAI ? (
-                        <span className={styles.aiLabel}>{AI_LABELS[playerAI[i].difficulty]}</span>
+                        <span className={styles.aiLabel}>
+                          {playerNames[i] || AI_LABELS[playerAI[i].difficulty]}
+                          <span className={styles.aiDiffBadge}>{playerAI[i].difficulty === 'hard' ? 'Hard' : 'Normal'}</span>
+                        </span>
                       ) : (
                         <input
                           className={styles.nameInput}
@@ -401,9 +437,9 @@ export default function SetupScreen({ onStart, onBack }) {
                         title={`Toggle AI (current: ${isAI ? AI_LABELS[playerAI[i].difficulty] : 'Human'})`}
                         type="button"
                       >
-                        {isAI ? '🤖' : '👤'}
+                        AI
                       </button>
-                      <div className={styles.colorPicker} style={{ opacity: isAI ? 0.4 : 1, pointerEvents: isAI ? 'none' : 'auto' }}>
+                      <div className={styles.colorPicker} style={{ pointerEvents: isAI ? 'none' : 'auto' }}>
                         {COLOR_KEYS.map(colorKey => {
                           const isUsed = playerColors.slice(0, shownCount).some((c, j) => c === colorKey && j !== i)
                           const isSelected = playerColors[i] === colorKey
@@ -445,7 +481,7 @@ export default function SetupScreen({ onStart, onBack }) {
             </div>{/* end animated playerContent inner */}
             </div>{/* end playerContentOuter */}
 
-            <button className={styles.startBtn} onClick={() => setTimeout(handleStart, 320)} data-traced="" disabled={!allColorsSelected}>
+            <button className={styles.startBtn} onClick={() => setTimeout(handleStart, 320)} disabled={!allColorsSelected}>
               <span>Start Game</span>
               <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
                 <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd"/>
