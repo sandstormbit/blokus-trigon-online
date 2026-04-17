@@ -311,6 +311,47 @@
   flex-shrink: 0;
 }
 
+.aiToggle {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border-base);
+  background: var(--bg-card);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.aiToggle:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-elevated);
+}
+
+.aiToggleActive {
+  border-color: #3B82F6;
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.aiLabel {
+  flex: 1;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #3B82F6;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1.5px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
 .colorSwatch {
   width: 20px;
   height: 20px;

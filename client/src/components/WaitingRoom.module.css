@@ -334,6 +334,83 @@
   margin-top: 5px;
 }
 
+/* AI player controls */
+.aiBadge {
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(59,130,246,0.2);
+  color: #93C5FD;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.emptySlotHost {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.addAIControls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.aiDiffSelect {
+  height: 26px;
+  padding: 0 6px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  color: rgba(255,255,255,0.7);
+  font-size: 11px;
+  cursor: pointer;
+  outline: none;
+}
+
+.addAIBtn {
+  height: 26px;
+  padding: 0 10px;
+  background: rgba(59,130,246,0.2);
+  border: 1px solid rgba(59,130,246,0.4);
+  border-radius: 6px;
+  color: #93C5FD;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.addAIBtn:hover {
+  background: rgba(59,130,246,0.35);
+  border-color: rgba(59,130,246,0.6);
+}
+
+.removeAIBtn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid rgba(239,68,68,0.3);
+  background: rgba(239,68,68,0.1);
+  color: #F87171;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.removeAIBtn:hover {
+  background: rgba(239,68,68,0.25);
+}
+
 .connDotOn {
   background: #22C55E;
   box-shadow: 0 0 6px rgba(34,197,94,0.5);

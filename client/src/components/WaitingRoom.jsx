@@ -40,11 +40,14 @@ export default function WaitingRoom({
   onStartGame,
   onSelectColor,
   onSelectColorSlot,
+  onAddAI,
+  onRemoveAI,
   onExit,
 }) {
   const [copied, setCopied] = useState(false)
   const [startError, setStartError] = useState(null)
   const [starting, setStarting] = useState(false)
+  const [aiDifficulty, setAIDifficulty] = useState('normal')  // difficulty for next AI add
 
   const shareUrl = `${window.location.origin}?join=${roomCode}`
   const gameModes = settings?.gameModes || {}
@@ -85,10 +88,12 @@ export default function WaitingRoom({
   }, [onStartGame, maxPlayers, players.length])
 
   const filledSlots = players.length
+  const humanSlots = players.filter(p => !p.isAI).length
   const allColorsReady = isTwoPlayerStandard
-    ? filledSlots === maxPlayers && players.every(p => p && p.color && p.color2)
+    ? filledSlots === maxPlayers && players.filter(p => !p.isAI).every(p => p && p.color && p.color2)
     : true
-  const canStart = isHost && filledSlots >= maxPlayers && allColorsReady
+  // Must have at least 1 human + all slots filled
+  const canStart = isHost && filledSlots >= maxPlayers && humanSlots >= 1 && allColorsReady
 
   return (
     <div className={styles.container}>
@@ -166,6 +171,7 @@ export default function WaitingRoom({
                             {player.name}
                             {isMe && <span className={styles.youBadge}>You</span>}
                             {player.isHost && <span className={styles.hostBadge}>Host</span>}
+                            {player.isAI && <span className={styles.aiBadge}>🤖 {player.aiDifficulty === 'hard' ? 'Hard' : 'Normal'} AI</span>}
                           </span>
                           {isTwoPlayerStandard ? (
                             // 2p standard mode: two color set rows per player
@@ -229,8 +235,39 @@ export default function WaitingRoom({
                             </div>
                           )}
                         </div>
-                        <div className={`${styles.connDot} ${player.connected ? styles.connDotOn : styles.connDotOff}`} title={player.connected ? 'Connected' : 'Disconnected'}/>
+                        {player.isAI && isHost ? (
+                          <button
+                            className={styles.removeAIBtn}
+                            onClick={() => onRemoveAI?.(player.humanId)}
+                            title="Remove AI player"
+                            type="button"
+                          >✕</button>
+                        ) : (
+                          <div className={`${styles.connDot} ${player.connected ? styles.connDotOn : styles.connDotOff}`} title={player.connected ? 'Connected' : 'Disconnected'}/>
+                        )}
                       </>
+                    ) : isHost ? (
+                      <div className={styles.emptySlotHost}>
+                        <span className={styles.playerSlotWaiting}>Waiting for player…</span>
+                        <div className={styles.addAIControls}>
+                          <select
+                            className={styles.aiDiffSelect}
+                            value={aiDifficulty}
+                            onChange={e => setAIDifficulty(e.target.value)}
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <option value="normal">Normal</option>
+                            <option value="hard">Hard</option>
+                          </select>
+                          <button
+                            className={styles.addAIBtn}
+                            onClick={(e) => { triggerBounceInline(e.currentTarget); onAddAI?.(aiDifficulty) }}
+                            type="button"
+                          >
+                            + Add AI
+                          </button>
+                        </div>
+                      </div>
                     ) : (
                       <span className={styles.playerSlotWaiting}>Waiting for player…</span>
                     )}
@@ -261,8 +298,10 @@ export default function WaitingRoom({
               {!canStart && (
                 <p className={styles.startHint}>
                   {filledSlots < maxPlayers
-                    ? `Waiting for ${maxPlayers - filledSlots} more player${maxPlayers - filledSlots !== 1 ? 's' : ''}…`
-                    : 'All players must select both color sets before starting.'}
+                    ? `Waiting for ${maxPlayers - filledSlots} more player${maxPlayers - filledSlots !== 1 ? 's' : ''} (or add AI)…`
+                    : humanSlots === 0
+                      ? 'At least one human player is required.'
+                      : 'All players must select both color sets before starting.'}
                 </p>
               )}
             </div>
