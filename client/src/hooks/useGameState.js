@@ -1,7 +1,8 @@
-import { useReducer, useCallback } from 'react'
+import { useReducer, useCallback, useEffect, useRef } from 'react'
 import { generateBoard } from '../game/boardGeometry.js'
 import { createPlayerPiecesRandom, createMegaColorPieces, getPieceOrientation, placePieceCells } from '../game/pieces.js'
 import { isLegalPlacement, hasAnyLegalMove, checkGameOver } from '../game/gameLogic.js'
+import { computeAIMove } from '../game/aiEngine.js'
 
 // ─── Parity-aware anchor ───────────────────────────────────────────────────────
 // Anchor must always have even parity so piece cells land on correct-parity positions.
@@ -40,6 +41,7 @@ const ACTIONS = {
   CANCEL_END_GAME:   'CANCEL_END_GAME',
   NEW_GAME:          'NEW_GAME',
   REMOVE_PIECE:      'REMOVE_PIECE',
+  AI_MOVE:           'AI_MOVE',
 }
 
 function createInitialState() {
@@ -161,7 +163,14 @@ function gameReducer(state, action) {
   switch (action.type) {
 
     case ACTIONS.START_GAME: {
-      const { humanCount, playerNames, playerColors, gameModes = {} } = action.payload
+      const { humanCount, playerNames, playerColors, gameModes = {}, playerAI = [] } = action.payload
+
+      // playerAI[i] = { isAI: true, difficulty: 'normal'|'hard' } | falsy for human
+      const getAIFlags = (i) => {
+        const ai = playerAI[i]
+        if (!ai || !ai.isAI) return { isAI: false }
+        return { isAI: true, aiDifficulty: ai.difficulty || 'normal' }
+      }
 
       // Build player slots.
       // 2p Mega Colors: 2 slots, each with 44 pieces in one color
@@ -170,16 +179,16 @@ function gameReducer(state, action) {
       let players
       if (humanCount === 2 && gameModes.megaColors) {
         players = [
-          { id: 1, humanId: 1, name: playerNames[0] || 'Player 1', color: playerColors[0], pieces: createMegaColorPieces() },
-          { id: 2, humanId: 2, name: playerNames[1] || 'Player 2', color: playerColors[1], pieces: createMegaColorPieces() },
+          { id: 1, humanId: 1, name: playerNames[0] || 'Player 1', color: playerColors[0], pieces: createMegaColorPieces(), ...getAIFlags(0) },
+          { id: 2, humanId: 2, name: playerNames[1] || 'Player 2', color: playerColors[1], pieces: createMegaColorPieces(), ...getAIFlags(1) },
         ]
       } else if (humanCount === 2) {
         // playerNames has 2 entries, playerColors has 4 (2 per human)
         players = [
-          { id: 1, humanId: 1, name: `${playerNames[0]} (${PLAYER_COLORS[playerColors[0]].label})`, color: playerColors[0], pieces: createPlayerPiecesRandom() },
-          { id: 2, humanId: 2, name: `${playerNames[1]} (${PLAYER_COLORS[playerColors[1]].label})`, color: playerColors[1], pieces: createPlayerPiecesRandom() },
-          { id: 3, humanId: 1, name: `${playerNames[0]} (${PLAYER_COLORS[playerColors[2]].label})`, color: playerColors[2], pieces: createPlayerPiecesRandom() },
-          { id: 4, humanId: 2, name: `${playerNames[1]} (${PLAYER_COLORS[playerColors[3]].label})`, color: playerColors[3], pieces: createPlayerPiecesRandom() },
+          { id: 1, humanId: 1, name: `${playerNames[0]} (${PLAYER_COLORS[playerColors[0]].label})`, color: playerColors[0], pieces: createPlayerPiecesRandom(), ...getAIFlags(0) },
+          { id: 2, humanId: 2, name: `${playerNames[1]} (${PLAYER_COLORS[playerColors[1]].label})`, color: playerColors[1], pieces: createPlayerPiecesRandom(), ...getAIFlags(1) },
+          { id: 3, humanId: 1, name: `${playerNames[0]} (${PLAYER_COLORS[playerColors[2]].label})`, color: playerColors[2], pieces: createPlayerPiecesRandom(), ...getAIFlags(0) },
+          { id: 4, humanId: 2, name: `${playerNames[1]} (${PLAYER_COLORS[playerColors[3]].label})`, color: playerColors[3], pieces: createPlayerPiecesRandom(), ...getAIFlags(1) },
         ]
       } else {
         players = Array.from({ length: humanCount }, (_, i) => ({
@@ -188,6 +197,7 @@ function gameReducer(state, action) {
           name: playerNames[i] || `Player ${i + 1}`,
           color: playerColors[i],
           pieces: createPlayerPiecesRandom(),
+          ...getAIFlags(i),
         }))
       }
 
@@ -445,6 +455,43 @@ function gameReducer(state, action) {
     case ACTIONS.NEW_GAME:
       return createInitialState()
 
+    // AI_MOVE: atomically place an AI piece (bypasses pending/confirm flow)
+    case ACTIONS.AI_MOVE: {
+      const { pieceId, anchorQ, anchorR, rotIndex, flipped, cells } = action.payload
+      const playerIdx = state.currentPlayerIndex
+      const currentPlayer = state.players[playerIdx]
+      if (!currentPlayer?.isAI) return state
+
+      const newBoardCells = { ...state.board.cells }
+      for (const cell of cells) {
+        const id = `${cell.q},${cell.r}`
+        newBoardCells[id] = { ...newBoardCells[id], occupiedBy: currentPlayer.id }
+      }
+      const newBoard = { ...state.board, cells: newBoardCells }
+
+      const newPlayers = state.players.map((p, i) => {
+        if (i !== playerIdx) return p
+        const newPieces = p.pieces.map(pc =>
+          pc.id === pieceId ? { ...pc, placed: true, rotIndex, flipped } : pc
+        )
+        const score = newPieces.filter(pc => !pc.placed).reduce((sum, pc) => sum + pc.size, 0)
+        return { ...p, pieces: newPieces, score }
+      })
+
+      return {
+        ...state,
+        board: newBoard,
+        players: newPlayers,
+        pendingPlacement: null,
+        selectedPieceId: null,
+        hoverCell: null,
+        waitingForEndTurn: true,
+        lastPlacedCells: cells.map(c => ({ q: c.q, r: c.r })),
+        lastPlacedPlayerId: currentPlayer.id,
+        lastPlacedPieceId: pieceId,
+      }
+    }
+
     default:
       return state
   }
@@ -453,9 +500,51 @@ function gameReducer(state, action) {
 // ─── Hook ──────────────────────────────────────────────────────────────────────
 export function useGameState() {
   const [state, dispatch] = useReducer(gameReducer, createInitialState())
+  const stateRef = useRef(state)
+  stateRef.current = state
 
-  const startGame      = useCallback((humanCount, playerNames, playerColors, gameModes = {}) => {
-    dispatch({ type: ACTIONS.START_GAME, payload: { humanCount, playerNames, playerColors, gameModes } })
+  // AI turn automation — fires whenever the current player or turn state changes
+  useEffect(() => {
+    const { phase, currentPlayerIndex, noMovesModalPlayerId, waitingForEndTurn, turnCount } = state
+    if (phase !== 'playing') return
+
+    const cp = state.players[currentPlayerIndex]
+    if (!cp?.isAI) return
+
+    const delay = 500 + Math.random() * 1000
+    const tid = setTimeout(() => {
+      const s = stateRef.current
+      const player = s.players[s.currentPlayerIndex]
+      if (!player?.isAI) return
+
+      if (s.noMovesModalPlayerId === player.id) {
+        dispatch({ type: ACTIONS.DISMISS_NO_MOVES })
+      } else if (s.waitingForEndTurn) {
+        dispatch({ type: ACTIONS.END_TURN })
+      } else {
+        const gameOptions = getGameOptions(s)
+        const isFirst = !player.pieces.some(p => p.placed)
+        const move = computeAIMove(s.board.cells, player, s.players, isFirst, gameOptions)
+        if (move) {
+          dispatch({ type: ACTIONS.AI_MOVE, payload: move })
+        } else {
+          // No legal move — will be handled by noMovesModal on next advanceTurn
+          dispatch({ type: ACTIONS.CONFIRM_SKIP })
+        }
+      }
+    }, delay)
+
+    return () => clearTimeout(tid)
+  }, [
+    state.phase,
+    state.currentPlayerIndex,
+    state.noMovesModalPlayerId,
+    state.waitingForEndTurn,
+    state.turnCount,
+  ])
+
+  const startGame = useCallback((humanCount, playerNames, playerColors, gameModes = {}, playerAI = []) => {
+    dispatch({ type: ACTIONS.START_GAME, payload: { humanCount, playerNames, playerColors, gameModes, playerAI } })
   }, [])
   const selectPiece    = useCallback(id  => dispatch({ type: ACTIONS.SELECT_PIECE,   payload: { pieceId: id } }), [])
   const deselectPiece  = useCallback(()  => dispatch({ type: ACTIONS.DESELECT_PIECE }), [])

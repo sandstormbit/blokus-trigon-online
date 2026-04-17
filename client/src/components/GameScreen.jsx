@@ -109,9 +109,9 @@ export default function GameScreen({
 
   const { players, playerCount } = state
 
-  // No-moves modal player
+  // No-moves modal player — suppressed for AI players (auto-handled by server/hook)
   const noMovesPlayer = (state.noMovesModalPlayerId && !noMovesLocallyDismissed)
-    ? players.find(p => p.id === state.noMovesModalPlayerId)
+    ? players.find(p => p.id === state.noMovesModalPlayerId && !p.isAI)
     : null
   // In online games, only the player who ran out of moves triggers the server dismiss.
   // Other players just close the modal locally and wait for the game state to update.

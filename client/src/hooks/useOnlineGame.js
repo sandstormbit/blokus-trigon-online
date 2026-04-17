@@ -53,8 +53,14 @@ export function useOnlineGame() {
   const [isHostPlayer, setIsHostPlayer] = useState(false)
   const [roomPlayers, setRoomPlayers] = useState([])  // waiting room player list
   const [settings, setSettings] = useState({ gameModes: {} })
-  const [roomPhase, setRoomPhase] = useState('disconnected')  // 'disconnected' | 'waiting' | 'playing' | 'ended'
+  const [roomPhase, setRoomPhase] = useState('disconnected')  // 'disconnected' | 'waiting' | 'playing' | 'ended' | 'spectating'
   const [connectionError, setConnectionError] = useState(null)
+  const [isSpectator, setIsSpectator] = useState(false)
+
+  // Modals driven by socket events
+  const [spectatorModalData, setSpectatorModalData] = useState(null)   // { roomCode, phase, aiSlots? }
+  const [disconnectReplaceData, setDisconnectReplaceData] = useState(null) // { humanId, playerName }
+  const [claimSlotData, setClaimSlotData] = useState(null)             // { aiHumanId, replacedName, roomCode }
 
   // Authoritative game state from server
   const [gameState, setGameState] = useState(null)
@@ -91,12 +97,26 @@ export function useOnlineGame() {
 
     // ── Waiting room events ───────────────────────────────────────────────────
     socket.on('player_joined', ({ players }) => setRoomPlayers(players))
-    socket.on('player_reconnected', ({ players }) => setRoomPlayers(players))
-    socket.on('player_disconnected', ({ players }) => {
+    socket.on('player_reconnected', ({ players }) => {
       setRoomPlayers(players)
-      // Update host status in case the host left and it was transferred to us
       const me = players.find(p => p.humanId === myHumanIdRef.current)
       if (me) setIsHostPlayer(me.isHost)
+    })
+    socket.on('player_disconnected', ({ players }) => {
+      setRoomPlayers(players)
+      const me = players.find(p => p.humanId === myHumanIdRef.current)
+      if (me) setIsHostPlayer(me.isHost)
+    })
+
+    // ── AI / spectator events ─────────────────────────────────────────────────
+    socket.on('player_replaced_by_ai', ({ players }) => setRoomPlayers(players))
+    socket.on('host_transferred', ({ players }) => {
+      setRoomPlayers(players)
+      const me = players.find(p => p.humanId === myHumanIdRef.current)
+      if (me) setIsHostPlayer(me.isHost)
+    })
+    socket.on('player_replace_prompt', ({ humanId, playerName }) => {
+      setDisconnectReplaceData({ humanId, playerName })
     })
     socket.on('settings_updated', ({ settings: s }) => setSettings(s))
     socket.on('color_updated', ({ players }) => setRoomPlayers(players))
@@ -260,17 +280,41 @@ export function useOnlineGame() {
           callback?.({ error: res.error })
           return
         }
+
+        // Server offered us the chance to claim an AI slot (we reconnected after AI replaced us)
+        if (res.canClaimAISlot) {
+          setRoomCode(res.roomCode)
+          setRoomPlayers(res.players || [])
+          if (res.gameState) setGameState(deserializeState(res.gameState))
+          setClaimSlotData({ aiHumanId: res.aiHumanId, replacedName: res.replacedName, roomCode: res.roomCode })
+          callback?.({ ok: true, pendingAction: 'claim_slot' })
+          return
+        }
+
+        // Room full or in progress — server is offering spectate/AI-slot options
+        if (res.canSpectate || res.hasAISlots) {
+          setSpectatorModalData({
+            roomCode: res.roomCode,
+            phase: res.phase,
+            aiSlots: res.aiSlots || null,
+            playerName,
+          })
+          if (res.gameState) setGameState(deserializeState(res.gameState))
+          callback?.({ ok: true, pendingAction: 'spectate_or_join' })
+          return
+        }
+
         localStorage.setItem('bt_session_token', res.token)
         localStorage.setItem('bt_player_name', playerName)
         localStorage.setItem('bt_room_code', res.roomCode)
         setMyToken(res.token)
         setRoomCode(res.roomCode)
         setRoomMode('unknown')
-        setMaxPlayersInRoom(res.maxPlayers || (res.players.length > 0 ? res.players[res.players.length - 1].humanId : 4))
+        setMaxPlayersInRoom(res.maxPlayers || (res.players?.length > 0 ? res.players[res.players.length - 1].humanId : 4))
         setMyHumanId(res.humanId)
         setIsHostPlayer(res.isHost)
-        setRoomPlayers(res.players)
-        setSettings(res.settings)
+        setRoomPlayers(res.players || [])
+        setSettings(res.settings || { gameModes: {} })
         setRoomPhase(res.phase)
 
         if (res.gameState) {
@@ -286,6 +330,84 @@ export function useOnlineGame() {
       socket.once('connect', emitJoin)
     }
   }, [myToken])
+
+  // ── AI / Spectator actions ──────────────────────────────────────────────────
+
+  const addAIPlayerAction = useCallback((difficulty = 'normal') => {
+    socketRef.current?.emit('add_ai_player', { difficulty }, (res) => {
+      if (!res?.ok) console.warn('add_ai_player rejected:', res?.error)
+    })
+  }, [])
+
+  const removeAIPlayerAction = useCallback((humanId) => {
+    socketRef.current?.emit('remove_ai_player', { humanId }, (res) => {
+      if (!res?.ok) console.warn('remove_ai_player rejected:', res?.error)
+    })
+  }, [])
+
+  const spectateGameAction = useCallback((code, playerName, callback) => {
+    const socket = socketRef.current
+    if (!socket) return
+    socket.emit('spectate_game', { roomCode: code, playerName }, (res) => {
+      if (!res?.ok) { callback?.({ error: res?.error }); return }
+      setRoomCode(res.roomCode)
+      setRoomPlayers(res.players || [])
+      setRoomPhase('spectating')
+      setIsSpectator(true)
+      setSpectatorModalData(null)
+      if (res.gameState) setGameState(deserializeState(res.gameState))
+      callback?.({ ok: true })
+    })
+  }, [])
+
+  const takeAISlotAction = useCallback((code, aiHumanId, playerName, callback) => {
+    const socket = socketRef.current
+    if (!socket) return
+    const token = myToken
+    socket.emit('take_ai_slot', { roomCode: code, aiHumanId, playerName, sessionToken: token }, (res) => {
+      if (!res?.ok) { callback?.({ error: res?.error }); return }
+      localStorage.setItem('bt_session_token', res.token)
+      localStorage.setItem('bt_room_code', res.roomCode)
+      setMyToken(res.token)
+      setRoomCode(res.roomCode)
+      setMaxPlayersInRoom(res.maxPlayers || 4)
+      setMyHumanId(res.humanId)
+      setIsHostPlayer(res.isHost || false)
+      setRoomPlayers(res.players || [])
+      setSettings(res.settings || { gameModes: {} })
+      setRoomPhase(res.phase)
+      setSpectatorModalData(null)
+      callback?.({ ok: true })
+    })
+  }, [myToken])
+
+  const claimAISlotAction = useCallback((callback) => {
+    const socket = socketRef.current
+    const data = claimSlotData
+    if (!socket || !data) return
+    const token = myToken || localStorage.getItem('bt_session_token')
+    socket.emit('claim_ai_slot', { roomCode: data.roomCode, sessionToken: token }, (res) => {
+      if (!res?.ok) { callback?.({ error: res?.error }); return }
+      setMyHumanId(res.humanId)
+      setIsHostPlayer(res.isHost || false)
+      setRoomPlayers(res.players || [])
+      setRoomPhase('playing')
+      setClaimSlotData(null)
+      if (res.gameState) setGameState(deserializeState(res.gameState))
+      callback?.({ ok: true })
+    })
+  }, [claimSlotData, myToken])
+
+  const replaceWithAIAction = useCallback((humanId, difficulty = 'normal') => {
+    socketRef.current?.emit('replace_with_ai', { humanId, difficulty }, (res) => {
+      if (!res?.ok) console.warn('replace_with_ai rejected:', res?.error)
+      setDisconnectReplaceData(null)
+    })
+  }, [])
+
+  const dismissDisconnectPrompt = useCallback(() => {
+    setDisconnectReplaceData(null)
+  }, [])
 
   // ── Waiting room actions ────────────────────────────────────────────────────
   const updateSettingsAction = useCallback((gameModes) => {
@@ -527,9 +649,13 @@ export function useOnlineGame() {
     setRoomPlayers([])
     setGameState(null)
     setRoomPhase('disconnected')
+    setIsSpectator(false)
     setSelectedPieceId(null)
     setHoverCell(null)
     setPendingPlacement(null)
+    setSpectatorModalData(null)
+    setDisconnectReplaceData(null)
+    setClaimSlotData(null)
   }, [])
 
   // ── Derived helpers (match useGameState interface) ────────────────────────────
@@ -617,6 +743,12 @@ export function useOnlineGame() {
     settings,
     roomPhase,
     connectionError,
+    isSpectator,
+
+    // Modal state driven by server events
+    spectatorModalData,
+    disconnectReplaceData,
+    claimSlotData,
 
     // Room actions
     createRoom: createRoomAction,
@@ -626,6 +758,15 @@ export function useOnlineGame() {
     selectColor: selectColorAction,
     selectColorSlot: selectColorSlotAction,
     disconnect,
+
+    // AI / spectator actions
+    addAIPlayer: addAIPlayerAction,
+    removeAIPlayer: removeAIPlayerAction,
+    spectateGame: spectateGameAction,
+    takeAISlot: takeAISlotAction,
+    claimAISlot: claimAISlotAction,
+    replaceWithAI: replaceWithAIAction,
+    dismissDisconnectPrompt,
 
     // Game interface (mirrors useGameState)
     state: mergedState,
