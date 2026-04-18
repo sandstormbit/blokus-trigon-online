@@ -121,7 +121,16 @@ function advanceTurn(state, newBoard, newPlayers, newSkipped) {
  */
 export function createGameState(roomPlayers, humanCount, gameModes = {}) {
   const playerNames = roomPlayers.map(p => p.name)
-  const playerColors = roomPlayers.map((p, i) => p.color || DEFAULT_COLORS[i])
+
+  // Assign fallback colors without duplicates: explicit colors take priority,
+  // then pick the first DEFAULT_COLORS entry not already taken.
+  const takenColors = new Set(roomPlayers.map(p => p.color).filter(Boolean))
+  const playerColors = roomPlayers.map((p) => {
+    if (p.color) return p.color
+    const avail = DEFAULT_COLORS.find(c => !takenColors.has(c)) || DEFAULT_COLORS[0]
+    takenColors.add(avail)
+    return avail
+  })
 
   let players
   if (humanCount === 2 && gameModes.megaColors) {
@@ -131,11 +140,18 @@ export function createGameState(roomPlayers, humanCount, gameModes = {}) {
     ]
   } else if (humanCount === 2) {
     const defaults = ['blue', 'red', 'green', 'yellow']
+    const taken2p = new Set()
+    const pickColor = (explicit, fallback) => {
+      if (explicit && !taken2p.has(explicit)) { taken2p.add(explicit); return explicit }
+      const avail = defaults.find(c => !taken2p.has(c)) || fallback
+      taken2p.add(avail)
+      return avail
+    }
     const resolved = [
-      roomPlayers[0].color  || defaults[0],
-      roomPlayers[1].color  || defaults[1],
-      roomPlayers[0].color2 || defaults[2],
-      roomPlayers[1].color2 || defaults[3],
+      pickColor(roomPlayers[0].color,  defaults[0]),
+      pickColor(roomPlayers[1].color,  defaults[1]),
+      pickColor(roomPlayers[0].color2, defaults[2]),
+      pickColor(roomPlayers[1].color2, defaults[3]),
     ]
     players = [
       { id: 1, humanId: 1, name: `${playerNames[0] || 'Player 1'} (${PLAYER_COLORS[resolved[0]].label})`, color: resolved[0], pieces: createPlayerPiecesRandom() },
@@ -148,7 +164,7 @@ export function createGameState(roomPlayers, humanCount, gameModes = {}) {
       id: i + 1,
       humanId: i + 1,
       name: playerNames[i] || `Player ${i + 1}`,
-      color: playerColors[i] || DEFAULT_COLORS[i],
+      color: playerColors[i],
       pieces: createPlayerPiecesRandom(),
     }))
   }

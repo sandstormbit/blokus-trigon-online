@@ -45,6 +45,13 @@ function generateToken() {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
+const ALL_COLORS = ['blue', 'red', 'green', 'yellow']
+
+function pickAvailableColor(existingPlayers) {
+  const taken = new Set(existingPlayers.flatMap(p => [p.color, p.color2]).filter(Boolean))
+  return ALL_COLORS.find(c => !taken.has(c)) || null
+}
+
 /**
  * Create a new room. Returns { room, player } or throws.
  */
@@ -58,7 +65,7 @@ export function createRoom(mode, maxPlayers, hostName, socketId) {
     token,
     socketId,
     connected: true,
-    color: null,
+    color: ALL_COLORS[0],  // auto-assign blue so server color is never null
     color2: null,
     isAI: false,
   }
@@ -120,7 +127,7 @@ export function joinRoom(code, playerName, socketId) {
     token,
     socketId,
     connected: true,
-    color: null,
+    color: pickAvailableColor(room.players),  // auto-assign so server color is never null
     color2: null,
     isAI: false,
   }

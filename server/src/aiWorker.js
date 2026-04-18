@@ -5,11 +5,11 @@
  * Receives game state data via workerData, evaluates all legal moves
  * using a greedy heuristic, and posts the best move back to the parent.
  *
- * Scoring weights (heaviest to lightest per PRD §7.3):
+ * Scoring weights (heaviest to lightest):
  *   1. Piece size         — larger pieces score higher
  *   2. New corner count   — vertices the placement opens for future use
  *   3. Opponent blocking  — opponent corner vertices we overlap
- *   4. Outward expansion  — early game (score > 55), reward expanding outward
+ *   First move only: strong center proximity bonus overrides other scoring
  *
  * Returns top-N (3–5) moves scored, then picks randomly among them for variety.
  */
@@ -26,7 +26,6 @@ const {
   allPlayers,
   isFirstPiece,
   gameOptions: rawGameOptions,
-  playerScore,
 } = workerData
 
 // Re-hydrate requiredStartCells as a Set (serialized as array)
@@ -36,6 +35,11 @@ const gameOptions = {
     ? new Set(rawGameOptions.requiredStartCells)
     : null,
 }
+
+// Compute board center once for first-move proximity scoring
+const boardCellsArray = Object.values(boardCells)
+const boardCenterQ = boardCellsArray.reduce((s, c) => s + c.q, 0) / boardCellsArray.length
+const boardCenterR = boardCellsArray.reduce((s, c) => s + c.r, 0) / boardCellsArray.length
 
 // Build vertex set for a given playerId from current board
 function buildColorVertexSet(cells, pid) {
@@ -54,6 +58,15 @@ function scoreMove(newCells, piece) {
   // 1. Piece size (weight: highest — 100 per triangle)
   score += piece.size * 100
 
+  // First move: strong center proximity bonus dominates other scoring
+  if (isFirstPiece) {
+    const centQ = newCells.reduce((s, c) => s + c.q, 0) / newCells.length
+    const centR = newCells.reduce((s, c) => s + c.r, 0) / newCells.length
+    const dist = Math.sqrt((centQ - boardCenterQ) ** 2 + (centR - boardCenterR) ** 2)
+    score -= dist * 50
+    return score
+  }
+
   // 2. New corner count — vertices from this placement not already in our color set
   const existingMyVerts = buildColorVertexSet(boardCells, playerId)
   const newVerts = new Set()
@@ -70,22 +83,6 @@ function scoreMove(newCells, piece) {
     const opponentVerts = buildColorVertexSet(boardCells, other.id)
     for (const vk of newVerts) {
       if (opponentVerts.has(vk)) score += 5
-    }
-  }
-
-  // 4. Outward expansion — early game when many pieces remain (score > 55)
-  if (playerScore > 55) {
-    const myPlacedCells = Object.values(boardCells).filter(c => c.occupiedBy === playerId)
-    if (myPlacedCells.length === 0) {
-      // First piece: small bonus for any placement
-      score += newCells.length * 2
-    } else {
-      const centroidQ = myPlacedCells.reduce((s, c) => s + c.q, 0) / myPlacedCells.length
-      const centroidR = myPlacedCells.reduce((s, c) => s + c.r, 0) / myPlacedCells.length
-      for (const cell of newCells) {
-        const dist = Math.sqrt((cell.q - centroidQ) ** 2 + (cell.r - centroidR) ** 2)
-        score += dist * 2
-      }
     }
   }
 

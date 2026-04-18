@@ -3,7 +3,7 @@
  *
  * Provides Normal and Hard AI move generators.
  *
- * Normal AI: O(n) random selection from all valid placements.
+ * Normal AI: first 11 moves prefer size 5/6 pieces; first move aims for board center.
  * Hard AI:   Heuristic evaluation in a worker thread (non-blocking).
  *            Falls back to Normal AI if the 5-second budget is exceeded.
  *
@@ -15,6 +15,7 @@ import { Worker } from 'worker_threads'
 import { fileURLToPath } from 'url'
 import path from 'path'
 import { getValidPlacements } from '../game/gameLogic.js'
+import { getPieceOrientation, placePieceCells } from '../game/pieces.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const WORKER_PATH = path.join(__dirname, 'aiWorker.js')
@@ -22,21 +23,50 @@ const WORKER_PATH = path.join(__dirname, 'aiWorker.js')
 const HARD_AI_TIMEOUT_MS = 5000
 
 /**
- * Normal AI: pick a uniformly random legal move.
- * Runs synchronously in O(n) over all placements.
+ * Normal AI: for the first 11 moves prefer size-5/6 pieces; first move aims for center.
  * Returns null if no moves exist.
  */
 export function getNormalAIMove(boardCells, player, isFirstPiece, gameOptions) {
-  const allMoves = []
-  for (const piece of player.pieces) {
-    if (piece.placed) continue
-    const placements = getValidPlacements(boardCells, piece, player.id, isFirstPiece, false, gameOptions)
-    for (const p of placements) {
-      allMoves.push({ pieceId: piece.id, ...p })
+  const piecesPlaced = player.pieces.filter(p => p.placed).length
+  const preferLarge = piecesPlaced < 11
+
+  const collect = (sizeFilter) => {
+    const moves = []
+    for (const piece of player.pieces) {
+      if (piece.placed) continue
+      if (sizeFilter && piece.size !== 5 && piece.size !== 6) continue
+      const placements = getValidPlacements(boardCells, piece, player.id, isFirstPiece, false, gameOptions)
+      for (const p of placements) {
+        moves.push({ pieceId: piece.id, piece, ...p })
+      }
     }
+    return moves
   }
+
+  let allMoves = preferLarge ? collect(true) : collect(false)
+  if (allMoves.length === 0) allMoves = collect(false)
   if (allMoves.length === 0) return null
-  return allMoves[Math.floor(Math.random() * allMoves.length)]
+
+  if (isFirstPiece) {
+    const boardVals = Object.values(boardCells)
+    const centerQ = boardVals.reduce((s, c) => s + c.q, 0) / boardVals.length
+    const centerR = boardVals.reduce((s, c) => s + c.r, 0) / boardVals.length
+
+    const scored = allMoves.map(move => {
+      const oriented = getPieceOrientation(move.piece, move.rotIndex, move.flipped)
+      const cells = placePieceCells(oriented, move.anchorQ, move.anchorR)
+      const cQ = cells.reduce((s, c) => s + c.q, 0) / cells.length
+      const cR = cells.reduce((s, c) => s + c.r, 0) / cells.length
+      return { ...move, dist: Math.sqrt((cQ - centerQ) ** 2 + (cR - centerR) ** 2) }
+    })
+    scored.sort((a, b) => a.dist - b.dist)
+    const topN = Math.min(5, scored.length)
+    const chosen = scored[Math.floor(Math.random() * topN)]
+    return { pieceId: chosen.pieceId, anchorQ: chosen.anchorQ, anchorR: chosen.anchorR, rotIndex: chosen.rotIndex, flipped: chosen.flipped }
+  }
+
+  const chosen = allMoves[Math.floor(Math.random() * allMoves.length)]
+  return { pieceId: chosen.pieceId, anchorQ: chosen.anchorQ, anchorR: chosen.anchorR, rotIndex: chosen.rotIndex, flipped: chosen.flipped }
 }
 
 /**

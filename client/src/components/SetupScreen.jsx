@@ -85,7 +85,7 @@ export default function SetupScreen({ onStart, onBack }) {
       // Transitioning human → AI: auto-assign an available color and generate a name
       const taken = updatedColors.slice(0, shownCount).filter((c, i) => i !== idx && c !== null)
       const available = COLOR_KEYS.filter(c => !taken.includes(c))
-      updatedColors[idx] = available[0] || COLOR_KEYS[idx % COLOR_KEYS.length]
+      updatedColors[idx] = available[0] ?? null
       updatedNames[idx] = generateAIName()
     } else if (next === null) {
       // Transitioning AI → human: clear the auto-assigned values
@@ -194,22 +194,29 @@ export default function SetupScreen({ onStart, onBack }) {
   })()
 
   const handleStart = () => {
+    const defaults = ['blue', 'red', 'green', 'yellow']
+    const pickUnique = (colors) => {
+      const taken = new Set()
+      return colors.map((c) => {
+        if (c) { taken.add(c); return c }
+        const avail = defaults.find(d => !taken.has(d)) || defaults[0]
+        taken.add(avail)
+        return avail
+      })
+    }
     if (playerCount === 2 && gameModes.megaColors) {
       const names = [0, 1].map(i => playerNames[i].trim() || `Player ${i + 1}`)
-      const defaults = ['blue', 'red']
-      const resolved = [playerColors[0] || defaults[0], playerColors[1] || defaults[1]]
+      const resolved = pickUnique(playerColors.slice(0, 2))
       onStart(2, names, resolved, gameModes, playerAI.slice(0, 2))
     } else if (playerCount === 2) {
       const names = [0, 1].map(i => playerNames[i].trim() || `Player ${i + 1}`)
-      const defaults = ['blue', 'red', 'green', 'yellow']
-      const resolved = playerColors.slice(0, 4).map((c, i) => c || defaults[i])
+      const resolved = pickUnique(playerColors.slice(0, 4))
       onStart(2, names, resolved, gameModes, playerAI.slice(0, 2))
     } else {
       const names = Array.from({ length: playerCount }, (_, i) =>
         playerNames[i].trim() || (playerAI[i]?.isAI ? generateAIName() : `Player ${i + 1}`)
       )
-      const defaults = ['blue', 'red', 'green', 'yellow']
-      const resolved = playerColors.slice(0, playerCount).map((c, i) => c || defaults[i])
+      const resolved = pickUnique(playerColors.slice(0, playerCount))
       onStart(playerCount, names, resolved, gameModes, playerAI.slice(0, playerCount))
     }
   }

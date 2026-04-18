@@ -312,7 +312,7 @@ export default function LandingPage({ onPassAndPlay, onCreateRoom, onJoinRoom })
 
             <div className={styles.modalFooter}>
               <button className={styles.modalCancelBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => setModal(null), 350) }}>Cancel</button>
-              <button className={styles.modalPrimaryBtn} onClick={(e) => { triggerBounce(e.currentTarget); handleJoin() }} disabled={joining}>
+              <button className={styles.modalPrimaryBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(handleJoin, 350) }} disabled={joining}>
                 {joining ? 'Joining…' : 'Join Room'}
               </button>
             </div>
