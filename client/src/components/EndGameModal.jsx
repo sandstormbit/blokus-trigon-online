@@ -19,7 +19,16 @@ function CrownIcon() {
   )
 }
 
-export default function EndGameModal({ players, playerCount, onNewGame, onViewBoard, onClose, isHost = true }) {
+function formatTime(ms) {
+  if (!ms) return null
+  const totalSec = Math.floor(ms / 1000)
+  const m = Math.floor(totalSec / 60)
+  const s = totalSec % 60
+  if (m > 0) return `${m}m ${s}s`
+  return `${s}s`
+}
+
+export default function EndGameModal({ players, playerCount, onNewGame, onViewBoard, onClose, isHost = true, playerTimers = {} }) {
   // For 2-player mode, consolidate by humanId
   const ranked = useMemo(() => {
     if (playerCount === 2) {
@@ -52,6 +61,31 @@ export default function EndGameModal({ players, playerCount, onNewGame, onViewBo
   const winnerPrimaryColor = playerCount === 2
     ? winner.colors[0]
     : winner.color
+
+  // Compute per-entry total timer (sum slots for 2p, direct for 3/4p)
+  // Only compare human players (non-AI) for turtle/rocket
+  const { fastestId, slowestId } = useMemo(() => {
+    const humanTimes = []
+    for (const entry of ranked) {
+      if (playerCount === 2) {
+        if (entry.slots.some(s => s.isAI)) continue
+        const totalMs = entry.slots.reduce((s, p) => s + (playerTimers[p.id] || 0), 0)
+        if (totalMs > 0) humanTimes.push({ id: `h${entry.humanId}`, ms: totalMs })
+      } else {
+        const p = entry  // entry is a plain player
+        if (!p.isAI && (playerTimers[p.id] || 0) > 0) {
+          humanTimes.push({ id: p.id, ms: playerTimers[p.id] || 0 })
+        }
+      }
+    }
+    if (humanTimes.length < 2) return { fastestId: null, slowestId: null }
+    const fastest = humanTimes.reduce((a, b) => b.ms < a.ms ? b : a)
+    const slowest = humanTimes.reduce((a, b) => b.ms > a.ms ? b : a)
+    return { fastestId: fastest.id, slowestId: slowest.id }
+  }, [ranked, playerTimers, playerCount])
+
+  const getTimerKey = (entry) =>
+    playerCount === 2 ? `h${entry.humanId}` : entry.id
 
   return (
     <Modal title="Game over" wide onClose={onClose}>
@@ -104,6 +138,9 @@ export default function EndGameModal({ players, playerCount, onNewGame, onViewBo
             const remainingPieces = entry.slots.flatMap(p =>
               p.pieces.filter(pc => !pc.placed).map(pc => ({ ...pc, color: p.color }))
             ).sort((a, b) => b.size - a.size)
+            const timerKey = getTimerKey(entry)
+            const totalMs = entry.slots.reduce((s, p) => s + (playerTimers[p.id] || 0), 0)
+            const timeStr = formatTime(totalMs)
 
             return (
               <div
@@ -125,8 +162,15 @@ export default function EndGameModal({ players, playerCount, onNewGame, onViewBo
                     ))}
                   </div>
                   <div className={styles.scorePlayerInfo}>
-                    <div className={styles.scorePlayerName}>{entry.name}</div>
-                    <div className={styles.scorePlayerMeta}>{totalPlaced} of 44 placed · {entry.colors.map(c => PLAYER_COLORS[c].label).join(' & ')}</div>
+                    <div className={styles.scorePlayerName}>
+                      {entry.name}
+                      {!entry.slots.some(s => s.isAI) && timerKey === fastestId && <span className={styles.timerEmoji} title="Fastest player">🚀</span>}
+                      {!entry.slots.some(s => s.isAI) && timerKey === slowestId && <span className={styles.timerEmoji} title="Slowest player">🐢</span>}
+                    </div>
+                    <div className={styles.scorePlayerMeta}>
+                      {totalPlaced} of 44 placed · {entry.colors.map(c => PLAYER_COLORS[c].label).join(' & ')}
+                      {timeStr && <span className={styles.timerBadge}>⏱ {timeStr}</span>}
+                    </div>
                   </div>
                   <div className={styles.scoreValue}>
                     <span className={styles.scoreNumber} style={{ color: isWinner ? primaryColor.bg : 'var(--color-text-primary)' }}>
@@ -167,6 +211,8 @@ export default function EndGameModal({ players, playerCount, onNewGame, onViewBo
           const colorInfo = PLAYER_COLORS[player.color]
           const placedCount = player.pieces.filter(p => p.placed).length
           const remainingPieces = player.pieces.filter(p => !p.placed).sort((a, b) => b.size - a.size)
+          const timerKey = getTimerKey(player)
+          const timeStr = formatTime(playerTimers[player.id])
 
           return (
             <div
@@ -185,8 +231,15 @@ export default function EndGameModal({ players, playerCount, onNewGame, onViewBo
                   <div className={styles.playerColorDot} style={{ background: colorInfo.bg, boxShadow: `0 0 8px ${colorInfo.bg}60` }} />
                 </div>
                 <div className={styles.scorePlayerInfo}>
-                  <div className={styles.scorePlayerName}>{player.name}</div>
-                  <div className={styles.scorePlayerMeta}>{placedCount} of 22 placed</div>
+                  <div className={styles.scorePlayerName}>
+                    {player.name}
+                    {!player.isAI && timerKey === fastestId && <span className={styles.timerEmoji} title="Fastest player">🚀</span>}
+                    {!player.isAI && timerKey === slowestId && <span className={styles.timerEmoji} title="Slowest player">🐢</span>}
+                  </div>
+                  <div className={styles.scorePlayerMeta}>
+                    {placedCount} of 22 placed
+                    {timeStr && <span className={styles.timerBadge}>⏱ {timeStr}</span>}
+                  </div>
                 </div>
                 <div className={styles.scoreValue}>
                   <span className={styles.scoreNumber} style={{ color: isWinner ? colorInfo.bg : 'var(--color-text-primary)' }}>

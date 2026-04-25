@@ -55,11 +55,158 @@ export default function GameScreen({
   const [showSkipConfirm, setShowSkipConfirm] = useState(false)
   const [showRemovePieceModal, setShowRemovePieceModal] = useState(false)
   const [noMovesLocallyDismissed, setNoMovesLocallyDismissed] = useState(false)
+  const [enhancedColoring, setEnhancedColoring] = useState(false)
   const toggleFreeHover = useCallback(() => setFreeHoverEnabled(v => !v), [])
+  const toggleEnhancedColoring = useCallback(() => setEnhancedColoring(v => !v), [])
+
+  // IDs of the player(s) whose pieces get thicker outlines when enhanced coloring is on.
+  // Online: the local client's assigned player(s) (matched by humanId).
+  // Local pass-and-play: whoever's turn it currently is.
+  const enhancedColoringPlayerIds = React.useMemo(() => {
+    if (!enhancedColoring) return []
+    if (isOnline && myHumanId !== null) {
+      return state.players.filter(p => p.humanId === myHumanId).map(p => p.id)
+    }
+    return currentPlayer ? [currentPlayer.id] : []
+  }, [enhancedColoring, isOnline, myHumanId, state.players, currentPlayer?.id])
 
   const selectedPiece = getSelectedPiece()
   const { cells: ghostCells, isLegal: ghostIsLegal } = getGhostCells()
 
+  // ── Per-player last placed tracking (feature 4) ───────────────────────────
+  const [lastPlacedPerPlayer, setLastPlacedPerPlayer] = useState({})
+  const prevLastPlacedPlayerIdRef = useRef(null)
+
+  useEffect(() => {
+    const pid = state.lastPlacedPlayerId
+    const cells = state.lastPlacedCells
+    if (pid && cells) {
+      setLastPlacedPerPlayer(prev => ({ ...prev, [pid]: cells }))
+    } else if (!pid && prevLastPlacedPlayerIdRef.current) {
+      // Piece was removed via undo — clear that player's last-placed glow
+      const removedId = prevLastPlacedPlayerIdRef.current
+      setLastPlacedPerPlayer(prev => {
+        const next = { ...prev }
+        delete next[removedId]
+        return next
+      })
+    }
+    prevLastPlacedPlayerIdRef.current = pid
+  }, [state.lastPlacedCells, state.lastPlacedPlayerId])
+
+  useEffect(() => {
+    if (state.phase === 'setup') {
+      setLastPlacedPerPlayer({})
+      prevLastPlacedPlayerIdRef.current = null
+    }
+  }, [state.phase])
+
+  // ── Player timer tracking (feature 2) ────────────────────────────────────
+  const playerTimersAccRef = useRef({})    // { playerId: ms } — accumulates during play
+  const turnTimerStartRef  = useRef(null)  // timestamp when current turn started
+  const turnTimerPlayerRef = useRef(null)  // playerId currently being timed
+  const prevPhaseRef       = useRef(null)
+  const [finalPlayerTimers, setFinalPlayerTimers] = useState({})
+
+  const flushCurrentTimer = useCallback(() => {
+    const pid = turnTimerPlayerRef.current
+    if (pid === null || turnTimerStartRef.current === null) return
+    const elapsed = Date.now() - turnTimerStartRef.current
+    playerTimersAccRef.current = {
+      ...playerTimersAccRef.current,
+      [pid]: (playerTimersAccRef.current[pid] || 0) + elapsed,
+    }
+    turnTimerStartRef.current = null
+  }, [])
+
+  useEffect(() => {
+    const phase = state.phase
+    const prevPhase = prevPhaseRef.current
+    prevPhaseRef.current = phase
+
+    if (phase === 'setup') {
+      // New game (local flow: ended → setup → playing)
+      playerTimersAccRef.current = {}
+      turnTimerStartRef.current = null
+      turnTimerPlayerRef.current = null
+      setFinalPlayerTimers({})
+      return
+    }
+
+    if (phase === 'ended') {
+      flushCurrentTimer()
+      setFinalPlayerTimers({ ...playerTimersAccRef.current })
+      return
+    }
+
+    if (phase === 'playing') {
+      // Online new game: goes ended → playing without a setup phase
+      if (prevPhase === 'ended') {
+        playerTimersAccRef.current = {}
+        turnTimerStartRef.current = null
+        turnTimerPlayerRef.current = null
+        setFinalPlayerTimers({})
+      }
+
+      const cp = currentPlayer
+      if (!cp) return
+      if (turnTimerPlayerRef.current !== cp.id) {
+        flushCurrentTimer()
+        if (cp.isAI) {
+          // Don't time AI turns — leave refs null so they accumulate nothing
+          turnTimerPlayerRef.current = null
+          turnTimerStartRef.current = null
+        } else {
+          turnTimerPlayerRef.current = cp.id
+          turnTimerStartRef.current = Date.now()
+        }
+      }
+    }
+  }, [currentPlayer?.id, state.phase, flushCurrentTimer])
+
+  // ── Turn glow & inactivity flash (features 5 & 6) ────────────────────────
+  const [showTurnGlow, setShowTurnGlow] = useState(false)
+  const [showInactivityFlash, setShowInactivityFlash] = useState(false)
+  const lastActivityRef = useRef(Date.now())
+
+  const handleMouseActivity = useCallback(() => {
+    lastActivityRef.current = Date.now()
+    setShowTurnGlow(false)
+    setShowInactivityFlash(false)
+  }, [])
+
+  // Show turn glow when a new human turn begins
+  useEffect(() => {
+    if (state.phase !== 'playing') { setShowTurnGlow(false); return }
+    if (!isMyTurn || currentPlayer?.isAI || state.waitingForEndTurn) {
+      setShowTurnGlow(false)
+      return
+    }
+    setShowTurnGlow(true)
+    lastActivityRef.current = Date.now()
+  }, [currentPlayer?.id, isMyTurn, state.phase, state.waitingForEndTurn])
+
+  // Hide turn glow when piece is selected
+  useEffect(() => {
+    if (state.selectedPieceId) setShowTurnGlow(false)
+  }, [state.selectedPieceId])
+
+  // Inactivity: 10 seconds with no mouse/piece activity → flash background
+  useEffect(() => {
+    if (!isMyTurn || state.phase !== 'playing' || state.waitingForEndTurn || currentPlayer?.isAI) {
+      setShowInactivityFlash(false)
+      return
+    }
+    lastActivityRef.current = Date.now()
+    const interval = setInterval(() => {
+      if (Date.now() - lastActivityRef.current >= 10000) {
+        setShowInactivityFlash(true)
+      }
+    }, 500)
+    return () => clearInterval(interval)
+  }, [isMyTurn, state.phase, state.waitingForEndTurn, currentPlayer?.id])
+
+  // ── Keyboard & HUD bounce ref ─────────────────────────────────────────────
   const hudBounceRef = useRef(null)
   const keyRotate = useCallback(() => { rotatePiece(); hudBounceRef.current?.('rotate') }, [rotatePiece])
   const keyRotateReverse = useCallback(() => { rotatePieceReverse?.(); hudBounceRef.current?.('rotateReverse') }, [rotatePieceReverse])
@@ -98,6 +245,7 @@ export default function GameScreen({
     onRotateReverse: keyRotateReverse,
     onFlip: keyFlip,
     onToggleHover: keyHover,
+    onToggleEnhancedColoring: toggleEnhancedColoring,
     onDeselect: keyDeselect,
     onConfirmPlacement: confirmPlacement,
     onCancelPlacement: cancelPlacement,
@@ -133,10 +281,14 @@ export default function GameScreen({
                       showRemovePieceModal
   const boardDisabled = isModalOpen || (state.phase === 'ended' && viewingFinalBoard) || state.waitingForEndTurn
 
-  // Compute winner for final board bar (lowest score wins; for 2p, use slot level)
-  const finalBoardWinner = viewingFinalBoard
-    ? [...players].sort((a, b) => a.score - b.score)[0]
-    : null
+  // Compute winner(s) for final board bar (ties supported)
+  const finalBoardSorted = viewingFinalBoard ? [...players].sort((a, b) => a.score - b.score) : []
+  const finalBoardWinner = finalBoardSorted[0] || null
+  const finalBoardTiedWinners = (
+    viewingFinalBoard &&
+    finalBoardSorted.length > 1 &&
+    finalBoardSorted[0]?.score === finalBoardSorted[1]?.score
+  ) ? finalBoardSorted.filter(p => p.score === finalBoardSorted[0].score) : null
 
   return (
     <div className={styles.screen}>
@@ -146,14 +298,27 @@ export default function GameScreen({
             <span className={styles.gameOverLabel}>Game over</span>
           </div>
           <div className={styles.finalBoardCenter}>
-            {finalBoardWinner && (() => {
+            {finalBoardTiedWinners && finalBoardTiedWinners.length > 1 ? (
+              <span className={styles.finalTie}>
+                {finalBoardTiedWinners.map((p, i) => {
+                  const ci = PLAYER_COLORS[p.color]
+                  return (
+                    <React.Fragment key={p.id}>
+                      {i > 0 && <span className={styles.finalTieAnd}> &amp; </span>}
+                      <span style={{ color: ci.bg }}>{p.name}</span>
+                    </React.Fragment>
+                  )
+                })}
+                {' '}tie!
+              </span>
+            ) : finalBoardWinner ? (() => {
               const colorInfo = PLAYER_COLORS[finalBoardWinner.color]
               return (
                 <span className={styles.finalWinner} style={{ color: colorInfo.bg }}>
                   {finalBoardWinner.name} wins!
                 </span>
               )
-            })()}
+            })() : null}
           </div>
           <div className={styles.finalBoardRight}>
             <button className={styles.backToResultsBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => setViewingFinalBoard(false), 350) }}>
@@ -183,6 +348,8 @@ export default function GameScreen({
           onFlip={flipPiece}
           onToggleHover={toggleFreeHover}
           freeHoverEnabled={freeHoverEnabled}
+          onToggleEnhancedColoring={toggleEnhancedColoring}
+          enhancedColoring={enhancedColoring}
           onDeselect={deselectPiece}
           onEndGame={requestEndGame}
           onSkip={handleSkip}
@@ -217,6 +384,7 @@ export default function GameScreen({
         </div>
 
         <div className={styles.boardArea}>
+          {showInactivityFlash && <div className={styles.inactivityOverlay} />}
           <Board
             boardData={state.board}
             selectedPiece={selectedPiece}
@@ -228,12 +396,16 @@ export default function GameScreen({
             onCellClick={placePiece}
             onCellHover={setHover}
             onBoardLeave={handleBoardLeave}
+            onMouseActivity={handleMouseActivity}
             players={players}
             disabled={!!boardDisabled}
             requiredStartCells={state.gameModes?.requiredStart ? state.requiredStartCells : null}
             otherPlayersGhosts={otherPlayersGhosts}
             lastPlacedCells={state.lastPlacedCells}
             lastPlacedPlayerId={state.lastPlacedPlayerId}
+            lastPlacedPerPlayer={lastPlacedPerPlayer}
+            enhancedColoringPlayerIds={enhancedColoringPlayerIds}
+            yourTurn={showTurnGlow}
             onRemovePiece={
               isMyTurn && state.waitingForEndTurn && state.lastPlacedCells && !showRemovePieceModal
                 ? handleRemovePieceClick
@@ -279,6 +451,7 @@ export default function GameScreen({
           onViewBoard={() => setViewingFinalBoard(true)}
           onClose={() => setViewingFinalBoard(true)}
           isHost={!isOnline || isHostPlayer}
+          playerTimers={finalPlayerTimers}
         />
       )}
 

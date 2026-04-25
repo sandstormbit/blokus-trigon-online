@@ -18,6 +18,7 @@ export function useKeyboard({
   onRotateReverse,
   onFlip,
   onToggleHover,
+  onToggleEnhancedColoring,
   onDeselect,
   onConfirmPlacement,
   onCancelPlacement,
@@ -35,6 +36,13 @@ export function useKeyboard({
       if (e.key === 'Enter' && e.shiftKey) {
         e.preventDefault()
         onEndTurn?.()
+        return
+      }
+
+      // C → toggle enhanced coloring (works any time during play)
+      if ((e.key === 'c' || e.key === 'C') && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault()
+        onToggleEnhancedColoring?.()
         return
       }
 
@@ -93,6 +101,7 @@ export function useKeyboard({
     onRotateReverse,
     onFlip,
     onToggleHover,
+    onToggleEnhancedColoring,
     onDeselect,
     onConfirmPlacement,
     onCancelPlacement,

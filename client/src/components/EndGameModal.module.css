@@ -293,3 +293,22 @@
   width: 32px;
   height: 32px;
 }
+
+/* Timer display in scoreboard */
+.timerEmoji {
+  margin-left: 6px;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.timerBadge {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 1px 6px;
+  vertical-align: middle;
+}

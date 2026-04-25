@@ -25,6 +25,8 @@ export default function HUD({
   onFlip,
   onToggleHover,
   freeHoverEnabled,
+  onToggleEnhancedColoring,
+  enhancedColoring,
   onDeselect,
   onEndGame,
   onSkip,
@@ -198,6 +200,15 @@ export default function HUD({
             </div>
           ))}
         </div>
+        {onToggleEnhancedColoring && (
+          <button
+            className={enhancedColoring ? styles.glowBtnActive : styles.glowBtn}
+            onClick={(e) => { triggerBounce(e.currentTarget); onToggleEnhancedColoring() }}
+            title={enhancedColoring ? 'Hide piece glows (C)' : 'Show piece glows (C)'}
+          >
+            ✦ <kbd>C</kbd>
+          </button>
+        )}
         {isOnline && onExit && (
           <button className={styles.leaveBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onExit, 350) }}>Leave</button>
         )}

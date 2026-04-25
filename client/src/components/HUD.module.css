@@ -342,6 +342,41 @@ kbd {
   border-color: rgba(255,255,255,0.4);
 }
 
+/* Enhanced coloring toggle button */
+.glowBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 9px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius-sm);
+  color: rgba(255,255,255,0.35);
+  font-size: 12px;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.glowBtn:hover {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.25);
+  color: rgba(255,255,255,0.7);
+}
+
+.glowBtnActive {
+  composes: glowBtn;
+  background: rgba(234,179,8,0.12);
+  border-color: rgba(234,179,8,0.4);
+  color: #fde68a;
+  box-shadow: 0 0 8px rgba(234,179,8,0.25);
+}
+
+.glowBtnActive:hover {
+  background: rgba(234,179,8,0.2);
+  border-color: rgba(234,179,8,0.6);
+  color: #fef3c7;
+}
+
 /* End turn hint text (shown when waiting for end turn) */
 .endTurnHint {
   display: flex;

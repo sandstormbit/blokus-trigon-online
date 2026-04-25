@@ -115,7 +115,7 @@ function getPlacedPieceOutlines(boardData, playerColorMap) {
     const componentSet = new Set(component.map(c => c.id))
     const edges = getOuterEdges(component, componentSet, offsetX, offsetY)
     const colors = playerColorMap[playerId]
-    result.push({ edges, stroke: colors ? colors.dark : 'rgba(0,0,0,0.6)' })
+    result.push({ edges, stroke: colors ? colors.dark : 'rgba(0,0,0,0.6)', bg: colors ? colors.bg : '#ffffff', playerId })
   }
 
   return result
@@ -186,12 +186,16 @@ export default function Board({
   onCellClick,
   onCellHover,
   onBoardLeave,
+  onMouseActivity,    // called on any mouse move (for turn glow + inactivity reset)
   players,
   disabled,
   requiredStartCells,   // Set<"q,r"> | null — Required Start mode markers
   otherPlayersGhosts,   // [{ cells, color }] — live cursors from other players
-  lastPlacedCells,      // [{q,r}] | null — most recently placed piece for glow
-  lastPlacedPlayerId,   // player id of who placed it
+  lastPlacedCells,      // [{q,r}] | null — most recently placed piece (for bounce + remove targets)
+  lastPlacedPlayerId,   // player id of who placed it (for bounce)
+  lastPlacedPerPlayer,  // { [playerId]: [{q,r}] } — each player's last placed piece (for glow)
+  enhancedColoringPlayerIds, // number[] — player IDs whose pieces get thicker outlines
+  yourTurn,             // bool — show pulsing outline when it's your turn
   onRemovePiece,        // callback — when defined, last placed piece cells are clickable to remove
 }) {
   const svgRef = useRef(null)
@@ -271,31 +275,35 @@ export default function Board({
     return PLAYER_COLORS[currentPlayerColor].bg
   }, [currentPlayerColor])
 
-  // Hex color of the last placed piece (for glow)
-  const lastPlacedColorHex = useMemo(() => {
-    if (!lastPlacedPlayerId || !playerColorMap[lastPlacedPlayerId]) return '#ffffff'
-    return playerColorMap[lastPlacedPlayerId].bg
-  }, [lastPlacedPlayerId, playerColorMap])
-
-  // Outer edges of the last placed piece (for glow border)
-  const lastPlacedOuterEdges = useMemo(() => {
-    if (!lastPlacedCells || lastPlacedCells.length === 0 || !boardData) return []
-    const { offsetX, offsetY } = boardData
-    const cellKeySet = new Set(lastPlacedCells.map(c => `${c.q},${c.r}`))
-    return getOuterEdges(lastPlacedCells, cellKeySet, offsetX, offsetY)
-  }, [lastPlacedCells, boardData])
-
-  const outlinePoints = useMemo(() => getBoardOutlinePoints(boardData), [boardData])
-
-  /**
-   * Outer edges of each placed piece (connected component), expressed in SVG
-   * viewport space. Recomputed only when the board changes (on placement).
-   */
+  // Outer edges of each placed piece (connected component), expressed in SVG
+  // viewport space. Recomputed only when the board changes (on placement).
   const placedPieceOutlines = useMemo(
     () => getPlacedPieceOutlines(boardData, playerColorMap),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [boardData, playerColorMap]
   )
+
+  // Per-player last-placed glow edges (feature 4: each player's last piece glows)
+  const allLastPlacedEdges = useMemo(() => {
+    if (!lastPlacedPerPlayer || !boardData) return []
+    const { offsetX, offsetY } = boardData
+    return Object.entries(lastPlacedPerPlayer).map(([playerIdStr, cells]) => {
+      if (!cells || cells.length === 0) return null
+      const playerId = parseInt(playerIdStr)
+      const player = players?.find(p => p.id === playerId)
+      if (!player) return null
+      const cellKeySet = new Set(cells.map(c => `${c.q},${c.r}`))
+      const edges = getOuterEdges(cells, cellKeySet, offsetX, offsetY)
+      return {
+        playerId,
+        colorHex: playerColorMap[playerId]?.bg || '#ffffff',
+        colorKey: player.color,
+        edges,
+      }
+    }).filter(Boolean)
+  }, [lastPlacedPerPlayer, boardData, players, playerColorMap])
+
+  const outlinePoints = useMemo(() => getBoardOutlinePoints(boardData), [boardData])
 
   /**
    * Outer border edges of the current ghost piece, expressed relative to the
@@ -360,6 +368,9 @@ export default function Board({
   }, [boardData])
 
   const handleMouseMove = useCallback((e) => {
+    // Notify parent of any mouse activity (for turn glow + inactivity reset)
+    onMouseActivity?.()
+
     // Always track raw SVG position for free hover spring
     const svg = svgRef.current
     if (svg) {
@@ -380,7 +391,7 @@ export default function Board({
     if (disabled || !selectedPiece) return
     const cell = svgPosToCell(e.clientX, e.clientY)
     if (cell) onCellHover(cell)
-  }, [disabled, selectedPiece, svgPosToCell, onCellHover, runSpring])
+  }, [onMouseActivity, disabled, selectedPiece, svgPosToCell, onCellHover, runSpring])
 
   const handleBoardLeave = useCallback(() => {
     isOnBoardRef.current = false
@@ -418,10 +429,19 @@ export default function Board({
           <filter id="freeHoverGlow" x="-40%" y="-40%" width="180%" height="180%">
             <feDropShadow dx="0" dy="0" stdDeviation="2.5" floodColor={playerColorHex} floodOpacity="0.8" />
           </filter>
-          {/* Pulsing glow for the last placed piece border */}
-          <filter id="lastPlacedGlow" x="-60%" y="-60%" width="220%" height="220%">
-            <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor={lastPlacedColorHex} floodOpacity="0.9" />
-            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor={lastPlacedColorHex} floodOpacity="0.4" />
+
+          {/* Per-player glow filters for last-placed piece (feature 4) */}
+          {Object.entries(PLAYER_COLORS).map(([key, colorInfo]) => (
+            <filter key={key} id={`lastPlacedGlow-${key}`} x="-60%" y="-60%" width="220%" height="220%">
+              <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor={colorInfo.bg} floodOpacity="0.9" />
+              <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor={colorInfo.bg} floodOpacity="0.4" />
+            </filter>
+          ))}
+
+          {/* Glowing white outline for "your turn" indicator */}
+          <filter id="turnGlowFilter" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="white" floodOpacity="0.9" />
+            <feDropShadow dx="0" dy="0" stdDeviation="10" floodColor="white" floodOpacity="0.45" />
           </filter>
         </defs>
 
@@ -433,6 +453,20 @@ export default function Board({
             stroke="rgba(255,255,255,0.75)"
             strokeWidth={2.5}
             strokeLinejoin="round"
+          />
+        )}
+
+        {/* Pulsing "your turn" glow around the board outline (feature 5) */}
+        {yourTurn && outlinePoints && (
+          <polygon
+            points={outlinePoints}
+            fill="none"
+            stroke="rgba(255,255,255,0.9)"
+            strokeWidth={5}
+            strokeLinejoin="round"
+            filter="url(#turnGlowFilter)"
+            pointerEvents="none"
+            className={styles.turnGlow}
           />
         )}
 
@@ -511,6 +545,28 @@ export default function Board({
         )}
 
         {/*
+          Enhanced coloring — thicker piece outlines for the local player's pieces (feature 3).
+          Renders a second pass of borders in the player's bright color at 3× the normal width.
+        */}
+        {enhancedColoringPlayerIds && enhancedColoringPlayerIds.length > 0 &&
+          placedPieceOutlines
+            .filter(piece => enhancedColoringPlayerIds.includes(piece.playerId))
+            .flatMap((piece, pi) =>
+              piece.edges.map((edge, ei) => (
+                <line
+                  key={`ec-${pi}-${ei}`}
+                  x1={edge.x1} y1={edge.y1}
+                  x2={edge.x2} y2={edge.y2}
+                  stroke={piece.stroke}
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  pointerEvents="none"
+                />
+              ))
+            )
+        }
+
+        {/*
           Other players' live cursor ghosts — rendered below the free hover
           so the current player's hover is always on top.
         */}
@@ -539,23 +595,29 @@ export default function Board({
         })}
 
         {/*
-          Glowing outer border of the last placed piece.
+          Per-player last-placed piece glow (feature 4).
+          Each player's most recently placed piece shows a pulsing glow border.
         */}
-        {lastPlacedOuterEdges.length > 0 && (
-          <g filter="url(#lastPlacedGlow)" pointerEvents="none" className={styles.lastPlacedGlow}>
-            {lastPlacedOuterEdges.map((edge, i) => (
+        {allLastPlacedEdges.map(({ playerId, colorHex, colorKey, edges }) => (
+          <g
+            key={`lpg-${playerId}`}
+            filter={`url(#lastPlacedGlow-${colorKey})`}
+            pointerEvents="none"
+            className={styles.lastPlacedGlow}
+          >
+            {edges.map((edge, i) => (
               <line
                 key={i}
                 x1={edge.x1} y1={edge.y1}
                 x2={edge.x2} y2={edge.y2}
-                stroke={lastPlacedColorHex}
+                stroke={colorHex}
                 strokeWidth={2}
                 strokeLinecap="round"
                 strokeOpacity={0.95}
               />
             ))}
           </g>
-        )}
+        ))}
 
         {/*
           Bounce animation group for the last placed piece.

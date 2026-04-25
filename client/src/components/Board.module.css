@@ -36,7 +36,7 @@
   transform-origin: center center;
 }
 
-/* Pulsing glow for the last placed piece border */
+/* Pulsing glow for each player's last placed piece border */
 @keyframes lastPlacedPulse {
   0%   { opacity: 1; transform: scale(1); }
   50%  { opacity: 0.6; transform: scale(1.10); }
@@ -47,4 +47,24 @@
   animation: lastPlacedPulse 1.8s ease-in-out infinite;
   transform-box: fill-box;
   transform-origin: center center;
+}
+
+/* Gentle pulsing glow for all pieces when enhanced coloring is on */
+@keyframes enhancedGlowPulse {
+  0%, 100% { opacity: 0.75; }
+  50%       { opacity: 0.3; }
+}
+
+.enhancedGlow {
+  animation: enhancedGlowPulse 2.6s ease-in-out infinite;
+}
+
+/* Pulsing white outline around the board when it's the player's turn */
+@keyframes turnGlowPulse {
+  0%, 100% { opacity: 0.8; }
+  50%       { opacity: 0.2; }
+}
+
+.turnGlow {
+  animation: turnGlowPulse 2s ease-in-out infinite;
 }

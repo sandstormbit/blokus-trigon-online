@@ -162,3 +162,30 @@
   position: relative;
   background: radial-gradient(ellipse 70% 70% at 50% 50%, rgba(59,130,246,0.03) 0%, transparent 70%);
 }
+
+/* Inactivity flash — radial white glow behind the board */
+@keyframes inactivityFlashPulse {
+  0%, 100% { opacity: 0.25; }
+  50%       { opacity: 1; }
+}
+
+.inactivityOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 85% 85% at 50% 50%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.06) 45%, transparent 68%);
+  animation: inactivityFlashPulse 1s ease-in-out infinite;
+  z-index: 0;
+}
+
+/* Final board tie display */
+.finalTie {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.finalTieAnd {
+  color: var(--text-muted);
+  font-weight: 400;
+}
