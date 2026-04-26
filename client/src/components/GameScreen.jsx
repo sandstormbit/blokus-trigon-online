@@ -372,6 +372,11 @@ export default function GameScreen({
             <button className={styles.backToResultsBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => setViewingFinalBoard(false), 350) }}>
               Back to results
             </button>
+            {onExit && (
+              <button className={styles.finalLeaveBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onExit, 350) }}>
+                Leave
+              </button>
+            )}
             {(!isOnline || isHostPlayer) ? (
               <button className={styles.finalNewGameBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(newGame, 350) }}>
                 <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
@@ -534,6 +539,7 @@ export default function GameScreen({
           onNewGame={newGame}
           onViewBoard={() => setViewingFinalBoard(true)}
           onClose={() => setViewingFinalBoard(true)}
+          onLeave={onExit || null}
           isHost={!isOnline || isHostPlayer}
           playerTimers={finalPlayerTimers}
         />

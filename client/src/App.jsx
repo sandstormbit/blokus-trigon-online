@@ -54,7 +54,7 @@ function OnlineApp({ onPassAndPlay }) {
   const online = useOnlineGame()
 
   const handleExit = () => {
-    online.disconnect()
+    online.leaveGame()
   }
 
   // Show room-specific maxPlayers: derive from the room's maxPlayers stored during create/join
@@ -71,8 +71,12 @@ function OnlineApp({ onPassAndPlay }) {
           roomCode={spectatorModalData.roomCode}
           phase={spectatorModalData.phase}
           aiSlots={spectatorModalData.aiSlots}
+          openSlots={spectatorModalData.openSlots}
           onSpectate={() => online.spectateGame(spectatorModalData.roomCode, spectatorModalData.playerName || '')}
           onTakeAISlot={(aiHumanId) => online.takeAISlot(spectatorModalData.roomCode, aiHumanId, spectatorModalData.playerName || '')}
+          onTakeOpenSlot={(aiHumanId) => online.takeOpenSlot(spectatorModalData.roomCode, aiHumanId, spectatorModalData.playerName || '', ({ error }) => {
+              if (error) console.warn('take_open_slot failed:', error)
+            })}
           onClose={() => online.disconnect()}
         />
       )}

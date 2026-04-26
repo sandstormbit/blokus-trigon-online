@@ -8,9 +8,11 @@ import styles from './SpectatorModal.module.css'
 export default function SpectatorModal({
   roomCode,
   phase,
-  aiSlots,          // [{humanId, name, aiDifficulty}] | null
+  aiSlots,          // [{humanId, name, aiDifficulty}] | null — waiting room AI slots
+  openSlots,        // [{humanId, name}] | null — mid-game open player slots
   onSpectate,
-  onTakeAISlot,     // (aiHumanId) => void  — null if not applicable
+  onTakeAISlot,     // (aiHumanId) => void — waiting room only
+  onTakeOpenSlot,   // (aiHumanId) => void — mid-game open slots
   onClose,
 }) {
   const isInProgress = phase === 'playing' || phase === 'ended'
@@ -38,6 +40,21 @@ export default function SpectatorModal({
               >
                 Replace <strong>{slot.name}</strong>
                 <span className={styles.slotDiff}>{slot.aiDifficulty} AI</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {openSlots && openSlots.length > 0 && isInProgress && (
+          <div className={styles.section}>
+            <p className={styles.sectionLabel}>Take an open player slot:</p>
+            {openSlots.map(slot => (
+              <button
+                key={slot.humanId}
+                className={styles.takeSlotBtn}
+                onClick={() => onTakeOpenSlot?.(slot.humanId)}
+              >
+                Play as <strong>{slot.name}</strong>
               </button>
             ))}
           </div>

@@ -28,7 +28,7 @@ function formatTime(ms) {
   return `${s}s`
 }
 
-export default function EndGameModal({ players, playerCount, onNewGame, onViewBoard, onClose, isHost = true, playerTimers = {} }) {
+export default function EndGameModal({ players, playerCount, onNewGame, onViewBoard, onClose, onLeave, isHost = true, playerTimers = {} }) {
   // For 2-player mode, consolidate by humanId
   const ranked = useMemo(() => {
     if (playerCount === 2) {
@@ -282,6 +282,11 @@ export default function EndGameModal({ players, playerCount, onNewGame, onViewBo
               <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/>
             </svg>
             View board
+          </button>
+        )}
+        {onLeave && (
+          <button className={styles.leaveBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onLeave, 350) }}>
+            Leave
           </button>
         )}
         {isHost ? (

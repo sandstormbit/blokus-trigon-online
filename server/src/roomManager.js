@@ -47,6 +47,11 @@ function generateToken() {
 
 const ALL_COLORS = ['blue', 'red', 'green', 'yellow']
 
+function nextHumanId(room) {
+  if (room.players.length === 0) return 1
+  return Math.max(...room.players.map(p => p.humanId)) + 1
+}
+
 function pickAvailableColor(existingPlayers) {
   const taken = new Set(existingPlayers.flatMap(p => [p.color, p.color2]).filter(Boolean))
   return ALL_COLORS.find(c => !taken.has(c)) || null
@@ -121,9 +126,10 @@ export function joinRoom(code, playerName, socketId) {
   }
 
   const token = generateToken()
+  const newId = nextHumanId(room)
   const player = {
-    humanId: room.players.length + 1,
-    name: playerName || `Player ${room.players.length + 1}`,
+    humanId: newId,
+    name: playerName || `Player ${newId}`,
     token,
     socketId,
     connected: true,
@@ -158,7 +164,7 @@ export function addAIPlayer(code, difficulty = 'normal') {
   const aiColor2 = isTwoPlayerStandard ? (available[1] || null) : null
 
   const aiPlayer = {
-    humanId: room.players.length + 1,
+    humanId: nextHumanId(room),
     name: generateAIName(),
     token: null,
     socketId: null,
@@ -186,9 +192,6 @@ export function removeAIPlayer(code, humanId) {
   if (aiIdx === -1) return { error: 'ai_not_found' }
 
   room.players.splice(aiIdx, 1)
-
-  // Re-number humanIds sequentially
-  room.players.forEach((p, i) => { p.humanId = i + 1 })
 
   return { room }
 }
@@ -294,6 +297,69 @@ export function claimAISlot(code, originalToken, newSocketId) {
 }
 
 /**
+ * Voluntarily leave a mid-game slot. The slot becomes an open human slot
+ * (no AI replacement) that auto-skips each turn until someone claims it.
+ * Works during 'playing' or 'ended' phase.
+ * Returns { room, player } or { error }.
+ */
+export function leaveAndOpenSlot(code, token) {
+  const room = rooms.get(code)
+  if (!room) return { error: 'room_not_found' }
+
+  const playerIdx = room.players.findIndex(p => p.token === token)
+  if (playerIdx === -1) return { error: 'player_not_found' }
+
+  const existing = room.players[playerIdx]
+
+  if (existing.token) tokenToRoom.delete(existing.token)
+  if (existing.socketId) socketToToken.delete(existing.socketId)
+
+  // Keep as a human slot but mark it open (no AI takeover)
+  existing.token = null
+  existing.socketId = null
+  existing.connected = false
+  existing.openSlot = true
+
+  if (room.hostToken === token) {
+    const nextHuman = room.players.find(p => !p.isAI && p.connected)
+    room.hostToken = nextHuman ? nextHuman.token : null
+  }
+
+  return { room, player: existing }
+}
+
+/**
+ * Allow any new player to claim an open slot mid-game.
+ * Returns { room, player } or { error }.
+ */
+export function takeOpenSlot(code, aiHumanId, playerName, socketId) {
+  const room = rooms.get(code)
+  if (!room) return { error: 'room_not_found' }
+  if (room.phase !== 'playing') return { error: 'game_not_active' }
+
+  const aiIdx = room.players.findIndex(p => p.openSlot && p.humanId === aiHumanId)
+  if (aiIdx === -1) return { error: 'slot_not_found' }
+
+  const token = generateToken()
+  const player = {
+    humanId: aiHumanId,
+    name: playerName || `Player ${aiHumanId}`,
+    token,
+    socketId,
+    connected: true,
+    color: room.players[aiIdx].color,
+    color2: room.players[aiIdx].color2,
+    isAI: false,
+  }
+
+  room.players[aiIdx] = player
+  tokenToRoom.set(token, code)
+  socketToToken.set(socketId, token)
+
+  return { room, player }
+}
+
+/**
  * Add a spectator to a room. Returns { room, spectator } or { error }.
  */
 export function addSpectator(code, socketId, name) {
@@ -388,9 +454,6 @@ export function handleDisconnect(socketId) {
       rooms.delete(code)
       return { room: null, player, wasSpectator: false }
     }
-
-    // Re-number humanIds for remaining players
-    room.players.forEach((p, i) => { p.humanId = i + 1 })
 
     if (room.hostToken === token) {
       const nextHuman = room.players.find(p => !p.isAI)

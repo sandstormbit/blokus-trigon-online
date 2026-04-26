@@ -164,7 +164,13 @@ export function useOnlineGame() {
     const storedToken = localStorage.getItem('bt_session_token')
     const storedRoomCode = localStorage.getItem('bt_room_code')
 
-    if (storedToken && storedRoomCode) {
+    // Bug 4: If the URL is asking to join a DIFFERENT room, skip auto-reconnect
+    // so the landing page can open the join modal for the correct room.
+    const urlJoinCode = new URLSearchParams(window.location.search).get('join')?.toUpperCase() || null
+    const shouldAutoReconnect = storedToken && storedRoomCode &&
+      (!urlJoinCode || urlJoinCode === storedRoomCode)
+
+    if (shouldAutoReconnect) {
       socket.connect()
       const attemptReconnect = () => {
         socket.emit('join_room', { roomCode: storedRoomCode, playerName: '', sessionToken: storedToken }, (res) => {
@@ -275,6 +281,7 @@ export function useOnlineGame() {
     socket.connect()
 
     const emitJoin = () => {
+      socket.off('connect_error', onConnectError)
       socket.emit('join_room', { roomCode, playerName, sessionToken: token }, (res) => {
         if (!res.ok) {
           callback?.({ error: res.error })
@@ -292,11 +299,12 @@ export function useOnlineGame() {
         }
 
         // Room full or in progress — server is offering spectate/AI-slot options
-        if (res.canSpectate || res.hasAISlots) {
+        if (res.canSpectate || res.hasAISlots || res.hasOpenSlots) {
           setSpectatorModalData({
             roomCode: res.roomCode,
             phase: res.phase,
             aiSlots: res.aiSlots || null,
+            openSlots: res.openSlots || null,
             playerName,
           })
           if (res.gameState) setGameState(deserializeState(res.gameState))
@@ -324,10 +332,16 @@ export function useOnlineGame() {
       })
     }
 
+    const onConnectError = (err) => {
+      socket.off('connect', emitJoin)
+      callback?.({ error: err?.message || 'connection_failed' })
+    }
+
     if (socket.connected) {
       emitJoin()
     } else {
       socket.once('connect', emitJoin)
+      socket.once('connect_error', onConnectError)
     }
   }, [myToken])
 
@@ -658,6 +672,55 @@ export function useOnlineGame() {
     setClaimSlotData(null)
   }, [])
 
+  // During a live game: convert slot to open AI before disconnecting so others can rejoin.
+  // During waiting/ended: just disconnect.
+  const leaveGame = useCallback(() => {
+    const socket = socketRef.current
+    if (socket?.connected && roomPhase === 'playing') {
+      socket.emit('leave_game', {}, () => disconnect())
+    } else {
+      disconnect()
+    }
+  }, [roomPhase, disconnect])
+
+  const takeOpenSlotAction = useCallback((code, aiHumanId, playerName, callback) => {
+    const socket = socketRef.current
+    if (!socket) return
+
+    socket.connect()
+
+    const doTake = () => {
+      socket.off('connect_error', onTakeError)
+      socket.emit('take_open_slot', { roomCode: code, aiHumanId, playerName }, (res) => {
+        if (!res?.ok) { callback?.({ error: res?.error || 'unknown' }); return }
+        localStorage.setItem('bt_session_token', res.token)
+        localStorage.setItem('bt_room_code', res.roomCode)
+        setMyToken(res.token)
+        setRoomCode(res.roomCode)
+        setMyHumanId(res.humanId)
+        setIsHostPlayer(res.isHost || false)
+        setRoomPlayers(res.players || [])
+        setSettings(res.settings || { gameModes: {} })
+        setRoomPhase(res.phase)
+        setSpectatorModalData(null)
+        if (res.gameState) setGameState(deserializeState(res.gameState))
+        callback?.({ ok: true })
+      })
+    }
+
+    const onTakeError = (err) => {
+      socket.off('connect', doTake)
+      callback?.({ error: err?.message || 'connection_failed' })
+    }
+
+    if (socket.connected) {
+      doTake()
+    } else {
+      socket.once('connect', doTake)
+      socket.once('connect_error', onTakeError)
+    }
+  }, [])
+
   // ── Derived helpers (match useGameState interface) ────────────────────────────
   const mergedState = gameState ? {
     ...gameState,
@@ -758,12 +821,14 @@ export function useOnlineGame() {
     selectColor: selectColorAction,
     selectColorSlot: selectColorSlotAction,
     disconnect,
+    leaveGame,
 
     // AI / spectator actions
     addAIPlayer: addAIPlayerAction,
     removeAIPlayer: removeAIPlayerAction,
     spectateGame: spectateGameAction,
     takeAISlot: takeAISlotAction,
+    takeOpenSlot: takeOpenSlotAction,
     claimAISlot: claimAISlotAction,
     replaceWithAI: replaceWithAIAction,
     dismissDisconnectPrompt,

@@ -135,8 +135,8 @@ export function createGameState(roomPlayers, humanCount, gameModes = {}) {
   let players
   if (humanCount === 2 && gameModes.megaColors) {
     players = [
-      { id: 1, humanId: 1, name: playerNames[0] || 'Player 1', color: playerColors[0], pieces: createMegaColorPieces(), isAI: roomPlayers[0]?.isAI || false },
-      { id: 2, humanId: 2, name: playerNames[1] || 'Player 2', color: playerColors[1], pieces: createMegaColorPieces(), isAI: roomPlayers[1]?.isAI || false },
+      { id: 1, humanId: roomPlayers[0].humanId, name: playerNames[0] || 'Player 1', color: playerColors[0], pieces: createMegaColorPieces(), isAI: roomPlayers[0]?.isAI || false },
+      { id: 2, humanId: roomPlayers[1].humanId, name: playerNames[1] || 'Player 2', color: playerColors[1], pieces: createMegaColorPieces(), isAI: roomPlayers[1]?.isAI || false },
     ]
   } else if (humanCount === 2) {
     const defaults = ['blue', 'red', 'green', 'yellow']
@@ -154,15 +154,15 @@ export function createGameState(roomPlayers, humanCount, gameModes = {}) {
       pickColor(roomPlayers[1].color2, defaults[3]),
     ]
     players = [
-      { id: 1, humanId: 1, name: `${playerNames[0] || 'Player 1'} (${PLAYER_COLORS[resolved[0]].label})`, color: resolved[0], pieces: createPlayerPiecesRandom(), isAI: roomPlayers[0]?.isAI || false },
-      { id: 2, humanId: 2, name: `${playerNames[1] || 'Player 2'} (${PLAYER_COLORS[resolved[1]].label})`, color: resolved[1], pieces: createPlayerPiecesRandom(), isAI: roomPlayers[1]?.isAI || false },
-      { id: 3, humanId: 1, name: `${playerNames[0] || 'Player 1'} (${PLAYER_COLORS[resolved[2]].label})`, color: resolved[2], pieces: createPlayerPiecesRandom(), isAI: roomPlayers[0]?.isAI || false },
-      { id: 4, humanId: 2, name: `${playerNames[1] || 'Player 2'} (${PLAYER_COLORS[resolved[3]].label})`, color: resolved[3], pieces: createPlayerPiecesRandom(), isAI: roomPlayers[1]?.isAI || false },
+      { id: 1, humanId: roomPlayers[0].humanId, name: `${playerNames[0] || 'Player 1'} (${PLAYER_COLORS[resolved[0]].label})`, color: resolved[0], pieces: createPlayerPiecesRandom(), isAI: roomPlayers[0]?.isAI || false },
+      { id: 2, humanId: roomPlayers[1].humanId, name: `${playerNames[1] || 'Player 2'} (${PLAYER_COLORS[resolved[1]].label})`, color: resolved[1], pieces: createPlayerPiecesRandom(), isAI: roomPlayers[1]?.isAI || false },
+      { id: 3, humanId: roomPlayers[0].humanId, name: `${playerNames[0] || 'Player 1'} (${PLAYER_COLORS[resolved[2]].label})`, color: resolved[2], pieces: createPlayerPiecesRandom(), isAI: roomPlayers[0]?.isAI || false },
+      { id: 4, humanId: roomPlayers[1].humanId, name: `${playerNames[1] || 'Player 2'} (${PLAYER_COLORS[resolved[3]].label})`, color: resolved[3], pieces: createPlayerPiecesRandom(), isAI: roomPlayers[1]?.isAI || false },
     ]
   } else {
     players = Array.from({ length: humanCount }, (_, i) => ({
       id: i + 1,
-      humanId: i + 1,
+      humanId: roomPlayers[i].humanId,
       name: playerNames[i] || `Player ${i + 1}`,
       color: playerColors[i],
       pieces: createPlayerPiecesRandom(),

@@ -97,6 +97,24 @@
   color: var(--text-primary);
 }
 
+.finalLeaveBtn {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.finalLeaveBtn:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
 .finalNewGameBtn {
   display: flex;
   align-items: center;

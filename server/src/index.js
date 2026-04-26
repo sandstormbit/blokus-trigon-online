@@ -18,7 +18,7 @@ import {
   updatePlayerColor, appendMoveLog, addAIPlayer, removeAIPlayer,
   replaceAIWithHuman, replaceHumanWithAI, claimAISlot,
   addSpectator, removeSpectator, transferHost, hasConnectedHumans,
-  deleteRoom,
+  deleteRoom, leaveAndOpenSlot, takeOpenSlot,
 } from './roomManager.js'
 
 import { createGameState, processAction, serializeState } from './gameEngine.js'
@@ -62,6 +62,7 @@ function getRoomPlayers(room) {
     color2: p.color2 || null,
     isAI: p.isAI || false,
     aiDifficulty: p.isAI ? p.aiDifficulty : undefined,
+    openSlot: p.openSlot || false,
   }))
 }
 
@@ -373,15 +374,20 @@ io.on('connection', (socket) => {
 
       const result = joinRoom(code, playerName, socket.id)
 
-      // Room is in progress — offer to spectate
+      // Room is in progress — offer to spectate or take an open slot
       if (result.error === 'game_in_progress') {
         const room = result.room
+        const openSlots = room.players
+          .filter(p => p.openSlot)
+          .map(p => ({ humanId: p.humanId, name: p.name }))
         socket.join(room.code)
         ack({
           ok: true,
           roomCode: room.code,
           phase: room.phase,
           canSpectate: true,
+          hasOpenSlots: openSlots.length > 0,
+          openSlots: openSlots.length > 0 ? openSlots : null,
           gameState: room.gameState ? serializeState(room.gameState) : null,
           moveLog: room.moveLog,
           players: getRoomPlayers(room),
@@ -459,8 +465,6 @@ io.on('connection', (socket) => {
 
     const { room, player } = result
     socket.join(room.code)
-
-    localStorage?.setItem?.('bt_session_token', player.token)
 
     ack?.({
       ok: true,
@@ -757,7 +761,6 @@ io.on('connection', (socket) => {
 
     // Remove AI players — new game starts fresh for human players to reconfigure
     room.players = room.players.filter(p => !p.isAI)
-    room.players.forEach((p, i) => { p.humanId = i + 1 })
     room.phase = 'waiting'
     room.gameState = null
     room.moveLog = []
@@ -781,6 +784,57 @@ io.on('connection', (socket) => {
     if (result.error) return
 
     io.to(roomCode).emit('color_updated', { players: getRoomPlayers(result.room) })
+  })
+
+  // ── Voluntary leave mid-game (opens slot, no AI replacement) ────────────
+  socket.on('leave_game', (_, ack) => {
+    const roomCode = [...socket.rooms].find(r => r !== socket.id)
+    if (!roomCode) { ack?.({ ok: true }); return }
+
+    const room = getRoom(roomCode)
+    if (!room || room.phase === 'waiting') { ack?.({ ok: true }); return }
+
+    const token = getTokenFromSocket(socket.id)
+    if (!token) { ack?.({ ok: true }); return }
+
+    const result = leaveAndOpenSlot(roomCode, token)
+    if (result.error) { ack?.({ ok: false, error: result.error }); return }
+
+    ack?.({ ok: true })
+    io.to(roomCode).emit('player_disconnected', { players: getRoomPlayers(result.room) })
+  })
+
+  // ── Take an open player slot mid-game ─────────────────────────────────────
+  socket.on('take_open_slot', ({ roomCode, aiHumanId, playerName }, ack) => {
+    const code = roomCode?.toUpperCase()
+
+    const result = takeOpenSlot(code, aiHumanId, playerName, socket.id)
+    if (result.error) { ack?.({ ok: false, error: result.error }); return }
+
+    const { room, player } = result
+    socket.join(room.code)
+
+    // Cancel any pending AI turn for this slot if it's their turn
+    const state = room.gameState
+    if (state) {
+      const cp = state.players[state.currentPlayerIndex]
+      if (cp && cp.humanId === player.humanId) cancelAITurn(code)
+    }
+
+    ack?.({
+      ok: true,
+      roomCode: room.code,
+      humanId: player.humanId,
+      token: player.token,
+      isHost: isHost(room, player.token),
+      players: getRoomPlayers(room),
+      settings: room.settings,
+      phase: room.phase,
+      gameState: room.gameState ? serializeState(room.gameState) : null,
+      moveLog: room.moveLog,
+    })
+
+    io.to(room.code).emit('player_reconnected', { players: getRoomPlayers(room) })
   })
 
   // ── Disconnect ────────────────────────────────────────────────────────────
