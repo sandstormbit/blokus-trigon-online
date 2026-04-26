@@ -151,6 +151,52 @@
   to { transform: rotate(360deg); }
 }
 
+/* Score overlay — floats at top of board area, top-aligned with sidebars */
+.scoreOverlay {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.scoreOverlayRoomCode {
+  font-family: monospace;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.28);
+  letter-spacing: 0.12em;
+}
+
+.scoreOverlayScores {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.scoreOverlayItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.scoreOverlayDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.scoreOverlayValue {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+}
+
 /* Board center */
 .boardArea {
   flex: 1;

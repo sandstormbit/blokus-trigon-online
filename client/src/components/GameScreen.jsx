@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 function triggerBounce(el) {
   if (!el) return
@@ -8,8 +8,10 @@ function triggerBounce(el) {
 }
 import Board from './Board.jsx'
 import PlayerPanel from './PlayerPanel.jsx'
+import PieceControlPanel from './PieceControlPanel.jsx'
 import HUD from './HUD.jsx'
 import { PLAYER_COLORS } from '../hooks/useGameState.js'
+import AnimatedScore from './AnimatedScore.jsx'
 import PlacementConfirmModal from './PlacementConfirmModal.jsx'
 import EndGameConfirmModal from './EndGameConfirmModal.jsx'
 import EndGameModal from './EndGameModal.jsx'
@@ -56,8 +58,35 @@ export default function GameScreen({
   const [showRemovePieceModal, setShowRemovePieceModal] = useState(false)
   const [noMovesLocallyDismissed, setNoMovesLocallyDismissed] = useState(false)
   const [enhancedColoring, setEnhancedColoring] = useState(false)
+  const [autoAdvanceEnabled, setAutoAdvanceEnabled] = useState(false)
+  const [controlPanelOpen, setControlPanelOpen] = useState(false)
+  const [controlPanelAnchorTop, setControlPanelAnchorTop] = useState(100)
   const toggleFreeHover = useCallback(() => setFreeHoverEnabled(v => !v), [])
   const toggleEnhancedColoring = useCallback(() => setEnhancedColoring(v => !v), [])
+  const toggleAutoAdvance = useCallback(() => setAutoAdvanceEnabled(v => !v), [])
+  const toggleControlPanel  = useCallback(() => setControlPanelOpen(v => !v), [])
+  const openControlPanel   = useCallback(() => setControlPanelOpen(true), [])
+  const closeControlPanel  = useCallback(() => setControlPanelOpen(false), [])
+
+  // Refs for PieceControlPanel positioning
+  const controlPanelBounceRef = useRef(null)
+  const activePanelRef = useRef(null)
+
+  // Auto-open control panel when a piece is first selected this turn
+  const prevSelectedPieceRef = useRef(null)
+  useEffect(() => {
+    if (state.selectedPieceId !== null && prevSelectedPieceRef.current === null) {
+      setControlPanelOpen(true)
+    }
+    prevSelectedPieceRef.current = state.selectedPieceId
+  }, [state.selectedPieceId])
+
+  // Track active panel's viewport top for positioning the floating panel
+  useLayoutEffect(() => {
+    if (!activePanelRef.current) return
+    const rect = activePanelRef.current.getBoundingClientRect()
+    setControlPanelAnchorTop(rect.top)
+  }, [currentPlayer?.id, state.phase])
 
   // IDs of the player(s) whose pieces get thicker outlines when enhanced coloring is on.
   // Online: the local client's assigned player(s) (matched by humanId).
@@ -208,14 +237,24 @@ export default function GameScreen({
 
   // ── Keyboard & HUD bounce ref ─────────────────────────────────────────────
   const hudBounceRef = useRef(null)
-  const keyRotate = useCallback(() => { rotatePiece(); hudBounceRef.current?.('rotate') }, [rotatePiece])
-  const keyRotateReverse = useCallback(() => { rotatePieceReverse?.(); hudBounceRef.current?.('rotateReverse') }, [rotatePieceReverse])
-  const keyFlip = useCallback(() => { flipPiece(); hudBounceRef.current?.('flip') }, [flipPiece])
-  const keyHover = useCallback(() => { toggleFreeHover(); hudBounceRef.current?.('hover') }, [toggleFreeHover])
-  const keyDeselect = useCallback(() => { deselectPiece(); hudBounceRef.current?.('deselect') }, [deselectPiece])
+  const keyRotate = useCallback(() => { rotatePiece(); controlPanelBounceRef.current?.('rotate') }, [rotatePiece])
+  const keyRotateReverse = useCallback(() => { rotatePieceReverse?.(); controlPanelBounceRef.current?.('rotateReverse') }, [rotatePieceReverse])
+  const keyFlip = useCallback(() => { flipPiece(); controlPanelBounceRef.current?.('flip') }, [flipPiece])
+  const keyHover = useCallback(() => { toggleFreeHover(); controlPanelBounceRef.current?.('hover') }, [toggleFreeHover])
+  const keyDeselect = useCallback(() => { deselectPiece(); controlPanelBounceRef.current?.('deselect') }, [deselectPiece])
   const keyEndTurn = useCallback(() => {
     if (state.waitingForEndTurn) { endTurn(); hudBounceRef.current?.('endTurn') }
   }, [state.waitingForEndTurn, endTurn])
+
+  const handleConfirmPlacement = useCallback(() => {
+    confirmPlacement(autoAdvanceEnabled)
+  }, [confirmPlacement, autoAdvanceEnabled])
+
+  // Auto-advance when A is on — covers both: placement while A is already on,
+  // and A being toggled on while already waiting for end turn
+  useEffect(() => {
+    if (autoAdvanceEnabled && state.waitingForEndTurn) endTurn()
+  }, [autoAdvanceEnabled, state.waitingForEndTurn])
 
   const handleRemovePieceClick = useCallback(() => setShowRemovePieceModal(true), [])
   const handleConfirmRemove = useCallback(() => {
@@ -237,6 +276,12 @@ export default function GameScreen({
     confirmSkip()
   }, [confirmSkip])
 
+  // Left-side players: panel opens right (→) and closes left (←)
+  // Right-side players: panel opens left (←) and closes right (→)
+  const isCurrentPlayerOnLeft = !currentPlayer ||
+    state.players[0]?.id === currentPlayer.id ||
+    state.players[3]?.id === currentPlayer.id
+
   useKeyboard({
     selectedPieceId: state.selectedPieceId,
     pendingPlacement: state.pendingPlacement,
@@ -246,8 +291,11 @@ export default function GameScreen({
     onFlip: keyFlip,
     onToggleHover: keyHover,
     onToggleEnhancedColoring: toggleEnhancedColoring,
+    onToggleAutoAdvance: toggleAutoAdvance,
+    onArrowRight: isCurrentPlayerOnLeft ? openControlPanel : closeControlPanel,
+    onArrowLeft:  isCurrentPlayerOnLeft ? closeControlPanel : openControlPanel,
     onDeselect: keyDeselect,
-    onConfirmPlacement: confirmPlacement,
+    onConfirmPlacement: handleConfirmPlacement,
     onCancelPlacement: cancelPlacement,
     onEndTurn: keyEndTurn,
     active: state.phase === 'playing',
@@ -342,15 +390,10 @@ export default function GameScreen({
       ) : (
         <HUD
           currentPlayer={currentPlayer}
-          selectedPiece={selectedPiece}
-          onRotate={rotatePiece}
-          onRotateReverse={rotatePieceReverse}
-          onFlip={flipPiece}
-          onToggleHover={toggleFreeHover}
-          freeHoverEnabled={freeHoverEnabled}
           onToggleEnhancedColoring={toggleEnhancedColoring}
           enhancedColoring={enhancedColoring}
-          onDeselect={deselectPiece}
+          onToggleAutoAdvance={toggleAutoAdvance}
+          autoAdvanceEnabled={autoAdvanceEnabled}
           onEndGame={requestEndGame}
           onSkip={handleSkip}
           onConfirmSkip={handleConfirmSkip}
@@ -358,11 +401,9 @@ export default function GameScreen({
           showSkipConfirm={showSkipConfirm}
           onEndTurn={endTurn}
           waitingForEndTurn={state.waitingForEndTurn}
-          players={players}
           playerCount={playerCount}
           isOnline={isOnline}
           isMyTurn={isMyTurn}
-          onlineRoomCode={onlineRoomCode}
           onExit={onExit}
           bounceRef={hudBounceRef}
         />
@@ -379,12 +420,34 @@ export default function GameScreen({
               onSelectPiece={selectPiece}
               disabled={currentPlayer?.id !== player.id}
               isSkipped={state.skippedPlayerIds.has(player.id)}
+              panelRef={currentPlayer?.id === player.id ? activePanelRef : null}
             />
           ))}
         </div>
 
         <div className={styles.boardArea}>
           {showInactivityFlash && <div className={styles.inactivityOverlay} />}
+
+          {/* Score overlay — floats at the top of the board area */}
+          <div className={styles.scoreOverlay} aria-hidden="true">
+            {isOnline && onlineRoomCode && (
+              <div className={styles.scoreOverlayRoomCode}>#{onlineRoomCode}</div>
+            )}
+            <div className={styles.scoreOverlayScores}>
+              {players.map(p => {
+                const ci = PLAYER_COLORS[p.color]
+                return (
+                  <div key={p.id} className={styles.scoreOverlayItem}>
+                    <div className={styles.scoreOverlayDot} style={{ background: ci.bg, boxShadow: `0 0 5px ${ci.bg}` }} />
+                    <span className={styles.scoreOverlayValue} style={{ color: ci.bg }}>
+                      <AnimatedScore value={p.score} />
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
           <Board
             boardData={state.board}
             selectedPiece={selectedPiece}
@@ -424,18 +487,39 @@ export default function GameScreen({
               onSelectPiece={selectPiece}
               disabled={currentPlayer?.id !== player.id}
               isSkipped={state.skippedPlayerIds.has(player.id)}
+              panelRef={currentPlayer?.id === player.id ? activePanelRef : null}
             />
           ))}
         </div>
       </div>
+
+      {/* Floating piece control panel */}
+      {state.phase === 'playing' && currentPlayer && !currentPlayer.isAI && isMyTurn && (
+        <PieceControlPanel
+          isOpen={controlPanelOpen}
+          onToggle={toggleControlPanel}
+          side={leftPlayers.some(p => p.id === currentPlayer.id) ? 'left' : 'right'}
+          anchorTop={controlPanelAnchorTop}
+          playerColor={PLAYER_COLORS[currentPlayer.color].bg}
+          selectedPiece={selectedPiece}
+          onRotate={keyRotate}
+          onRotateReverse={keyRotateReverse}
+          onFlip={keyFlip}
+          onToggleHover={keyHover}
+          freeHoverEnabled={freeHoverEnabled}
+          onDeselect={keyDeselect}
+          bounceRef={controlPanelBounceRef}
+        />
+      )}
 
       {/* Modals */}
       {state.pendingPlacement && selectedPiece && (
         <PlacementConfirmModal
           currentPlayer={currentPlayer}
           piece={selectedPiece}
-          onConfirm={confirmPlacement}
+          onConfirm={handleConfirmPlacement}
           onCancel={cancelPlacement}
+          autoAdvanceEnabled={autoAdvanceEnabled}
         />
       )}
 

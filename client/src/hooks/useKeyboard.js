@@ -19,6 +19,9 @@ export function useKeyboard({
   onFlip,
   onToggleHover,
   onToggleEnhancedColoring,
+  onToggleAutoAdvance,
+  onArrowLeft,
+  onArrowRight,
   onDeselect,
   onConfirmPlacement,
   onCancelPlacement,
@@ -43,6 +46,25 @@ export function useKeyboard({
       if ((e.key === 'c' || e.key === 'C') && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
         e.preventDefault()
         onToggleEnhancedColoring?.()
+        return
+      }
+
+      // A → toggle auto advance (works any time during play)
+      if ((e.key === 'a' || e.key === 'A') && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault()
+        onToggleAutoAdvance?.()
+        return
+      }
+
+      // Arrow keys → open/close piece control panel (works any time during play)
+      if (e.key === 'ArrowRight' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault()
+        onArrowRight?.()
+        return
+      }
+      if (e.key === 'ArrowLeft' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault()
+        onArrowLeft?.()
         return
       }
 
@@ -102,6 +124,9 @@ export function useKeyboard({
     onFlip,
     onToggleHover,
     onToggleEnhancedColoring,
+    onToggleAutoAdvance,
+    onArrowLeft,
+    onArrowRight,
     onDeselect,
     onConfirmPlacement,
     onCancelPlacement,

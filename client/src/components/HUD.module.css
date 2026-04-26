@@ -81,58 +81,6 @@
   font-weight: 700;
 }
 
-/* Controls */
-.controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.selectedIndicator {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.selectedDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent-blue);
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-.controlBtns {
-  display: flex;
-  gap: 4px;
-}
-
-.controlBtn {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: 12px;
-  transition: all var(--transition-fast);
-}
-
-.controlBtn:hover {
-  background: var(--bg-card);
-  border-color: var(--border-mid);
-  color: var(--text-primary);
-}
-
-.controlBtnGhost {
-  composes: controlBtn;
-  color: var(--text-muted);
-}
-
 kbd {
   font-family: var(--font-body);
   font-size: 9px;
@@ -177,15 +125,6 @@ kbd {
   font-style: italic;
 }
 
-/* Room code badge (right section) */
-.roomCodeBadge {
-  font-family: monospace;
-  font-size: 11px;
-  color: rgba(255,255,255,0.3);
-  letter-spacing: 0.1em;
-  white-space: nowrap;
-}
-
 /* Leave button */
 .leaveBtn {
   background: rgba(255,255,255,0.06);
@@ -202,27 +141,6 @@ kbd {
 .leaveBtn:hover {
   background: rgba(255,255,255,0.1);
   color: rgba(255,255,255,0.8);
-}
-
-/* Mini scores */
-.miniScores {
-  display: flex;
-  gap: 8px;
-}
-
-.miniScore {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.miniDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
 }
 
 /* End game button */

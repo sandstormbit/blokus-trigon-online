@@ -332,6 +332,7 @@ function gameReducer(state, action) {
 
       const { pieceId, cells } = state.pendingPlacement
       const playerIdx = state.currentPlayerIndex
+      const autoAdvance = action.payload?.autoAdvance ?? false
 
       // Update board
       const newBoardCells = { ...state.board.cells }
@@ -349,6 +350,23 @@ function gameReducer(state, action) {
         return { ...p, pieces: newPieces, score }
       })
 
+      const placedInfo = {
+        lastPlacedCells: cells.map(c => ({ q: c.q, r: c.r })),
+        lastPlacedPlayerId: state.players[playerIdx].id,
+        lastPlacedPieceId: pieceId,
+      }
+
+      if (autoAdvance) {
+        const newSkipped = new Set(state.skippedPlayerIds)
+        const advanced = advanceTurn(
+          { ...state, waitingForEndTurn: false },
+          newBoard,
+          newPlayers,
+          newSkipped,
+        )
+        return { ...state, ...placedInfo, pendingPlacement: null, selectedPieceId: null, hoverCell: null, ...advanced }
+      }
+
       // Don't advance turn yet — wait for END_TURN
       return {
         ...state,
@@ -358,9 +376,7 @@ function gameReducer(state, action) {
         selectedPieceId: null,
         hoverCell: null,
         waitingForEndTurn: true,
-        lastPlacedCells: cells.map(c => ({ q: c.q, r: c.r })),
-        lastPlacedPlayerId: state.players[playerIdx].id,
-        lastPlacedPieceId: pieceId,
+        ...placedInfo,
       }
     }
 
@@ -553,7 +569,7 @@ export function useGameState() {
   const flipPiece      = useCallback(()  => dispatch({ type: ACTIONS.FLIP_PIECE }), [])
   const setHover       = useCallback(c   => dispatch({ type: ACTIONS.SET_HOVER, payload: { cell: c } }), [])
   const placePiece     = useCallback((q, r) => dispatch({ type: ACTIONS.PLACE_PIECE, payload: { hoverQ: q, hoverR: r } }), [])
-  const confirmPlacement = useCallback(() => dispatch({ type: ACTIONS.CONFIRM_PLACEMENT }), [])
+  const confirmPlacement = useCallback((autoAdvance = false) => dispatch({ type: ACTIONS.CONFIRM_PLACEMENT, payload: { autoAdvance } }), [])
   const cancelPlacement  = useCallback(() => dispatch({ type: ACTIONS.CANCEL_PLACEMENT }), [])
   const dismissNoMoves   = useCallback(() => dispatch({ type: ACTIONS.DISMISS_NO_MOVES }), [])
   const confirmSkip      = useCallback(() => dispatch({ type: ACTIONS.CONFIRM_SKIP }), [])

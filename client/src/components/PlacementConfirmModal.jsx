@@ -10,7 +10,7 @@ function triggerBounce(el) {
   el.classList.add('btn-bounce')
 }
 
-export default function PlacementConfirmModal({ currentPlayer, piece, onConfirm, onCancel }) {
+export default function PlacementConfirmModal({ currentPlayer, piece, onConfirm, onCancel, autoAdvanceEnabled }) {
   const colorInfo = PLAYER_COLORS[currentPlayer.color]
 
   return (
@@ -22,7 +22,17 @@ export default function PlacementConfirmModal({ currentPlayer, piece, onConfirm,
         </strong>{' '}
         ({piece.size} triangle{piece.size !== 1 ? 's' : ''}) here?
       </p>
-      <p className={styles.hint}>This action cannot be undone.</p>
+      {autoAdvanceEnabled ? (
+        <p className={styles.hint}>
+          <strong className={styles.hintRed}>You have Auto Advance ON.</strong><br />
+          Once you place your piece, the turn will automatically move to the next player.
+        </p>
+      ) : (
+        <p className={styles.hint}>
+          You can click again to remove the piece.<br />
+          Press <strong className={styles.hintBlue}>END TURN</strong> to advance to next player.
+        </p>
+      )}
       <div className={styles.actions}>
         <button className={styles.cancelBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onCancel, 350) }}>
           No, go back <kbd>Esc</kbd>

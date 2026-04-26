@@ -11,6 +11,7 @@ export default function PlayerPanel({
   onSelectPiece,
   disabled,
   isSkipped,
+  panelRef = null,
 }) {
   const colorInfo = PLAYER_COLORS[player.color]
 
@@ -31,6 +32,7 @@ export default function PlayerPanel({
 
   return (
     <div
+      ref={panelRef}
       className={`
         ${styles.panel}
         ${isActive ? styles.panelActive : ''}

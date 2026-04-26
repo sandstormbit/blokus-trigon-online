@@ -7,8 +7,19 @@
 
 .hint {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.hintRed {
+  color: #e05a5a;
+  font-weight: 700;
+}
+
+.hintBlue {
+  color: #60a5fa;
+  font-weight: 700;
 }
 
 .actions {
