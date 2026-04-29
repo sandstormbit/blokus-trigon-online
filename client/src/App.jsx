@@ -43,6 +43,7 @@ function PassAndPlayApp({ onExit }) {
       confirmEndGame={game.confirmEndGame}
       cancelEndGame={game.cancelEndGame}
       newGame={game.newGame}
+      onExit={onExit}
     />
   )
 }

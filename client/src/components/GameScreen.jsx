@@ -72,14 +72,17 @@ export default function GameScreen({
   const controlPanelBounceRef = useRef(null)
   const activePanelRef = useRef(null)
 
-  // Auto-open control panel when a piece is first selected this turn
+  // Auto-open control panel on each color's first piece selection
+  const autoOpenedPlayerIds = useRef(new Set())
   const prevSelectedPieceRef = useRef(null)
   useEffect(() => {
-    if (state.selectedPieceId !== null && prevSelectedPieceRef.current === null) {
+    const pid = currentPlayer?.id
+    if (state.selectedPieceId !== null && prevSelectedPieceRef.current === null && pid && !autoOpenedPlayerIds.current.has(pid)) {
       setControlPanelOpen(true)
+      autoOpenedPlayerIds.current.add(pid)
     }
     prevSelectedPieceRef.current = state.selectedPieceId
-  }, [state.selectedPieceId])
+  }, [state.selectedPieceId, currentPlayer?.id])
 
   // Track active panel's viewport top for positioning the floating panel
   useLayoutEffect(() => {

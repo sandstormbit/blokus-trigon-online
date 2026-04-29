@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <rect width="1200" height="630" fill="#0F1117"/>
+  <rect width="1200" height="630" fill="url(#grad)"/>
+  <defs>
+    <radialGradient id="grad" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1a2035"/>
+      <stop offset="100%" stop-color="#0F1117"/>
+    </radialGradient>
+  </defs>
+  <!-- Logo triangle (outer) -->
+  <polygon points="600,140 780,450 420,450" fill="none" stroke="#3B82F6" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Logo triangle (inner) -->
+  <polygon points="600,210 715,425 485,425" fill="rgba(59,130,246,0.2)" stroke="#3B82F6" stroke-width="5" stroke-linejoin="round"/>
+  <!-- Title -->
+  <text x="600" y="530" font-family="Arial, Helvetica, sans-serif" font-size="56" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">Blokus Trigon Online</text>
+  <!-- Subtitle -->
+  <text x="600" y="585" font-family="Arial, Helvetica, sans-serif" font-size="30" fill="#3B82F6" text-anchor="middle">Join a game and play!</text>
+</svg>

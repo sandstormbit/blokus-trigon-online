@@ -49,7 +49,7 @@ export default function WaitingRoom({
   const [starting, setStarting] = useState(false)
   const [aiDifficulty, setAIDifficulty] = useState('normal')  // difficulty for next AI add
 
-  const shareUrl = `${window.location.origin}?join=${roomCode}`
+  const shareUrl = `${window.location.origin}/api/share?join=${roomCode}`
   const gameModes = settings?.gameModes || {}
   const isTwoPlayerStandard = maxPlayers === 2 && !gameModes.megaColors
 
