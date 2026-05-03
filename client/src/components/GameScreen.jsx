@@ -71,6 +71,11 @@ export default function GameScreen({
   // Refs for PieceControlPanel positioning
   const controlPanelBounceRef = useRef(null)
   const activePanelRef = useRef(null)
+  // Stable refs for 2p-standard local toggle positioning — one always on players[0], one on players[2].
+  // Using two separate refs avoids the ref-swap ordering issue that occurs when a single ref moves
+  // between DOM elements (React detaches before attaching, leaving a null window).
+  const p0PanelRef = useRef(null)
+  const p2PanelRef = useRef(null)
 
   // Auto-open control panel on each color's first piece selection
   const autoOpenedPlayerIds = useRef(new Set())
@@ -84,12 +89,17 @@ export default function GameScreen({
     prevSelectedPieceRef.current = state.selectedPieceId
   }, [state.selectedPieceId, currentPlayer?.id])
 
-  // Track active panel's viewport top for positioning the floating panel
+  // Track toggle owner panel's viewport top for positioning the floating panel.
+  // Local 2p standard uses the dedicated stable refs; everything else uses activePanelRef.
   useLayoutEffect(() => {
-    if (!activePanelRef.current) return
-    const rect = activePanelRef.current.getBoundingClientRect()
+    const is2pStdLocal = state.playerCount === 2 && !state.gameModes?.megaColors && !isOnline
+    const ref = is2pStdLocal
+      ? ((state.currentPlayerIndex === 0 || state.currentPlayerIndex === 1) ? p0PanelRef : p2PanelRef)
+      : activePanelRef
+    if (!ref.current) return
+    const rect = ref.current.getBoundingClientRect()
     setControlPanelAnchorTop(rect.top)
-  }, [currentPlayer?.id, state.phase])
+  }, [currentPlayer?.id, state.currentPlayerIndex, state.phase, state.playerCount, state.gameModes, isOnline])
 
   // IDs of the player(s) whose pieces get thicker outlines when enhanced coloring is on.
   // Online: the local client's assigned player(s) (matched by humanId).
@@ -318,6 +328,8 @@ export default function GameScreen({
 
   // Mega Colors 2p has only 2 player slots instead of 4
   const isMegaColors2p = state.gameModes?.megaColors && playerCount === 2
+  // 2p standard: 4 slots (2 per human), not Mega Colors
+  const is2pStandard = playerCount === 2 && !isMegaColors2p
 
   // Layout: 3p → 1 left, 2 right; Mega Colors 2p → 1 left, 1 right; 2p/4p → 2 left, 2 right
   const leftPlayers  = playerCount === 3  ? [players[0]]
@@ -326,6 +338,25 @@ export default function GameScreen({
   const rightPlayers = playerCount === 3  ? [players[1], players[2]]
                      : isMegaColors2p     ? [players[1]]
                      : [players[1], players[2]]
+
+  // Which player "owns" the piece control panel toggle right now.
+  // Online (any mode): always the local player's first color slot — toggle stays visible between turns.
+  // Local 2p standard: turn order is H1c1→H2c1→H1c2→H2c2. The toggle follows H1's color panels:
+  //   indices 0,1 → players[0] (H1 first color); indices 2,3 → players[2] (H1 second color).
+  //   This keeps exactly 1 toggle visible and it "switches to the player's other color" at index 2.
+  // Everything else: current player (existing behavior).
+  let toggleOwnerPlayer
+  if (isOnline && myHumanId !== null) {
+    toggleOwnerPlayer = players.find(p => p.humanId === myHumanId) || currentPlayer
+  } else if (is2pStandard) {
+    toggleOwnerPlayer = (state.currentPlayerIndex === 0 || state.currentPlayerIndex === 1)
+      ? players[0]
+      : players[2]
+  } else {
+    toggleOwnerPlayer = currentPlayer
+  }
+  // True only for local (not online) 2p standard — drives the dedicated p0/p2 panel refs
+  const isLocal2pStandard = is2pStandard && !isOnline
 
   const isModalOpen = !!state.pendingPlacement || state.showEndGameConfirm ||
                       (state.phase === 'ended' && !viewingFinalBoard) || !!state.noMovesModalPlayerId ||
@@ -428,7 +459,11 @@ export default function GameScreen({
               onSelectPiece={selectPiece}
               disabled={currentPlayer?.id !== player.id}
               isSkipped={state.skippedPlayerIds.has(player.id)}
-              panelRef={currentPlayer?.id === player.id ? activePanelRef : null}
+              panelRef={
+                isLocal2pStandard
+                  ? (player.id === players[0].id ? p0PanelRef : null)
+                  : (toggleOwnerPlayer?.id === player.id ? activePanelRef : null)
+              }
             />
           ))}
         </div>
@@ -495,20 +530,24 @@ export default function GameScreen({
               onSelectPiece={selectPiece}
               disabled={currentPlayer?.id !== player.id}
               isSkipped={state.skippedPlayerIds.has(player.id)}
-              panelRef={currentPlayer?.id === player.id ? activePanelRef : null}
+              panelRef={
+                isLocal2pStandard
+                  ? (player.id === players[2].id ? p2PanelRef : null)
+                  : (toggleOwnerPlayer?.id === player.id ? activePanelRef : null)
+              }
             />
           ))}
         </div>
       </div>
 
       {/* Floating piece control panel */}
-      {state.phase === 'playing' && currentPlayer && !currentPlayer.isAI && isMyTurn && (
+      {state.phase === 'playing' && toggleOwnerPlayer && !toggleOwnerPlayer.isAI && (isMyTurn || isOnline || is2pStandard) && (
         <PieceControlPanel
           isOpen={controlPanelOpen}
           onToggle={toggleControlPanel}
-          side={leftPlayers.some(p => p.id === currentPlayer.id) ? 'left' : 'right'}
+          side={leftPlayers.some(p => p.id === toggleOwnerPlayer.id) ? 'left' : 'right'}
           anchorTop={controlPanelAnchorTop}
-          playerColor={PLAYER_COLORS[currentPlayer.color].bg}
+          playerColor={PLAYER_COLORS[toggleOwnerPlayer.color].bg}
           selectedPiece={selectedPiece}
           onRotate={keyRotate}
           onRotateReverse={keyRotateReverse}
