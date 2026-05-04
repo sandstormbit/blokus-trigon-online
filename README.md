@@ -2,7 +2,7 @@
 
 # Blokus Trigon
 
-**STRATEGY · TERRITORY · TRIANGLES**
+STRATEGY · TERRITORY · TRIANGLES
 
 <br>
 
@@ -12,9 +12,9 @@
 
 <br><br>
 
-![React](https://img.shields.io/badge/React_+_Vite-20232A?style=flat-square&logo=react&logoColor=61DAFB)
-![Node.js](https://img.shields.io/badge/Node.js_+_Socket.io-339933?style=flat-square&logo=nodedotjs&logoColor=white)
-![Players](https://img.shields.io/badge/2–4_Players-F59E0B?style=flat-square)
+<img src="docs/badge-react.svg" alt="React + Vite" height="28" />
+<img src="docs/badge-node.svg" alt="Node.js + Socket.io" height="28" />
+<img src="docs/badge-players.svg" alt="2–4 Players" height="28" />
 
 </div>
 
