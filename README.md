@@ -6,11 +6,8 @@
 
 <br>
 
-<!--
-  Replace the href URL with your live deployment URL, e.g. https://blokus-trigon.vercel.app
--->
-<a href="https://blokus-trigon.vercel.app">
-  <img src="https://img.shields.io/badge/▶%20Play%20Blokus%20Now-2563EB?style=for-the-badge&logoColor=white" alt="Play Blokus Now" height="44" />
+<a href="https://blokus-trigon-online.vercel.app/">
+  <img src="docs/play-button.svg" alt="Play Blokus Now" height="52" />
 </a>
 
 <br><br>
