@@ -71,11 +71,13 @@ export default function GameScreen({
   // Refs for PieceControlPanel positioning
   const controlPanelBounceRef = useRef(null)
   const activePanelRef = useRef(null)
-  // Stable refs for 2p-standard local toggle positioning — one always on players[0], one on players[2].
-  // Using two separate refs avoids the ref-swap ordering issue that occurs when a single ref moves
-  // between DOM elements (React detaches before attaching, leaving a null window).
+  // Stable refs for 2p-standard local toggle positioning — one per player slot, always attached to
+  // the same DOM element. Four separate refs avoid the ref-swap ordering issue that occurs when a
+  // single ref moves between DOM elements (React detaches before attaching, leaving a null window).
   const p0PanelRef = useRef(null)
+  const p1PanelRef = useRef(null)
   const p2PanelRef = useRef(null)
+  const p3PanelRef = useRef(null)
 
   // Auto-open control panel on each color's first piece selection
   const autoOpenedPlayerIds = useRef(new Set())
@@ -89,17 +91,32 @@ export default function GameScreen({
     prevSelectedPieceRef.current = state.selectedPieceId
   }, [state.selectedPieceId, currentPlayer?.id])
 
+  // Computed early so the useLayoutEffect below can use it without hitting the TDZ.
+  const toggleOwnerPlayerEarly = (() => {
+    if (isOnline && myHumanId !== null) {
+      const myPlayers = state.players.filter(p => p.humanId === myHumanId)
+      return myPlayers.find(p => p.id === currentPlayer?.id) ?? myPlayers[0] ?? currentPlayer
+    }
+    return currentPlayer
+  })()
+
   // Track toggle owner panel's viewport top for positioning the floating panel.
-  // Local 2p standard uses the dedicated stable refs; everything else uses activePanelRef.
+  // 2p standard uses stable per-slot refs to avoid the null window when a single ref moves
+  // between DOM elements. Works for both local and online 2p standard games.
   useLayoutEffect(() => {
-    const is2pStdLocal = state.playerCount === 2 && !state.gameModes?.megaColors && !isOnline
-    const ref = is2pStdLocal
-      ? ((state.currentPlayerIndex === 0 || state.currentPlayerIndex === 1) ? p0PanelRef : p2PanelRef)
-      : activePanelRef
+    const is2pStd = state.playerCount === 2 && !state.gameModes?.megaColors
+    let ref
+    if (is2pStd) {
+      const refMap = [p0PanelRef, p1PanelRef, p2PanelRef, p3PanelRef]
+      const toggleIdx = state.players.findIndex(p => p.id === toggleOwnerPlayerEarly?.id)
+      ref = (toggleIdx >= 0 ? refMap[toggleIdx] : null) ?? activePanelRef
+    } else {
+      ref = activePanelRef
+    }
     if (!ref.current) return
     const rect = ref.current.getBoundingClientRect()
     setControlPanelAnchorTop(rect.top)
-  }, [currentPlayer?.id, state.currentPlayerIndex, state.phase, state.playerCount, state.gameModes, isOnline])
+  }, [currentPlayer?.id, toggleOwnerPlayerEarly?.id, state.currentPlayerIndex, state.phase, state.playerCount, state.gameModes, isOnline])
 
   // IDs of the player(s) whose pieces get thicker outlines when enhanced coloring is on.
   // Online: the local client's assigned player(s) (matched by humanId).
@@ -339,24 +356,13 @@ export default function GameScreen({
                      : isMegaColors2p     ? [players[1]]
                      : [players[1], players[2]]
 
-  // Which player "owns" the piece control panel toggle right now.
-  // Online (any mode): always the local player's first color slot — toggle stays visible between turns.
-  // Local 2p standard: turn order is H1c1→H2c1→H1c2→H2c2. The toggle follows H1's color panels:
-  //   indices 0,1 → players[0] (H1 first color); indices 2,3 → players[2] (H1 second color).
-  //   This keeps exactly 1 toggle visible and it "switches to the player's other color" at index 2.
-  // Everything else: current player (existing behavior).
-  let toggleOwnerPlayer
-  if (isOnline && myHumanId !== null) {
-    toggleOwnerPlayer = players.find(p => p.humanId === myHumanId) || currentPlayer
-  } else if (is2pStandard) {
-    toggleOwnerPlayer = (state.currentPlayerIndex === 0 || state.currentPlayerIndex === 1)
-      ? players[0]
-      : players[2]
-  } else {
-    toggleOwnerPlayer = currentPlayer
+  // toggleOwnerPlayerEarly (computed above, before hooks) has the same logic — reuse it here.
+  const toggleOwnerPlayer = toggleOwnerPlayerEarly
+
+  const panelSide = leftPlayers.some(p => p.id === toggleOwnerPlayer?.id) ? 'left' : 'right'
+  if (process.env.NODE_ENV !== 'production' && state.phase === 'playing' && toggleOwnerPlayer && !toggleOwnerPlayer.isAI) {
+    console.log('[PCP]', { toggleOwnerColor: toggleOwnerPlayer.color, side: panelSide, currentPlayerIndex: state.currentPlayerIndex, leftIds: leftPlayers.map(p => p.id), toggleId: toggleOwnerPlayer.id })
   }
-  // True only for local (not online) 2p standard — drives the dedicated p0/p2 panel refs
-  const isLocal2pStandard = is2pStandard && !isOnline
 
   const isModalOpen = !!state.pendingPlacement || state.showEndGameConfirm ||
                       (state.phase === 'ended' && !viewingFinalBoard) || !!state.noMovesModalPlayerId ||
@@ -460,8 +466,8 @@ export default function GameScreen({
               disabled={currentPlayer?.id !== player.id}
               isSkipped={state.skippedPlayerIds.has(player.id)}
               panelRef={
-                isLocal2pStandard
-                  ? (player.id === players[0].id ? p0PanelRef : null)
+                is2pStandard
+                  ? (player.id === players[0]?.id ? p0PanelRef : player.id === players[3]?.id ? p3PanelRef : null)
                   : (toggleOwnerPlayer?.id === player.id ? activePanelRef : null)
               }
             />
@@ -531,8 +537,8 @@ export default function GameScreen({
               disabled={currentPlayer?.id !== player.id}
               isSkipped={state.skippedPlayerIds.has(player.id)}
               panelRef={
-                isLocal2pStandard
-                  ? (player.id === players[2].id ? p2PanelRef : null)
+                is2pStandard
+                  ? (player.id === players[1]?.id ? p1PanelRef : player.id === players[2]?.id ? p2PanelRef : null)
                   : (toggleOwnerPlayer?.id === player.id ? activePanelRef : null)
               }
             />
@@ -545,7 +551,7 @@ export default function GameScreen({
         <PieceControlPanel
           isOpen={controlPanelOpen}
           onToggle={toggleControlPanel}
-          side={leftPlayers.some(p => p.id === toggleOwnerPlayer.id) ? 'left' : 'right'}
+          side={panelSide}
           anchorTop={controlPanelAnchorTop}
           playerColor={PLAYER_COLORS[toggleOwnerPlayer.color].bg}
           selectedPiece={selectedPiece}

@@ -56,7 +56,8 @@ export default function PieceControlPanel({
 
   const wrapperStyle = {
     top: anchorTop,
-    ...(isLeft ? { left: 200 } : { right: 200 }),
+    left: isLeft ? 200 : null,
+    right: isLeft ? null : 200,
     flexDirection: isLeft ? 'row' : 'row-reverse',
     '--panel-color': playerColor,
   }
