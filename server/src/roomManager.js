@@ -197,6 +197,22 @@ export function removeAIPlayer(code, humanId) {
 }
 
 /**
+ * Change the difficulty of an AI player already in the waiting room.
+ * Returns { room } or { error }.
+ */
+export function setAIPlayerDifficulty(code, humanId, difficulty) {
+  const room = rooms.get(code)
+  if (!room) return { error: 'room_not_found' }
+  if (room.phase !== 'waiting') return { error: 'game_already_started' }
+
+  const player = room.players.find(p => p.isAI && p.humanId === humanId)
+  if (!player) return { error: 'ai_not_found' }
+
+  player.aiDifficulty = difficulty === 'hard' ? 'hard' : 'normal'
+  return { room }
+}
+
+/**
  * Replace an AI player in a waiting room with a joining human player.
  * Returns { room, player } or { error }.
  */

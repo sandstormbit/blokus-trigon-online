@@ -42,12 +42,13 @@ export default function WaitingRoom({
   onSelectColorSlot,
   onAddAI,
   onRemoveAI,
+  onSetAIDifficulty,
   onExit,
 }) {
   const [copied, setCopied] = useState(false)
   const [startError, setStartError] = useState(null)
   const [starting, setStarting] = useState(false)
-  const [aiDifficulty, setAIDifficulty] = useState('normal')  // difficulty for next AI add
+  const [aiDifficulty, setAIDifficulty] = useState({})  // { slotIndex: 'normal'|'hard' } — per slot
 
   const shareUrl = `${window.location.origin}/api/share?join=${roomCode}`
   const gameModes = settings?.gameModes || {}
@@ -236,12 +237,22 @@ export default function WaitingRoom({
                           )}
                         </div>
                         {player.isAI && isHost ? (
-                          <button
-                            className={styles.removeAIBtn}
-                            onClick={() => onRemoveAI?.(player.humanId)}
-                            title="Remove AI player"
-                            type="button"
-                          >✕</button>
+                          <div className={styles.aiSlotControls}>
+                            <button
+                              className={styles.aiDiffCycleBtn}
+                              onClick={() => onSetAIDifficulty?.(player.humanId, player.aiDifficulty === 'normal' ? 'hard' : 'normal')}
+                              title={`Switch to ${player.aiDifficulty === 'normal' ? 'Hard' : 'Normal'} AI`}
+                              type="button"
+                            >
+                              {player.aiDifficulty === 'hard' ? 'Hard' : 'Normal'}
+                            </button>
+                            <button
+                              className={styles.removeAIBtn}
+                              onClick={() => onRemoveAI?.(player.humanId)}
+                              title="Remove AI player"
+                              type="button"
+                            >✕</button>
+                          </div>
                         ) : (
                           <div className={`${styles.connDot} ${player.connected ? styles.connDotOn : styles.connDotOff}`} title={player.connected ? 'Connected' : 'Disconnected'}/>
                         )}
@@ -252,8 +263,8 @@ export default function WaitingRoom({
                         <div className={styles.addAIControls}>
                           <select
                             className={styles.aiDiffSelect}
-                            value={aiDifficulty}
-                            onChange={e => setAIDifficulty(e.target.value)}
+                            value={aiDifficulty[i] || 'normal'}
+                            onChange={e => setAIDifficulty(prev => ({ ...prev, [i]: e.target.value }))}
                             onClick={e => e.stopPropagation()}
                           >
                             <option value="normal">Normal</option>
@@ -261,7 +272,7 @@ export default function WaitingRoom({
                           </select>
                           <button
                             className={styles.addAIBtn}
-                            onClick={(e) => { triggerBounceInline(e.currentTarget); onAddAI?.(aiDifficulty) }}
+                            onClick={(e) => { triggerBounceInline(e.currentTarget); onAddAI?.(aiDifficulty[i] || 'normal') }}
                             type="button"
                           >
                             + Add AI

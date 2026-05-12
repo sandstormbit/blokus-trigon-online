@@ -359,6 +359,12 @@ export function useOnlineGame() {
     })
   }, [])
 
+  const setAIDifficultyAction = useCallback((humanId, difficulty) => {
+    socketRef.current?.emit('set_ai_difficulty', { humanId, difficulty }, (res) => {
+      if (!res?.ok) console.warn('set_ai_difficulty rejected:', res?.error)
+    })
+  }, [])
+
   const spectateGameAction = useCallback((code, playerName, callback) => {
     const socket = socketRef.current
     if (!socket) return
@@ -826,6 +832,7 @@ export function useOnlineGame() {
     // AI / spectator actions
     addAIPlayer: addAIPlayerAction,
     removeAIPlayer: removeAIPlayerAction,
+    setAIDifficulty: setAIDifficultyAction,
     spectateGame: spectateGameAction,
     takeAISlot: takeAISlotAction,
     takeOpenSlot: takeOpenSlotAction,

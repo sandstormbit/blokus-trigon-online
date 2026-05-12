@@ -15,7 +15,7 @@ import {
   createRoom, joinRoom, reconnectPlayer, handleDisconnect,
   updateSettings, startRoom, updateGameState,
   getRoom, getTokenFromSocket, getPlayerByToken, isHost, getPublicRooms,
-  updatePlayerColor, appendMoveLog, addAIPlayer, removeAIPlayer,
+  updatePlayerColor, appendMoveLog, addAIPlayer, removeAIPlayer, setAIPlayerDifficulty,
   replaceAIWithHuman, replaceHumanWithAI, claimAISlot,
   addSpectator, removeSpectator, transferHost, hasConnectedHumans,
   deleteRoom, leaveAndOpenSlot, takeOpenSlot,
@@ -545,6 +545,24 @@ io.on('connection', (socket) => {
     if (!isHost(room, token)) { ack?.({ ok: false, error: 'not_host' }); return }
 
     const result = removeAIPlayer(roomCode, humanId)
+    if (result.error) { ack?.({ ok: false, error: result.error }); return }
+
+    ack?.({ ok: true })
+    io.to(roomCode).emit('player_joined', { players: getRoomPlayers(result.room) })
+  })
+
+  // ── Change AI difficulty (host only, waiting room) ──────────────────────────
+  socket.on('set_ai_difficulty', ({ humanId, difficulty = 'normal' }, ack) => {
+    const roomCode = [...socket.rooms].find(r => r !== socket.id)
+    if (!roomCode) { ack?.({ ok: false, error: 'not_in_room' }); return }
+
+    const room = getRoom(roomCode)
+    if (!room) { ack?.({ ok: false, error: 'room_not_found' }); return }
+
+    const token = getTokenFromSocket(socket.id)
+    if (!isHost(room, token)) { ack?.({ ok: false, error: 'not_host' }); return }
+
+    const result = setAIPlayerDifficulty(roomCode, humanId, difficulty)
     if (result.error) { ack?.({ ok: false, error: result.error }); return }
 
     ack?.({ ok: true })

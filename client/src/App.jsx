@@ -116,6 +116,7 @@ function OnlineApp({ onPassAndPlay }) {
           onSelectColorSlot={online.selectColorSlot}
           onAddAI={online.addAIPlayer}
           onRemoveAI={online.removeAIPlayer}
+          onSetAIDifficulty={online.setAIDifficulty}
           onExit={handleExit}
         />
         {overlayModals}

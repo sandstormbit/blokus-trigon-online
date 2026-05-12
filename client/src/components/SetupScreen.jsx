@@ -71,6 +71,9 @@ export default function SetupScreen({ onStart, onBack }) {
     const updatedColors = [...playerColors]
     const updatedNames = [...playerNames]
 
+    // 2p standard: each player owns two color slots (idx*2 and idx*2+1)
+    const is2pStd = shownCount === 2 && !shownMegaColors
+
     const currentCycleIdx = AI_CYCLE.findIndex(a =>
       a === null ? updatedAI[idx] === null : (updatedAI[idx]?.difficulty === a?.difficulty)
     )
@@ -82,19 +85,32 @@ export default function SetupScreen({ onStart, onBack }) {
     if (next !== null && humanCount === 0) return
 
     if (next !== null && wasHuman) {
-      // Transitioning human → AI: auto-assign an available color and generate a name
-      const taken = updatedColors.slice(0, shownCount).filter((c, i) => i !== idx && c !== null)
-      const available = COLOR_KEYS.filter(c => !taken.includes(c))
-      updatedColors[idx] = available[0] ?? null
+      // Transitioning human → AI: auto-assign color(s) and generate a name
+      if (is2pStd) {
+        const otherStart = idx === 0 ? 2 : 0
+        const taken = [updatedColors[otherStart], updatedColors[otherStart + 1]].filter(Boolean)
+        const available = COLOR_KEYS.filter(c => !taken.includes(c))
+        updatedColors[idx * 2]     = available[0] ?? null
+        updatedColors[idx * 2 + 1] = available[1] ?? null
+      } else {
+        const taken = updatedColors.slice(0, shownCount).filter((c, i) => i !== idx && c !== null)
+        const available = COLOR_KEYS.filter(c => !taken.includes(c))
+        updatedColors[idx] = available[0] ?? null
+      }
       updatedNames[idx] = generateAIName()
     } else if (next === null) {
       // Transitioning AI → human: clear the auto-assigned values
-      updatedColors[idx] = null
+      if (is2pStd) {
+        updatedColors[idx * 2]     = null
+        updatedColors[idx * 2 + 1] = null
+      } else {
+        updatedColors[idx] = null
+      }
       updatedNames[idx] = ''
     }
     // Normal → Hard: keep existing name and color
 
-    updatedAI[idx] = next
+    updatedAI[idx] = next === null ? null : { ...next }
     setPlayerAI(updatedAI)
     setPlayerColors(updatedColors)
     setPlayerNames(updatedNames)
@@ -184,8 +200,9 @@ export default function SetupScreen({ onStart, onBack }) {
       return [0, 1].every(i => playerColors[i] !== null || playerAI[i]?.isAI)
     } else if (playerCount === 2) {
       // 4 color slots — AI players don't need to pick colors
+      // Each player owns two slots: player 0 → slots 0,1 · player 1 → slots 2,3
       return [0, 1, 2, 3].every(i => {
-        const humanIdx = i < 2 ? i : i - 2
+        const humanIdx = Math.floor(i / 2)
         return playerColors[i] !== null || playerAI[humanIdx]?.isAI
       })
     } else {
@@ -319,7 +336,9 @@ export default function SetupScreen({ onStart, onBack }) {
 
                 {shownCount === 2 && shownMegaColors ? (
                   // Mega Colors 2p: one color per player, gets 2 alpha sets
-                  [0, 1].map(humanIdx => (
+                  [0, 1].map(humanIdx => {
+                    const isAI = playerAI[humanIdx]?.isAI
+                    return (
                     <div key={humanIdx} className={styles.playerRow}>
                       <div
                         className={styles.playerNumber}
@@ -332,14 +351,29 @@ export default function SetupScreen({ onStart, onBack }) {
                           {humanIdx + 1}
                         </span>
                       </div>
-                      <input
-                        className={styles.nameInput}
-                        placeholder={`Player ${humanIdx + 1}`}
-                        value={playerNames[humanIdx]}
-                        onChange={e => updateName(humanIdx, e.target.value)}
-                        maxLength={16}
-                      />
-                      <div className={styles.colorPicker}>
+                      {isAI ? (
+                        <span className={styles.aiLabel}>
+                          {playerNames[humanIdx] || AI_LABELS[playerAI[humanIdx].difficulty]}
+                          <span className={styles.aiDiffBadge}>{playerAI[humanIdx].difficulty === 'hard' ? 'Hard' : 'Normal'}</span>
+                        </span>
+                      ) : (
+                        <input
+                          className={styles.nameInput}
+                          placeholder={`Player ${humanIdx + 1}`}
+                          value={playerNames[humanIdx]}
+                          onChange={e => updateName(humanIdx, e.target.value)}
+                          maxLength={16}
+                        />
+                      )}
+                      <button
+                        className={`${styles.aiToggle} ${isAI ? styles.aiToggleActive : ''}`}
+                        onClick={() => cycleAI(humanIdx)}
+                        title={`Toggle AI (current: ${isAI ? AI_LABELS[playerAI[humanIdx].difficulty] : 'Human'})`}
+                        type="button"
+                      >
+                        AI
+                      </button>
+                      <div className={styles.colorPicker} style={{ pointerEvents: isAI ? 'none' : 'auto' }}>
                         {COLOR_KEYS.map(colorKey => {
                           const isUsed = [0, 1].some(i => playerColors[i] === colorKey && i !== humanIdx)
                           const isSelected = playerColors[humanIdx] === colorKey
@@ -350,16 +384,19 @@ export default function SetupScreen({ onStart, onBack }) {
                               style={{ background: PLAYER_COLORS[colorKey].bg }}
                               onClick={() => updateColor(humanIdx, colorKey)}
                               title={PLAYER_COLORS[colorKey].label}
-                              disabled={isUsed}
+                              disabled={isUsed || isAI}
                             />
                           )
                         })}
                       </div>
                     </div>
-                  ))
+                    )
+                  })
                 ) : shownCount === 2 ? (
                   // Standard 2p: 2 players each pick 2 color sets
-                  [0, 1].map(humanIdx => (
+                  [0, 1].map(humanIdx => {
+                    const isAI = playerAI[humanIdx]?.isAI
+                    return (
                     <div key={humanIdx} className={styles.twoPlayerGroup}>
                       <div className={styles.twoPlayerHeader}>
                         <div
@@ -373,13 +410,28 @@ export default function SetupScreen({ onStart, onBack }) {
                             {humanIdx + 1}
                           </span>
                         </div>
-                        <input
-                          className={styles.nameInput}
-                          placeholder={`Player ${humanIdx + 1}`}
-                          value={playerNames[humanIdx]}
-                          onChange={e => updateName(humanIdx, e.target.value)}
-                          maxLength={16}
-                        />
+                        {isAI ? (
+                          <span className={styles.aiLabel}>
+                            {playerNames[humanIdx] || AI_LABELS[playerAI[humanIdx].difficulty]}
+                            <span className={styles.aiDiffBadge}>{playerAI[humanIdx].difficulty === 'hard' ? 'Hard' : 'Normal'}</span>
+                          </span>
+                        ) : (
+                          <input
+                            className={styles.nameInput}
+                            placeholder={`Player ${humanIdx + 1}`}
+                            value={playerNames[humanIdx]}
+                            onChange={e => updateName(humanIdx, e.target.value)}
+                            maxLength={16}
+                          />
+                        )}
+                        <button
+                          className={`${styles.aiToggle} ${isAI ? styles.aiToggleActive : ''}`}
+                          onClick={() => cycleAI(humanIdx)}
+                          title={`Toggle AI (current: ${isAI ? AI_LABELS[playerAI[humanIdx].difficulty] : 'Human'})`}
+                          type="button"
+                        >
+                          AI
+                        </button>
                       </div>
                       <div className={styles.twoPlayerColors}>
                         {[0, 1].map(setIdx => {
@@ -387,7 +439,7 @@ export default function SetupScreen({ onStart, onBack }) {
                           return (
                             <div key={setIdx} className={styles.twoPlayerColorRow}>
                               <span className={styles.colorSetLabel}>Set {setIdx + 1}</span>
-                              <div className={styles.colorPicker}>
+                              <div className={styles.colorPicker} style={{ pointerEvents: isAI ? 'none' : 'auto' }}>
                                 {COLOR_KEYS.map(colorKey => {
                                   const isUsed = playerColors.slice(0, 4).some((c, i) => c === colorKey && i !== slotIdx)
                                   const isSelected = playerColors[slotIdx] === colorKey
@@ -398,7 +450,7 @@ export default function SetupScreen({ onStart, onBack }) {
                                       style={{ background: PLAYER_COLORS[colorKey].bg }}
                                       onClick={() => updateColor(slotIdx, colorKey)}
                                       title={PLAYER_COLORS[colorKey].label}
-                                      disabled={isUsed}
+                                      disabled={isUsed || isAI}
                                     />
                                   )
                                 })}
@@ -408,7 +460,8 @@ export default function SetupScreen({ onStart, onBack }) {
                         })}
                       </div>
                     </div>
-                  ))
+                    )
+                  })
                 ) : (
                   // 3 or 4 players: one color per player
                   Array.from({ length: shownCount }, (_, i) => {

@@ -511,15 +511,23 @@ export default function HowToPlayModal({ onClose }) {
   const prev = useCallback(() => setFrame(f => Math.max(0, f - 1)), [])
   const next = useCallback(() => setFrame(f => Math.min(total - 1, f + 1)), [total])
 
+  const isLastFrame = frame === total - 1
+
   useEffect(() => {
     const handler = (e) => {
-      if (e.key === 'Escape') onClose()
-      if (e.key === 'ArrowRight') { triggerBounce(nextBtnRef.current); next() }
-      if (e.key === 'ArrowLeft')  { triggerBounce(prevBtnRef.current); prev() }
+      if (e.key === 'Escape') { onClose(); return }
+      if (e.key === 'ArrowRight') {
+        triggerBounce(nextBtnRef.current)
+        if (isLastFrame) setTimeout(onClose, 350)
+        else next()
+        return
+      }
+      if (e.key === 'ArrowLeft') { triggerBounce(prevBtnRef.current); prev(); return }
+      if (e.key === 'Enter' && isLastFrame) { triggerBounce(nextBtnRef.current); setTimeout(onClose, 350) }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [onClose, next, prev])
+  }, [onClose, next, prev, isLastFrame])
 
   const current = FRAMES[frame]
 

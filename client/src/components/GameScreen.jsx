@@ -306,11 +306,17 @@ export default function GameScreen({
     confirmSkip()
   }, [confirmSkip])
 
-  // Left-side players: panel opens right (→) and closes left (←)
-  // Right-side players: panel opens left (←) and closes right (→)
-  const isCurrentPlayerOnLeft = !currentPlayer ||
-    state.players[0]?.id === currentPlayer.id ||
-    state.players[3]?.id === currentPlayer.id
+  // panelSide: which side the toggle owner's HUD is on — drives both keyboard shortcuts and tab arrow.
+  // Must be computed from toggleOwnerPlayerEarly (not currentPlayer) so online games and 2p-standard
+  // stay consistent regardless of whose turn it currently is.
+  const panelSide = (() => {
+    const { players, playerCount, gameModes } = state
+    const isMC2p = gameModes?.megaColors && playerCount === 2
+    const leftIds = playerCount === 3  ? [players[0]?.id]
+                  : isMC2p            ? [players[0]?.id]
+                  : [players[0]?.id, players[3]?.id]
+    return leftIds.includes(toggleOwnerPlayerEarly?.id) ? 'left' : 'right'
+  })()
 
   useKeyboard({
     selectedPieceId: state.selectedPieceId,
@@ -322,8 +328,8 @@ export default function GameScreen({
     onToggleHover: keyHover,
     onToggleEnhancedColoring: toggleEnhancedColoring,
     onToggleAutoAdvance: toggleAutoAdvance,
-    onArrowRight: isCurrentPlayerOnLeft ? openControlPanel : closeControlPanel,
-    onArrowLeft:  isCurrentPlayerOnLeft ? closeControlPanel : openControlPanel,
+    onArrowRight: panelSide === 'left' ? openControlPanel : closeControlPanel,
+    onArrowLeft:  panelSide === 'left' ? closeControlPanel : openControlPanel,
     onDeselect: keyDeselect,
     onConfirmPlacement: handleConfirmPlacement,
     onCancelPlacement: cancelPlacement,
@@ -358,11 +364,7 @@ export default function GameScreen({
 
   // toggleOwnerPlayerEarly (computed above, before hooks) has the same logic — reuse it here.
   const toggleOwnerPlayer = toggleOwnerPlayerEarly
-
-  const panelSide = leftPlayers.some(p => p.id === toggleOwnerPlayer?.id) ? 'left' : 'right'
-  if (process.env.NODE_ENV !== 'production' && state.phase === 'playing' && toggleOwnerPlayer && !toggleOwnerPlayer.isAI) {
-    console.log('[PCP]', { toggleOwnerColor: toggleOwnerPlayer.color, side: panelSide, currentPlayerIndex: state.currentPlayerIndex, leftIds: leftPlayers.map(p => p.id), toggleId: toggleOwnerPlayer.id })
-  }
+  // panelSide is computed early (before useKeyboard) so keyboard bindings and tab arrow always agree.
 
   const isModalOpen = !!state.pendingPlacement || state.showEndGameConfirm ||
                       (state.phase === 'ended' && !viewingFinalBoard) || !!state.noMovesModalPlayerId ||
