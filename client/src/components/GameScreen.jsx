@@ -592,6 +592,8 @@ export default function GameScreen({
           onLeave={onExit || null}
           isHost={!isOnline || isHostPlayer}
           playerTimers={finalPlayerTimers}
+          moveHistory={state.moveHistory ?? []}
+          boardData={state.board}
         />
       )}
 

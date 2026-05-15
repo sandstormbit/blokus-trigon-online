@@ -1,8 +1,8 @@
 .winnerBanner {
   text-align: center;
-  padding: 20px 16px 24px;
+  padding: 12px 16px 14px;
   border-bottom: 1px solid var(--border-subtle);
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .crownIcon {
@@ -69,7 +69,7 @@
 
 /* Scoreboard */
 .scoreboard {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .scoreboardLabel {
@@ -85,7 +85,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 7px 12px;
   border-radius: var(--radius-md);
   margin-bottom: 4px;
   background: var(--bg-elevated);
@@ -168,6 +168,50 @@
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+/* Header action buttons (Share / GIF — sit next to the × close button) */
+.shareBtn,
+.gifBtn {
+  height: 28px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.shareBtn:hover:not(:disabled),
+.gifBtn:hover:not(:disabled) {
+  background: var(--bg-card);
+  border-color: var(--border-mid);
+  color: var(--text-primary);
+}
+
+.shareBtn:disabled,
+.gifBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btnSpinner {
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--text-secondary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
 }
 
 /* Button row */

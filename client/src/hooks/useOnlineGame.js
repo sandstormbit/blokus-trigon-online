@@ -65,6 +65,10 @@ export function useOnlineGame() {
   // Authoritative game state from server
   const [gameState, setGameState] = useState(null)
 
+  // Move history — accumulated client-side by watching lastPlacedCells changes
+  const [moveHistory, setMoveHistory] = useState([])
+  const lastPlacedCellsRef = useRef(null)
+
   // Local UI state (purely client-side, no server sync)
   const [selectedPieceId, setSelectedPieceId] = useState(null)
   const [hoverCell, setHoverCell] = useState(null)
@@ -130,6 +134,8 @@ export function useOnlineGame() {
       setHoverCell(null)
       setPendingPlacement(null)
       setOtherPlayersCursors({})
+      setMoveHistory([])
+      lastPlacedCellsRef.current = null
     })
 
     socket.on('game_state_update', ({ gameState: raw }) => {
@@ -139,6 +145,19 @@ export function useOnlineGame() {
       setHoverCell(null)
       setPendingPlacement(null)
       if (state.phase === 'ended') setRoomPhase('ended')
+      // Track move history from lastPlacedCells changes
+      if (state.lastPlacedCells && state.lastPlacedPlayerId) {
+        if (state.lastPlacedCells !== lastPlacedCellsRef.current) {
+          lastPlacedCellsRef.current = state.lastPlacedCells
+          setMoveHistory(prev => [...prev, { playerId: state.lastPlacedPlayerId, cells: state.lastPlacedCells }])
+        }
+      } else if (!state.lastPlacedCells) {
+        // Piece was removed (undo) — remove last history entry
+        if (lastPlacedCellsRef.current !== null) {
+          lastPlacedCellsRef.current = null
+          setMoveHistory(prev => prev.slice(0, -1))
+        }
+      }
     })
 
     socket.on('new_game_started', ({ players, settings: s }) => {
@@ -150,6 +169,8 @@ export function useOnlineGame() {
       setHoverCell(null)
       setPendingPlacement(null)
       setOtherPlayersCursors({})
+      setMoveHistory([])
+      lastPlacedCellsRef.current = null
     })
 
     // ── Live cursor from another player ───────────────────────────────────────
@@ -733,6 +754,7 @@ export function useOnlineGame() {
     selectedPieceId,
     hoverCell,
     pendingPlacement,
+    moveHistory,
   } : null
 
   // ── Ghost pieces for other players' live cursors ───────────────────────────

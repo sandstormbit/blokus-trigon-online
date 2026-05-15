@@ -64,6 +64,7 @@ function createInitialState() {
     lastPlacedPieceId: null,     // piece id of the most recently placed piece (for removal)
     gameModes: {},               // active game mode flags
     requiredStartCells: null,    // Set<"q,r"> | null — for Required Start mode
+    moveHistory: [],             // [{playerId, cells: [{q,r},...]}] — every confirmed placement in order
   }
 }
 
@@ -356,6 +357,8 @@ function gameReducer(state, action) {
         lastPlacedPieceId: pieceId,
       }
 
+      const newMoveEntry = { playerId: state.players[playerIdx].id, cells: cells.map(c => ({ q: c.q, r: c.r })) }
+
       if (autoAdvance) {
         const newSkipped = new Set(state.skippedPlayerIds)
         const advanced = advanceTurn(
@@ -364,7 +367,7 @@ function gameReducer(state, action) {
           newPlayers,
           newSkipped,
         )
-        return { ...state, ...placedInfo, pendingPlacement: null, selectedPieceId: null, hoverCell: null, ...advanced }
+        return { ...state, ...placedInfo, pendingPlacement: null, selectedPieceId: null, hoverCell: null, ...advanced, moveHistory: [...state.moveHistory, newMoveEntry] }
       }
 
       // Don't advance turn yet — wait for END_TURN
@@ -376,6 +379,7 @@ function gameReducer(state, action) {
         selectedPieceId: null,
         hoverCell: null,
         waitingForEndTurn: true,
+        moveHistory: [...state.moveHistory, newMoveEntry],
         ...placedInfo,
       }
     }
@@ -430,6 +434,7 @@ function gameReducer(state, action) {
         lastPlacedCells: null,
         lastPlacedPlayerId: null,
         lastPlacedPieceId: null,
+        moveHistory: state.moveHistory.slice(0, -1),
       }
     }
 
@@ -505,6 +510,7 @@ function gameReducer(state, action) {
         lastPlacedCells: cells.map(c => ({ q: c.q, r: c.r })),
         lastPlacedPlayerId: currentPlayer.id,
         lastPlacedPieceId: pieceId,
+        moveHistory: [...state.moveHistory, { playerId: currentPlayer.id, cells: cells.map(c => ({ q: c.q, r: c.r })) }],
       }
     }
 

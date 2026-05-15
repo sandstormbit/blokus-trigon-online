@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState, useCallback } from 'react'
 import Modal from './Modal.jsx'
 import PiecePreview from './PiecePreview.jsx'
 import { PLAYER_COLORS } from '../hooks/useGameState.js'
+import { generateShareImage, generateReplayGIF } from '../utils/shareGameUtils.js'
 import styles from './EndGameModal.module.css'
 
 function triggerBounce(el) {
@@ -28,7 +29,10 @@ function formatTime(ms) {
   return `${s}s`
 }
 
-export default function EndGameModal({ players, playerCount, onNewGame, onViewBoard, onClose, onLeave, isHost = true, playerTimers = {} }) {
+export default function EndGameModal({ players, playerCount, onNewGame, onViewBoard, onClose, onLeave, isHost = true, playerTimers = {}, moveHistory = [], boardData = null }) {
+  const [sharingImage, setSharingImage] = useState(false)
+  const [generatingGIF, setGeneratingGIF] = useState(false)
+  const [gifProgress, setGifProgress] = useState(0)
   // For 2-player mode, consolidate by humanId
   const ranked = useMemo(() => {
     if (playerCount === 2) {
@@ -64,6 +68,39 @@ export default function EndGameModal({ players, playerCount, onNewGame, onViewBo
 
   // Compute per-entry total timer (sum slots for 2p, direct for 3/4p)
   // Only compare human players (non-AI) for turtle/rocket
+  // Board size for GIF: 4 for 2p (uses 4-slot board) and 4p, 3 for 3p
+  const boardPlayerCount = playerCount === 3 ? 3 : 4
+
+  const handleShare = useCallback(async () => {
+    if (!boardData || sharingImage) return
+    setSharingImage(true)
+    try {
+      await generateShareImage(boardData, players, ranked, playerCount, isTie)
+    } catch (e) {
+      console.error('Share image failed:', e)
+    } finally {
+      setSharingImage(false)
+    }
+  }, [boardData, players, ranked, playerCount, isTie, sharingImage])
+
+  const handleGIF = useCallback(async () => {
+    if (!boardData || generatingGIF) return
+    setGeneratingGIF(true)
+    setGifProgress(0)
+    try {
+      await generateReplayGIF(
+        moveHistory, players, ranked, playerCount, isTie,
+        boardPlayerCount,
+        (fraction) => setGifProgress(Math.round(fraction * 100)),
+      )
+    } catch (e) {
+      console.error('GIF generation failed:', e)
+    } finally {
+      setGeneratingGIF(false)
+      setGifProgress(0)
+    }
+  }, [boardData, moveHistory, players, ranked, playerCount, isTie, boardPlayerCount, generatingGIF])
+
   const { fastestId, slowestId } = useMemo(() => {
     const humanTimes = []
     for (const entry of ranked) {
@@ -87,8 +124,43 @@ export default function EndGameModal({ players, playerCount, onNewGame, onViewBo
   const getTimerKey = (entry) =>
     playerCount === 2 ? `h${entry.humanId}` : entry.id
 
+  const headerActions = boardData ? (
+    <>
+      <button
+        className={styles.shareBtn}
+        onClick={handleShare}
+        disabled={sharingImage || generatingGIF}
+        title="Save or share a screenshot of the final board with scores"
+      >
+        {sharingImage ? (
+          <div className={styles.btnSpinner} />
+        ) : (
+          <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
+            <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"/>
+          </svg>
+        )}
+        <span>{sharingImage ? 'Sharing…' : 'Share'}</span>
+      </button>
+      <button
+        className={styles.gifBtn}
+        onClick={handleGIF}
+        disabled={generatingGIF || sharingImage}
+        title="Download an animated GIF replaying the entire game"
+      >
+        {generatingGIF ? (
+          <div className={styles.btnSpinner} />
+        ) : (
+          <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
+            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd"/>
+          </svg>
+        )}
+        <span>{generatingGIF ? (gifProgress > 0 ? `${gifProgress}%` : 'Building…') : 'GIF'}</span>
+      </button>
+    </>
+  ) : null
+
   return (
-    <Modal title="Game over" wide onClose={onClose}>
+    <Modal title="Game over" wide onClose={onClose} headerActions={headerActions}>
       {/* Winner announcement */}
       <div className={styles.winnerBanner}>
         {isTie ? (
