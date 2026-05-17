@@ -172,7 +172,6 @@ export default function WaitingRoom({
                             {player.name}
                             {isMe && <span className={styles.youBadge}>You</span>}
                             {player.isHost && <span className={styles.hostBadge}>Host</span>}
-                            {player.isAI && <span className={styles.aiBadge}>🤖 {player.aiDifficulty === 'hard' ? 'Hard' : 'Normal'} AI</span>}
                           </span>
                           {isTwoPlayerStandard ? (
                             // 2p standard mode: two color set rows per player
@@ -244,7 +243,7 @@ export default function WaitingRoom({
                               title={`Switch to ${player.aiDifficulty === 'normal' ? 'Hard' : 'Normal'} AI`}
                               type="button"
                             >
-                              {player.aiDifficulty === 'hard' ? 'Hard' : 'Normal'}
+                              🤖 {player.aiDifficulty === 'hard' ? 'Hard' : 'Normal'} AI
                             </button>
                             <button
                               className={styles.removeAIBtn}
