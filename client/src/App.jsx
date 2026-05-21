@@ -125,7 +125,7 @@ function OnlineApp({ onPassAndPlay }) {
   }
 
   // ── Active / ended game ─────────────────────────────────────────────────────
-  if ((online.roomPhase === 'playing' || online.roomPhase === 'ended') && online.state) {
+  if ((online.roomPhase === 'playing' || online.roomPhase === 'ended' || online.roomPhase === 'spectating') && online.state) {
     return (
       <>
         <GameScreen
