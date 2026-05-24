@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import styles from './Modal.module.css'
+import { playSound } from '../utils/sounds.js'
 
 function triggerBounce(el) {
   if (!el) return
@@ -15,6 +16,7 @@ export default function Modal({ title, children, onClose, wide, headerActions })
     const handler = (e) => {
       if (e.key === 'Escape' && onClose) {
         triggerBounce(closeBtnRef.current)
+        playSound('2-deselect-piece')
         onClose()
       }
     }
@@ -23,7 +25,7 @@ export default function Modal({ title, children, onClose, wide, headerActions })
   }, [onClose])
 
   return (
-    <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose && onClose()}>
+    <div className={styles.overlay} onClick={(e) => { if (e.target === e.currentTarget && onClose) { playSound('2-deselect-piece'); onClose() } }}>
       <div className={`${styles.modal} ${wide ? styles.wide : ''} animate-fadeInScale`}>
         {title && (
           <div className={styles.header}>
@@ -31,7 +33,7 @@ export default function Modal({ title, children, onClose, wide, headerActions })
             <div className={styles.headerRight}>
               {headerActions}
               {onClose && (
-                <button ref={closeBtnRef} className={styles.closeBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onClose, 350) }}>
+                <button ref={closeBtnRef} className={styles.closeBtn} onClick={(e) => { triggerBounce(e.currentTarget); playSound('2-deselect-piece'); setTimeout(onClose, 350) }}>
                   <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
                     <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>
                   </svg>

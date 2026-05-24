@@ -12,6 +12,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { io } from 'socket.io-client'
 import { getPieceOrientation, placePieceCells } from '../game/pieces.js'
 import { isLegalPlacement } from '../game/gameLogic.js'
+import { playSound } from '../utils/sounds.js'
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || ''
 
@@ -84,6 +85,11 @@ export function useOnlineGame() {
   const cursorStateRef = useRef(null)
   const cursorVersionRef = useRef(0)
   const lastEmittedCursorVersionRef = useRef(-1)
+  // Sound detection refs for other players' actions
+  const prevOtherCursorsRef = useRef({})
+  const prevGameLastPlacedIdRef = useRef(null)
+  const prevGameLastPlacedHumanIdRef = useRef(null)
+  const recentlyPlacedOtherHumanIds = useRef(new Set())
 
   // ── Socket initialization ───────────────────────────────────────────────────
   useEffect(() => {
@@ -135,10 +141,37 @@ export function useOnlineGame() {
       setOtherPlayersCursors({})
       setMoveHistory([])
       lastPlacedCellsRef.current = null
+      prevOtherCursorsRef.current = {}
+      prevGameLastPlacedIdRef.current = null
+      prevGameLastPlacedHumanIdRef.current = null
+      recentlyPlacedOtherHumanIds.current = new Set()
     })
 
     socket.on('game_state_update', ({ gameState: raw }) => {
       const state = deserializeState(raw)
+
+      // Sound detection for other players' placement/removal
+      const prevLastId = prevGameLastPlacedIdRef.current
+      const newLastId = state.lastPlacedPlayerId ?? null
+      if (newLastId !== prevLastId) {
+        if (newLastId !== null) {
+          const placingPlayer = state.players.find(p => p.id === newLastId)
+          const placerHumanId = placingPlayer?.humanId ?? null
+          prevGameLastPlacedHumanIdRef.current = placerHumanId
+          if (placerHumanId !== null && placerHumanId !== myHumanIdRef.current) {
+            playSound('place-piece')
+            recentlyPlacedOtherHumanIds.current.add(placerHumanId)
+          }
+        } else {
+          const removerHumanId = prevGameLastPlacedHumanIdRef.current
+          if (removerHumanId !== null && removerHumanId !== myHumanIdRef.current) {
+            playSound('remove-piece')
+          }
+          prevGameLastPlacedHumanIdRef.current = null
+        }
+      }
+      prevGameLastPlacedIdRef.current = newLastId
+
       setGameState(state)
       setSelectedPieceId(null)
       setHoverCell(null)
@@ -161,6 +194,18 @@ export function useOnlineGame() {
 
     // ── Live cursor from another player ───────────────────────────────────────
     socket.on('player_cursor_update', ({ humanId, hoverCell, selectedPieceId, rotIndex, flipped }) => {
+      const prevCursor = prevOtherCursorsRef.current[humanId]
+      const prevSelected = prevCursor?.selectedPieceId ?? null
+      if (prevSelected === null && selectedPieceId !== null) {
+        playSound('1-select-piece')
+      } else if (prevSelected !== null && selectedPieceId === null) {
+        if (recentlyPlacedOtherHumanIds.current.has(humanId)) {
+          recentlyPlacedOtherHumanIds.current.delete(humanId)
+        } else {
+          playSound('2-deselect-piece')
+        }
+      }
+      prevOtherCursorsRef.current = { ...prevOtherCursorsRef.current, [humanId]: { hoverCell, selectedPieceId, rotIndex, flipped } }
       setOtherPlayersCursors(prev => ({
         ...prev,
         [humanId]: { hoverCell, selectedPieceId, rotIndex, flipped },

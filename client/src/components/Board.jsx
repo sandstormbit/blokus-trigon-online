@@ -9,6 +9,7 @@ import {
 } from '../game/boardGeometry.js'
 import { PLAYER_COLORS } from '../hooks/useGameState.js'
 import styles from './Board.module.css'
+import { playSound } from '../utils/sounds.js'
 
 // Illegal ghost: gray so it's never confused with any player's color
 const GHOST_ILLEGAL_FILL   = 'rgba(100, 110, 130, 0.45)'
@@ -402,7 +403,12 @@ export default function Board({
   }, [onBoardLeave])
 
   const handleClick = useCallback((e) => {
-    if (disabled || !selectedPiece || !hoverCell || !ghostIsLegal) return
+    if (disabled || !selectedPiece || !hoverCell) return
+    if (!ghostIsLegal) {
+      playSound('invalid-placement')
+      return
+    }
+    playSound('click-to-place')
     onCellClick(hoverCell.q, hoverCell.r)
   }, [disabled, selectedPiece, hoverCell, ghostIsLegal, onCellClick])
 

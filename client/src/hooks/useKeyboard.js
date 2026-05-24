@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { playSound } from '../utils/sounds.js'
 
 /**
  * Listens for keyboard shortcuts during gameplay.
@@ -45,6 +46,7 @@ export function useKeyboard({
       // C → toggle enhanced coloring (works any time during play)
       if ((e.key === 'c' || e.key === 'C') && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
         e.preventDefault()
+        playSound('home-lobby')
         onToggleEnhancedColoring?.()
         return
       }
@@ -52,6 +54,7 @@ export function useKeyboard({
       // A → toggle auto advance (works any time during play)
       if ((e.key === 'a' || e.key === 'A') && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
         e.preventDefault()
+        playSound('home-lobby')
         onToggleAutoAdvance?.()
         return
       }
@@ -59,11 +62,13 @@ export function useKeyboard({
       // Arrow keys → open/close piece control panel (works any time during play)
       if (e.key === 'ArrowRight' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
         e.preventDefault()
+        playSound('home-lobby')
         onArrowRight?.()
         return
       }
       if (e.key === 'ArrowLeft' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
         e.preventDefault()
+        playSound('home-lobby')
         onArrowLeft?.()
         return
       }
@@ -72,9 +77,11 @@ export function useKeyboard({
         // In confirmation mode: Enter confirms, Escape cancels
         if (e.key === 'Enter') {
           e.preventDefault()
+          playSound('place-piece')
           onConfirmPlacement()
         } else if (e.key === 'Escape') {
           e.preventDefault()
+          playSound('2-deselect-piece')
           onCancelPlacement()
         }
         return
@@ -89,6 +96,7 @@ export function useKeyboard({
         case 'r':
         case 'R':
           e.preventDefault()
+          playSound('home-lobby')
           if (e.shiftKey) {
             onRotateReverse?.()
           } else {
@@ -98,15 +106,18 @@ export function useKeyboard({
         case 'f':
         case 'F':
           e.preventDefault()
+          playSound('home-lobby')
           onFlip()
           break
         case 'h':
         case 'H':
           e.preventDefault()
+          playSound('home-lobby')
           onToggleHover()
           break
         case 'Escape':
           e.preventDefault()
+          playSound('2-deselect-piece')
           onDeselect()
           break
       }

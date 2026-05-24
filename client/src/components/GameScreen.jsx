@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { playSound } from '../utils/sounds.js'
 
 function triggerBounce(el) {
   if (!el) return
@@ -265,6 +266,96 @@ export default function GameScreen({
     return () => clearInterval(interval)
   }, [isMyTurn, state.phase, state.waitingForEndTurn, currentPlayer?.id])
 
+  // ── Sound effects ─────────────────────────────────────────────────────────
+
+  // Game start: play once when phase first becomes 'playing'
+  const gameStartPlayedRef = useRef(false)
+  useEffect(() => {
+    if (state.phase === 'playing' && !gameStartPlayedRef.current) {
+      gameStartPlayedRef.current = true
+      playSound('game-start')
+    }
+    if (state.phase === 'setup') gameStartPlayedRef.current = false
+  }, [state.phase])
+
+  // Your turn: skip the initial turn, then play on each subsequent human turn
+  const turnSoundKeyRef = useRef(null)
+  const turnSoundInitRef = useRef(false)
+  useEffect(() => {
+    if (state.phase !== 'playing') { turnSoundInitRef.current = false; return }
+    if (!isMyTurn || currentPlayer?.isAI) {
+      // Mark init as done when AI or opponent goes first, so the local human's
+      // actual first turn is recognised as a genuine transition and plays the sound.
+      turnSoundInitRef.current = true
+      turnSoundKeyRef.current = null
+      return
+    }
+    const key = currentPlayer?.id
+    if (!turnSoundInitRef.current) {
+      turnSoundInitRef.current = true
+      turnSoundKeyRef.current = key
+      return
+    }
+    if (key !== turnSoundKeyRef.current) {
+      playSound('1-your-turn')
+      turnSoundKeyRef.current = key
+    }
+  }, [state.phase, state.currentPlayerIndex, isMyTurn, currentPlayer?.id])
+
+  // Inactivity flash
+  useEffect(() => {
+    if (showInactivityFlash) playSound('inactivity')
+  }, [showInactivityFlash])
+
+  // No more moves modal — delay 1s so it doesn't overlap with end-turn sound
+  const noMovesSoundTimerRef = useRef(null)
+  useEffect(() => {
+    clearTimeout(noMovesSoundTimerRef.current)
+    if (state.noMovesModalPlayerId) {
+      noMovesSoundTimerRef.current = setTimeout(() => playSound('no-more-moves'), 1000)
+    }
+    return () => clearTimeout(noMovesSoundTimerRef.current)
+  }, [state.noMovesModalPlayerId])
+
+  // End game: win or lose
+  const endSoundPlayedRef = useRef(false)
+  useEffect(() => {
+    if (state.phase === 'ended' && !endSoundPlayedRef.current) {
+      endSoundPlayedRef.current = true
+      const minScore = Math.min(...state.players.map(p => p.score))
+      const iAmWinner = myHumanId !== null
+        ? state.players.some(p => p.humanId === myHumanId && p.score === minScore)
+        : true
+      playSound(iAmWinner ? '1-you-win' : 'did-not-win')
+    }
+    if (state.phase !== 'ended') endSoundPlayedRef.current = false
+  }, [state.phase, state.players, myHumanId])
+
+  // Turn progression: play end-turn sound whenever currentPlayerIndex changes during play.
+  // Delay 1 second after AI turns so place-piece and end-turn don't overlap.
+  const prevCurrentPlayerIdxRef = useRef(null)
+  const endTurnSoundTimerRef = useRef(null)
+  const playersRef = useRef(state.players)
+  playersRef.current = state.players
+  useEffect(() => {
+    if (state.phase !== 'playing') {
+      clearTimeout(endTurnSoundTimerRef.current)
+      prevCurrentPlayerIdxRef.current = null
+      return
+    }
+    const idx = state.currentPlayerIndex
+    if (prevCurrentPlayerIdxRef.current !== null && prevCurrentPlayerIdxRef.current !== idx) {
+      const prevPlayer = playersRef.current[prevCurrentPlayerIdxRef.current]
+      const prevPlayerIsMe = !isOnline || prevPlayer?.humanId === myHumanId
+      if (!prevPlayer?.isAI && prevPlayerIsMe) {
+        playSound('end-turn')
+      }
+      // Local AI: sound played in useGameState.js before dispatch
+      // Online (other human or AI ending turn): no sound
+    }
+    prevCurrentPlayerIdxRef.current = idx
+  }, [state.phase, state.currentPlayerIndex])
+
   // ── Keyboard & HUD bounce ref ─────────────────────────────────────────────
   const hudBounceRef = useRef(null)
   const keyRotate = useCallback(() => { rotatePiece(); controlPanelBounceRef.current?.('rotate') }, [rotatePiece])
@@ -273,20 +364,27 @@ export default function GameScreen({
   const keyHover = useCallback(() => { toggleFreeHover(); controlPanelBounceRef.current?.('hover') }, [toggleFreeHover])
   const keyDeselect = useCallback(() => { deselectPiece(); controlPanelBounceRef.current?.('deselect') }, [deselectPiece])
   const keyEndTurn = useCallback(() => {
-    if (state.waitingForEndTurn) { endTurn(); hudBounceRef.current?.('endTurn') }
-  }, [state.waitingForEndTurn, endTurn])
+    if (state.waitingForEndTurn && !currentPlayer?.isAI) { endTurn(); hudBounceRef.current?.('endTurn') }
+  }, [state.waitingForEndTurn, currentPlayer?.isAI, endTurn])
 
   const handleConfirmPlacement = useCallback(() => {
     confirmPlacement(autoAdvanceEnabled)
   }, [confirmPlacement, autoAdvanceEnabled])
 
   // Auto-advance when A is on — covers both: placement while A is already on,
-  // and A being toggled on while already waiting for end turn
+  // and A being toggled on while already waiting for end turn.
+  // Skip for AI players — they handle their own end-turn with a sound delay.
+  // 1-second delay mirrors the AI / human-to-AI transition so placement is visible.
+  const autoAdvanceTimerRef = useRef(null)
   useEffect(() => {
-    if (autoAdvanceEnabled && state.waitingForEndTurn) endTurn()
-  }, [autoAdvanceEnabled, state.waitingForEndTurn])
+    clearTimeout(autoAdvanceTimerRef.current)
+    if (autoAdvanceEnabled && state.waitingForEndTurn && !currentPlayer?.isAI) {
+      autoAdvanceTimerRef.current = setTimeout(endTurn, 1000)
+    }
+    return () => clearTimeout(autoAdvanceTimerRef.current)
+  }, [autoAdvanceEnabled, state.waitingForEndTurn, currentPlayer?.isAI, endTurn])
 
-  const handleRemovePieceClick = useCallback(() => setShowRemovePieceModal(true), [])
+  const handleRemovePieceClick = useCallback(() => { playSound('1-select-piece'); setShowRemovePieceModal(true) }, [])
   const handleConfirmRemove = useCallback(() => {
     setShowRemovePieceModal(false)
     removePiece?.()
@@ -341,12 +439,13 @@ export default function GameScreen({
 
   const { players, playerCount } = state
 
-  // No-moves modal player — suppressed for AI players (auto-handled by server/hook)
+  // No-moves modal player — shown for both human and AI players.
   const noMovesPlayer = (state.noMovesModalPlayerId && !noMovesLocallyDismissed)
-    ? players.find(p => p.id === state.noMovesModalPlayerId && !p.isAI)
+    ? players.find(p => p.id === state.noMovesModalPlayerId)
     : null
   // In online games, only the player who ran out of moves triggers the server dismiss.
   // Other players just close the modal locally and wait for the game state to update.
+  // AI players never manually dismiss — the modal auto-clears when the turn advances.
   const isNoMovesPlayer = !isOnline || (noMovesPlayer?.humanId === myHumanId)
 
   // Mega Colors 2p has only 2 player slots instead of 4
@@ -411,17 +510,17 @@ export default function GameScreen({
             })() : null}
           </div>
           <div className={styles.finalBoardRight}>
-            <button className={styles.backToResultsBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(() => setViewingFinalBoard(false), 350) }}>
+            <button className={styles.backToResultsBtn} onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); setTimeout(() => setViewingFinalBoard(false), 350) }}>
               Back to results
             </button>
             {onExit && (
-              <button className={styles.finalLeaveBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onExit, 350) }}>
+              <button className={styles.finalLeaveBtn} onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); setTimeout(onExit, 350) }}>
                 Leave
               </button>
             )}
             <button
               className={styles.finalNewGameBtn}
-              onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(newGame, 350) }}
+              onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); setTimeout(newGame, 350) }}
             >
               <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
                 <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1z" clipRule="evenodd"/>
@@ -442,7 +541,7 @@ export default function GameScreen({
           onConfirmSkip={handleConfirmSkip}
           onCancelSkip={handleCancelSkip}
           showSkipConfirm={showSkipConfirm}
-          onEndTurn={endTurn}
+          onEndTurn={currentPlayer?.isAI ? null : endTurn}
           waitingForEndTurn={state.waitingForEndTurn}
           playerCount={playerCount}
           isOnline={isOnline}
@@ -595,7 +694,7 @@ export default function GameScreen({
       {noMovesPlayer && (
         <NoMovesModal
           player={noMovesPlayer}
-          onDismiss={isNoMovesPlayer ? dismissNoMoves : () => setNoMovesLocallyDismissed(true)}
+          onDismiss={noMovesPlayer?.isAI ? null : (isNoMovesPlayer ? dismissNoMoves : () => setNoMovesLocallyDismissed(true))}
         />
       )}
 

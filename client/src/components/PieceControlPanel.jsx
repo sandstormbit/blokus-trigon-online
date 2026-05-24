@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react'
 import styles from './PieceControlPanel.module.css'
+import { playSound } from '../utils/sounds.js'
 
 function triggerBounce(el) {
   if (!el) return
@@ -56,8 +57,8 @@ export default function PieceControlPanel({
 
   const wrapperStyle = {
     top: anchorTop,
-    left: isLeft ? 200 : null,
-    right: isLeft ? null : 200,
+    left: isLeft ? 240 : null,
+    right: isLeft ? null : 240,
     flexDirection: isLeft ? 'row' : 'row-reverse',
     '--panel-color': playerColor,
   }
@@ -67,7 +68,7 @@ export default function PieceControlPanel({
       {/* Toggle tab — always visible at the sidebar edge */}
       <button
         className={`${styles.tab} ${isLeft ? styles.tabLeft : styles.tabRight}`}
-        onClick={onToggle}
+        onClick={() => { playSound(isOpen ? 'home-lobby' : '2-deselect-piece'); onToggle() }}
         title={isOpen ? 'Close piece controls' : 'Open piece controls'}
         aria-label={isOpen ? 'Close piece controls' : 'Open piece controls'}
       >
@@ -87,7 +88,7 @@ export default function PieceControlPanel({
           <button
             ref={rotateRef}
             className={styles.btn}
-            onClick={onRotate}
+            onClick={() => { playSound('home-lobby'); onRotate() }}
             title="Rotate 60° CW (R)"
           >
             <svg viewBox="0 0 20 20" width="13" height="13" fill="currentColor" aria-hidden="true">
@@ -99,7 +100,7 @@ export default function PieceControlPanel({
           <button
             ref={rotateRevRef}
             className={styles.btn}
-            onClick={onRotateReverse}
+            onClick={() => { playSound('home-lobby'); onRotateReverse() }}
             title="Rotate 60° CCW (⇧R)"
           >
             <svg viewBox="0 0 20 20" width="13" height="13" fill="currentColor" aria-hidden="true">
@@ -111,7 +112,7 @@ export default function PieceControlPanel({
           <button
             ref={flipRef}
             className={styles.btn}
-            onClick={onFlip}
+            onClick={() => { playSound('home-lobby'); onFlip() }}
             title="Flip (F)"
           >
             <svg viewBox="0 0 20 20" width="13" height="13" fill="currentColor" aria-hidden="true">
@@ -123,7 +124,7 @@ export default function PieceControlPanel({
           <button
             ref={hoverRef}
             className={`${styles.btn} ${!freeHoverEnabled ? styles.btnInactive : ''}`}
-            onClick={onToggleHover}
+            onClick={() => { playSound('home-lobby'); onToggleHover() }}
             title="Toggle hover preview (H)"
           >
             <svg viewBox="0 0 20 20" width="13" height="13" fill="currentColor" aria-hidden="true">
@@ -136,7 +137,7 @@ export default function PieceControlPanel({
           <button
             ref={deselectRef}
             className={`${styles.btn} ${styles.btnDeselect}`}
-            onClick={onDeselect}
+            onClick={() => { playSound('2-deselect-piece'); onDeselect() }}
             title="Deselect (Esc)"
           >
             <svg viewBox="0 0 20 20" width="13" height="13" fill="currentColor" aria-hidden="true">

@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react'
 import { PLAYER_COLORS } from '../hooks/useGameState.js'
 import styles from './HUD.module.css'
+import { playSound } from '../utils/sounds.js'
 
 function triggerBounce(el) {
   if (!el) return
@@ -87,13 +88,13 @@ export default function HUD({
             <div className={styles.skipConfirm}>
               <span className={styles.skipConfirmText}>Skip your turn?</span>
               <div className={styles.skipConfirmBtns}>
-                <button className={styles.skipCancelBtn} onClick={onCancelSkip}>
+                <button className={styles.skipCancelBtn} onClick={() => { playSound('home-lobby'); onCancelSkip() }}>
                   No, go back
                 </button>
                 <button
                   className={styles.skipConfirmBtn}
                   style={{ '--c': colorInfo?.bg || '#888' }}
-                  onClick={(e) => { triggerBounce(e.currentTarget); onConfirmSkip() }}
+                  onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); onConfirmSkip() }}
                   autoFocus
                 >
                   Yes, skip turn
@@ -117,7 +118,7 @@ export default function HUD({
         {onToggleEnhancedColoring && (
           <button
             className={enhancedColoring ? styles.glowBtnActive : styles.glowBtn}
-            onClick={(e) => { triggerBounce(e.currentTarget); onToggleEnhancedColoring() }}
+            onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); onToggleEnhancedColoring() }}
             title={enhancedColoring ? 'Hide piece glows (C)' : 'Show piece glows (C)'}
           >
             ✦ <kbd>C</kbd>
@@ -126,21 +127,21 @@ export default function HUD({
         {onToggleAutoAdvance && (
           <button
             className={autoAdvanceEnabled ? styles.glowBtnActive : styles.glowBtn}
-            onClick={(e) => { triggerBounce(e.currentTarget); onToggleAutoAdvance() }}
+            onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); onToggleAutoAdvance() }}
             title={autoAdvanceEnabled ? 'Auto Advance on — click to require End Turn (A)' : 'Auto Advance off — click to enable (A)'}
           >
             Auto Advance <kbd>A</kbd>
           </button>
         )}
         {isOnline && onExit && (
-          <button className={styles.leaveBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onExit, 350) }}>Leave</button>
+          <button className={styles.leaveBtn} onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); setTimeout(onExit, 350) }}>Leave</button>
         )}
         {/* Skip button */}
         {isMyTurn && !waitingForEndTurn && !showSkipConfirm && onSkip && (
           <button
             ref={skipRef}
             className={styles.skipBtn}
-            onClick={(e) => { triggerBounce(e.currentTarget); onSkip() }}
+            onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); onSkip() }}
             title="Skip your turn"
           >
             Skip
@@ -157,7 +158,7 @@ export default function HUD({
             End Turn <kbd>⇧↵</kbd>
           </button>
         )}
-        <button className={styles.endBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onEndGame, 350) }}>
+        <button className={styles.endBtn} onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); setTimeout(onEndGame, 350) }}>
           End Game
         </button>
       </div>

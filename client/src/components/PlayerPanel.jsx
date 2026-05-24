@@ -3,6 +3,7 @@ import PiecePreview from './PiecePreview.jsx'
 import { PLAYER_COLORS } from '../hooks/useGameState.js'
 import styles from './PlayerPanel.module.css'
 import AnimatedScore from './AnimatedScore.jsx'
+import { playSound } from '../utils/sounds.js'
 
 export default function PlayerPanel({
   player,
@@ -80,7 +81,11 @@ export default function PlayerPanel({
                     <button
                       key={piece.id}
                       className={`${styles.pieceBtn} ${isSelected ? styles.pieceBtnSelected : ''}`}
-                      onClick={() => !disabled && !isSkipped && onSelectPiece(piece.id)}
+                      onClick={() => {
+                        if (disabled || isSkipped) return
+                        playSound(isSelected ? '2-deselect-piece' : '1-select-piece')
+                        onSelectPiece(piece.id)
+                      }}
                       disabled={(disabled && !isSelected) || isSkipped}
                       title={`Piece ${piece.id} (${piece.size} triangles)`}
                     >

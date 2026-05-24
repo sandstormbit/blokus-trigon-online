@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import styles from './HowToPlayModal.module.css'
 import { ALPHA_SET } from '../game/pieces.js'
+import { playSound } from '../utils/sounds.js'
 
 function triggerBounce(el) {
   if (!el) return
@@ -515,15 +516,15 @@ export default function HowToPlayModal({ onClose }) {
 
   useEffect(() => {
     const handler = (e) => {
-      if (e.key === 'Escape') { onClose(); return }
+      if (e.key === 'Escape') { playSound('deselect-cancel-home'); onClose(); return }
       if (e.key === 'ArrowRight') {
         triggerBounce(nextBtnRef.current)
-        if (isLastFrame) setTimeout(onClose, 350)
-        else next()
+        if (isLastFrame) { playSound('1-select-piece'); setTimeout(onClose, 350) }
+        else { playSound('home-lobby'); next() }
         return
       }
-      if (e.key === 'ArrowLeft') { triggerBounce(prevBtnRef.current); prev(); return }
-      if (e.key === 'Enter' && isLastFrame) { triggerBounce(nextBtnRef.current); setTimeout(onClose, 350) }
+      if (e.key === 'ArrowLeft') { triggerBounce(prevBtnRef.current); playSound('home-lobby'); prev(); return }
+      if (e.key === 'Enter' && isLastFrame) { triggerBounce(nextBtnRef.current); playSound('1-select-piece'); setTimeout(onClose, 350) }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -536,7 +537,7 @@ export default function HowToPlayModal({ onClose }) {
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.header}>
           <span className={styles.headerTitle}>How to Play</span>
-          <button className={styles.closeBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onClose, 350) }} aria-label="Close">
+          <button className={styles.closeBtn} onClick={(e) => { triggerBounce(e.currentTarget); playSound('deselect-cancel-home'); setTimeout(onClose, 350) }} aria-label="Close">
             <svg viewBox="0 0 14 14" width="14" height="14" fill="none">
               <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
@@ -557,7 +558,7 @@ export default function HowToPlayModal({ onClose }) {
           <button
             ref={prevBtnRef}
             className={`${styles.navBtn} ${frame === 0 ? styles.navBtnDisabled : ''}`}
-            onClick={(e) => { triggerBounce(e.currentTarget); prev() }}
+            onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); prev() }}
             disabled={frame === 0}
           >← Prev</button>
 
@@ -566,16 +567,16 @@ export default function HowToPlayModal({ onClose }) {
               <button
                 key={i}
                 className={`${styles.dot} ${i === frame ? styles.dotActive : ''}`}
-                onClick={() => setFrame(i)}
+                onClick={() => { playSound('home-lobby'); setFrame(i) }}
                 aria-label={`Go to frame ${i + 1}`}
               />
             ))}
           </div>
 
           {frame < total - 1 ? (
-            <button ref={nextBtnRef} className={styles.navBtn} onClick={(e) => { triggerBounce(e.currentTarget); next() }}>Next →</button>
+            <button ref={nextBtnRef} className={styles.navBtn} onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); next() }}>Next →</button>
           ) : (
-            <button ref={nextBtnRef} className={`${styles.navBtn} ${styles.navBtnDone}`} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onClose, 350) }}>Got it!</button>
+            <button ref={nextBtnRef} className={`${styles.navBtn} ${styles.navBtnDone}`} onClick={(e) => { triggerBounce(e.currentTarget); playSound('1-select-piece'); setTimeout(onClose, 350) }}>Got it!</button>
           )}
         </div>
       </div>

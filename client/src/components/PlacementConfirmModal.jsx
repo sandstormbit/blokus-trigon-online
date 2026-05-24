@@ -2,6 +2,7 @@ import React from 'react'
 import Modal from './Modal.jsx'
 import { PLAYER_COLORS } from '../hooks/useGameState.js'
 import styles from './PlacementConfirmModal.module.css'
+import { playSound } from '../utils/sounds.js'
 
 function triggerBounce(el) {
   if (!el) return
@@ -34,13 +35,13 @@ export default function PlacementConfirmModal({ currentPlayer, piece, onConfirm,
         </p>
       )}
       <div className={styles.actions}>
-        <button className={styles.cancelBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onCancel, 350) }}>
+        <button className={styles.cancelBtn} onClick={(e) => { triggerBounce(e.currentTarget); playSound('2-deselect-piece'); setTimeout(onCancel, 350) }}>
           No, go back <kbd>Esc</kbd>
         </button>
         <button
           className={styles.confirmBtn}
           style={{ '--c': colorInfo.bg }}
-          onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onConfirm, 350) }}
+          onClick={(e) => { triggerBounce(e.currentTarget); playSound('place-piece'); setTimeout(onConfirm, 350) }}
           autoFocus
         >
           Yes, place it <kbd>Enter</kbd>

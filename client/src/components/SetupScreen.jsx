@@ -2,6 +2,7 @@ import React, { useState, useRef, useLayoutEffect } from 'react'
 import { PLAYER_COLORS, COLOR_KEYS } from '../hooks/useGameState.js'
 import { GAME_MODES } from '../game/gameModes.js'
 import styles from './SetupScreen.module.css'
+import { playSound } from '../utils/sounds.js'
 
 function triggerBounce(el) {
   if (!el) return
@@ -261,7 +262,7 @@ export default function SetupScreen({ onStart, onBack }) {
         {onBack ? (
           <button
             className={styles.backBtn}
-            onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onBack, 350) }}
+            onClick={(e) => { triggerBounce(e.currentTarget); playSound('deselect-cancel-home'); setTimeout(onBack, 350) }}
             title="Back to main menu"
             type="button"
           >
@@ -291,7 +292,7 @@ export default function SetupScreen({ onStart, onBack }) {
             {/* Game modes toggle */}
             <button
               className={styles.modesToggleBtn}
-              onClick={() => setModesOpen(o => !o)}
+              onClick={() => { playSound('home-lobby'); setModesOpen(o => !o) }}
               title={modesOpen ? 'Close game modes' : 'Open game modes'}
               type="button"
             >
@@ -314,7 +315,7 @@ export default function SetupScreen({ onStart, onBack }) {
                   <button
                     key={n}
                     className={`${styles.countBtn} ${playerCount === n ? styles.countBtnActive : ''}`}
-                    onClick={() => handleCountChange(n)}
+                    onClick={() => { playSound('home-lobby'); handleCountChange(n) }}
                   >
                     <span className={styles.countNum}>{n}</span>
                     <span className={styles.countLabel}>players</span>
@@ -367,7 +368,7 @@ export default function SetupScreen({ onStart, onBack }) {
                       )}
                       <button
                         className={`${styles.aiToggle} ${isAI ? styles.aiToggleActive : ''}`}
-                        onClick={() => cycleAI(humanIdx)}
+                        onClick={() => { playSound('home-lobby'); cycleAI(humanIdx) }}
                         title={`Toggle AI (current: ${isAI ? AI_LABELS[playerAI[humanIdx].difficulty] : 'Human'})`}
                         type="button"
                       >
@@ -382,7 +383,7 @@ export default function SetupScreen({ onStart, onBack }) {
                               key={colorKey}
                               className={`${styles.colorSwatch} ${isSelected ? styles.colorSwatchSelected : ''} ${isUsed ? styles.colorSwatchUsed : ''}`}
                               style={{ background: PLAYER_COLORS[colorKey].bg }}
-                              onClick={() => updateColor(humanIdx, colorKey)}
+                              onClick={() => { playSound('home-lobby'); updateColor(humanIdx, colorKey) }}
                               title={PLAYER_COLORS[colorKey].label}
                               disabled={isUsed || isAI}
                             />
@@ -426,7 +427,7 @@ export default function SetupScreen({ onStart, onBack }) {
                         )}
                         <button
                           className={`${styles.aiToggle} ${isAI ? styles.aiToggleActive : ''}`}
-                          onClick={() => cycleAI(humanIdx)}
+                          onClick={() => { playSound('home-lobby'); cycleAI(humanIdx) }}
                           title={`Toggle AI (current: ${isAI ? AI_LABELS[playerAI[humanIdx].difficulty] : 'Human'})`}
                           type="button"
                         >
@@ -448,7 +449,7 @@ export default function SetupScreen({ onStart, onBack }) {
                                       key={colorKey}
                                       className={`${styles.colorSwatch} ${isSelected ? styles.colorSwatchSelected : ''} ${isUsed ? styles.colorSwatchUsed : ''}`}
                                       style={{ background: PLAYER_COLORS[colorKey].bg }}
-                                      onClick={() => updateColor(slotIdx, colorKey)}
+                                      onClick={() => { playSound('home-lobby'); updateColor(slotIdx, colorKey) }}
                                       title={PLAYER_COLORS[colorKey].label}
                                       disabled={isUsed || isAI}
                                     />
@@ -493,7 +494,7 @@ export default function SetupScreen({ onStart, onBack }) {
                       )}
                       <button
                         className={`${styles.aiToggle} ${isAI ? styles.aiToggleActive : ''}`}
-                        onClick={() => cycleAI(i)}
+                        onClick={() => { playSound('home-lobby'); cycleAI(i) }}
                         title={`Toggle AI (current: ${isAI ? AI_LABELS[playerAI[i].difficulty] : 'Human'})`}
                         type="button"
                       >
@@ -508,7 +509,7 @@ export default function SetupScreen({ onStart, onBack }) {
                               key={colorKey}
                               className={`${styles.colorSwatch} ${isSelected ? styles.colorSwatchSelected : ''} ${isUsed ? styles.colorSwatchUsed : ''}`}
                               style={{ background: PLAYER_COLORS[colorKey].bg }}
-                              onClick={() => updateColor(i, colorKey)}
+                              onClick={() => { playSound('home-lobby'); updateColor(i, colorKey) }}
                               title={PLAYER_COLORS[colorKey].label}
                               disabled={isUsed || isAI}
                             />
@@ -565,6 +566,7 @@ export default function SetupScreen({ onStart, onBack }) {
                       onClick={(e) => {
                         if (!available) return
                         triggerBounceInline(e.currentTarget)
+                        playSound(active ? '2-game-modes' : '1-game-modes')
                         if (mode.id === 'megaColors' && shownCount === 2) handleMegaColorsToggle()
                         else toggleMode(mode.id)
                       }}

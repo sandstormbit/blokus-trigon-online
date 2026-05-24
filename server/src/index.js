@@ -103,7 +103,10 @@ function checkAndScheduleAITurn(roomCode) {
     room.aiTurnTimer = null
   }
 
-  const delay = 500 + Math.random() * 1000  // 0.5–1.5s for natural feel
+  // No-moves: wait 3.5s (1s before sound plays + 2.5s after) so the modal sound finishes
+  // before the turn advances. All other AI actions use a natural 0.5–1.5s feel.
+  const isNoMoves = state.noMovesModalPlayerId === currentPlayer.id
+  const delay = isNoMoves ? 3500 : 500 + Math.random() * 1000
   room.aiTurnTimer = setTimeout(() => {
     room.aiTurnTimer = null
     executeAITurn(roomCode, aiRoomPlayer)
@@ -207,6 +210,8 @@ async function executeAITurn(roomCode, aiRoomPlayer) {
       })
       // Broadcast the placement so clients see the piece appear before turn advances
       broadcastGameState(getRoom(roomCode))
+      // Pause so clients can see the placed piece before the turn advances
+      await new Promise(resolve => setTimeout(resolve, 1000))
     }
   } else {
     // No legal moves — skip

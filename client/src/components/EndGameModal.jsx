@@ -4,6 +4,7 @@ import PiecePreview from './PiecePreview.jsx'
 import { PLAYER_COLORS } from '../hooks/useGameState.js'
 import { generateShareImage, generateReplayGIF } from '../utils/shareGameUtils.js'
 import styles from './EndGameModal.module.css'
+import { playSound } from '../utils/sounds.js'
 
 function triggerBounce(el) {
   if (!el) return
@@ -73,6 +74,7 @@ export default function EndGameModal({ players, playerCount, onNewGame, onViewBo
 
   const handleShare = useCallback(async () => {
     if (!boardData || sharingImage) return
+    playSound('home-lobby')
     setSharingImage(true)
     try {
       await generateShareImage(boardData, players, ranked, playerCount, isTie)
@@ -85,6 +87,7 @@ export default function EndGameModal({ players, playerCount, onNewGame, onViewBo
 
   const handleGIF = useCallback(async () => {
     if (!boardData || generatingGIF) return
+    playSound('home-lobby')
     setGeneratingGIF(true)
     setGifProgress(0)
     try {
@@ -348,7 +351,7 @@ export default function EndGameModal({ players, playerCount, onNewGame, onViewBo
 
       <div className={styles.btnRow}>
         {onViewBoard && (
-          <button className={styles.viewBoardBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onViewBoard, 350) }}>
+          <button className={styles.viewBoardBtn} onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); setTimeout(onViewBoard, 350) }}>
             <svg viewBox="0 0 20 20" width="15" height="15" fill="currentColor">
               <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
               <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/>
@@ -357,13 +360,13 @@ export default function EndGameModal({ players, playerCount, onNewGame, onViewBo
           </button>
         )}
         {onLeave && (
-          <button className={styles.leaveBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onLeave, 350) }}>
+          <button className={styles.leaveBtn} onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); setTimeout(onLeave, 350) }}>
             Leave
           </button>
         )}
         <button
           className={styles.newGameBtn}
-          onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onNewGame, 350) }}
+          onClick={(e) => { triggerBounce(e.currentTarget); playSound('something-shiny'); setTimeout(onNewGame, 350) }}
         >
           <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
             <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1z" clipRule="evenodd"/>

@@ -28,13 +28,17 @@ export default function NoMovesModal({ player, onDismiss }) {
           Their panel will be grayed out to indicate they are out of moves.
         </p>
 
-        <button
-          className={styles.okBtn}
-          style={{ '--btn-color': colorInfo.bg, '--btn-dark': colorInfo.dark }}
-          onClick={onDismiss}
-        >
-          OK, continue
-        </button>
+        {onDismiss ? (
+          <button
+            className={styles.okBtn}
+            style={{ '--btn-color': colorInfo.bg, '--btn-dark': colorInfo.dark }}
+            onClick={onDismiss}
+          >
+            OK, continue
+          </button>
+        ) : (
+          <p className={styles.autoContinue}>Continuing automatically…</p>
+        )}
       </div>
     </Modal>
   )

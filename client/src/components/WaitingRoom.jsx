@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react'
 import { GAME_MODES } from '../game/gameModes.js'
 import { PLAYER_COLORS, COLOR_KEYS } from '../hooks/useGameState.js'
 import styles from './WaitingRoom.module.css'
+import { playSound } from '../utils/sounds.js'
 
 const DEFAULT_COLORS = ['blue', 'red', 'green', 'yellow']
 
@@ -114,7 +115,7 @@ export default function WaitingRoom({
             {roomMode === 'private' ? 'Private Room' : 'Public Room'} · {maxPlayers} players
           </p>
         </div>
-        <button className={styles.exitBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onExit, 350) }} title="Leave room">
+        <button className={styles.exitBtn} onClick={(e) => { triggerBounce(e.currentTarget); playSound('deselect-cancel-home'); setTimeout(onExit, 350) }} title="Leave room">
           <svg viewBox="0 0 20 20" width="16" height="16" fill="none">
             <path d="M7 3H4a1 1 0 00-1 1v12a1 1 0 001 1h3M10 10H17M17 10l-3-3M17 10l-3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
@@ -131,7 +132,7 @@ export default function WaitingRoom({
             <div className={styles.codeLabel}>Room Code</div>
             <div className={styles.codeDisplay}>
               <span className={styles.codeText}>{roomCode}</span>
-              <button className={styles.copyBtn} onClick={copyCode} title="Copy room code">
+              <button className={styles.copyBtn} onClick={() => { playSound('home-lobby'); copyCode() }} title="Copy room code">
                 {copied ? (
                   <svg viewBox="0 0 16 16" width="14" height="14" fill="none">
                     <path d="M2 8l4 4 8-8" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -144,7 +145,7 @@ export default function WaitingRoom({
                 )}
               </button>
             </div>
-            <button className={styles.linkBtn} onClick={copyLink}>
+            <button className={styles.linkBtn} onClick={() => { playSound('home-lobby'); copyLink() }}>
               <svg viewBox="0 0 16 16" width="12" height="12" fill="none">
                 <path d="M6.5 9.5a3.5 3.5 0 005 0l2-2a3.5 3.5 0 00-5-5L7.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                 <path d="M9.5 6.5a3.5 3.5 0 00-5 0l-2 2a3.5 3.5 0 005 5l1-1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -198,7 +199,7 @@ export default function WaitingRoom({
                                             key={colorKey}
                                             className={`${styles.colorSwatch} ${isActive ? styles.colorSwatchActive : ''} ${takenByOther && !isActive ? styles.colorSwatchTaken : ''}`}
                                             style={{ '--swatch-bg': PLAYER_COLORS[colorKey].bg }}
-                                            onClick={isMe ? () => onSelectColorSlot(setIdx, isActive ? null : colorKey) : undefined}
+                                            onClick={isMe ? () => { playSound('home-lobby'); onSelectColorSlot(setIdx, isActive ? null : colorKey) } : undefined}
                                             disabled={!isMe || (takenByOther && !isActive)}
                                             title={isMe ? (isActive ? `Deselect ${PLAYER_COLORS[colorKey].label}` : `Select ${PLAYER_COLORS[colorKey].label}`) : PLAYER_COLORS[colorKey].label}
                                             type="button"
@@ -225,7 +226,7 @@ export default function WaitingRoom({
                                     key={colorKey}
                                     className={`${styles.colorSwatch} ${isActive ? styles.colorSwatchActive : ''} ${takenByOther && !isActive ? styles.colorSwatchTaken : ''}`}
                                     style={{ '--swatch-bg': PLAYER_COLORS[colorKey].bg }}
-                                    onClick={isMe ? () => onSelectColor(isActive ? null : colorKey) : undefined}
+                                    onClick={isMe ? () => { playSound('home-lobby'); onSelectColor(isActive ? null : colorKey) } : undefined}
                                     disabled={!isMe || (takenByOther && !isActive)}
                                     title={isMe ? (isActive ? `Deselect ${PLAYER_COLORS[colorKey].label}` : `Select ${PLAYER_COLORS[colorKey].label}`) : PLAYER_COLORS[colorKey].label}
                                     type="button"
@@ -239,7 +240,7 @@ export default function WaitingRoom({
                           <div className={styles.aiSlotControls}>
                             <button
                               className={styles.aiDiffCycleBtn}
-                              onClick={() => onSetAIDifficulty?.(player.humanId, player.aiDifficulty === 'normal' ? 'hard' : 'normal')}
+                              onClick={() => { playSound('home-lobby'); onSetAIDifficulty?.(player.humanId, player.aiDifficulty === 'normal' ? 'hard' : 'normal') }}
                               title={`Switch to ${player.aiDifficulty === 'normal' ? 'Hard' : 'Normal'} AI`}
                               type="button"
                             >
@@ -247,7 +248,7 @@ export default function WaitingRoom({
                             </button>
                             <button
                               className={styles.removeAIBtn}
-                              onClick={() => onRemoveAI?.(player.humanId)}
+                              onClick={() => { playSound('home-lobby'); onRemoveAI?.(player.humanId) }}
                               title="Remove AI player"
                               type="button"
                             >✕</button>
@@ -271,7 +272,7 @@ export default function WaitingRoom({
                           </select>
                           <button
                             className={styles.addAIBtn}
-                            onClick={(e) => { triggerBounceInline(e.currentTarget); onAddAI?.(aiDifficulty[i] || 'normal') }}
+                            onClick={(e) => { triggerBounceInline(e.currentTarget); playSound('add-ai'); onAddAI?.(aiDifficulty[i] || 'normal') }}
                             type="button"
                           >
                             + Add AI
@@ -339,7 +340,7 @@ export default function WaitingRoom({
                   <button
                     key={mode.id}
                     className={`${styles.modeToggle} ${active ? styles.modeToggleActive : ''} ${!available ? styles.modeToggleDisabled : ''}`}
-                    onClick={(e) => { if (available) { triggerBounceInlineMd(e.currentTarget); toggleMode(mode.id) } }}
+                    onClick={(e) => { if (available) { triggerBounceInlineMd(e.currentTarget); playSound(active ? '2-game-modes' : '1-game-modes'); toggleMode(mode.id) } }}
                     disabled={!available}
                     type="button"
                     data-no-bounce

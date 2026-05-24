@@ -3,6 +3,7 @@ import { generateBoard } from '../game/boardGeometry.js'
 import { createPlayerPiecesRandom, createMegaColorPieces, getPieceOrientation, placePieceCells } from '../game/pieces.js'
 import { isLegalPlacement, hasAnyLegalMove, checkGameOver } from '../game/gameLogic.js'
 import { computeAIMove } from '../game/aiEngine.js'
+import { playSound } from '../utils/sounds.js'
 
 // ─── Parity-aware anchor ───────────────────────────────────────────────────────
 // Anchor must always have even parity so piece cells land on correct-parity positions.
@@ -533,7 +534,12 @@ export function useGameState() {
     const cp = state.players[currentPlayerIndex]
     if (!cp?.isAI) return
 
-    const delay = 500 + Math.random() * 1000
+    // Delay before placing keeps a natural pause; end-turn uses a fixed 1s so the
+    // piece is visible for exactly 1 second before the turn advances.
+    const isPlacing = !waitingForEndTurn && !noMovesModalPlayerId
+    const delay = isPlacing ? 1500 + Math.random() * 1000
+                : noMovesModalPlayerId ? 3500   // 1s before sound + 2.5s after sound
+                : 0                             // end-turn: inner setTimeout handles the 1s
     const tid = setTimeout(() => {
       const s = stateRef.current
       const player = s.players[s.currentPlayerIndex]
@@ -542,7 +548,11 @@ export function useGameState() {
       if (s.noMovesModalPlayerId === player.id) {
         dispatch({ type: ACTIONS.DISMISS_NO_MOVES })
       } else if (s.waitingForEndTurn) {
-        dispatch({ type: ACTIONS.END_TURN })
+        setTimeout(() => {
+          const wouldEndGame = checkGameOver(s.players, s.board.cells, s.skippedPlayerIds, getGameOptions(s))
+          if (!wouldEndGame) playSound('end-turn')
+          dispatch({ type: ACTIONS.END_TURN })
+        }, 1000)
       } else {
         const gameOptions = getGameOptions(s)
         const isFirst = !player.pieces.some(p => p.placed)
