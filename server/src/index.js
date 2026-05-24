@@ -53,17 +53,19 @@ app.get('/api/public-rooms', (_req, res) => {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getRoomPlayers(room) {
-  return room.players.map(p => ({
-    humanId: p.humanId,
-    name: p.name,
-    connected: p.connected,
-    isHost: p.token === room.hostToken,
-    color: p.color || null,
-    color2: p.color2 || null,
-    isAI: p.isAI || false,
-    aiDifficulty: p.isAI ? p.aiDifficulty : undefined,
-    openSlot: p.openSlot || false,
-  }))
+  return room.players
+    .filter(p => p.inLobby !== false)
+    .map(p => ({
+      humanId: p.humanId,
+      name: p.name,
+      connected: p.connected,
+      isHost: p.token === room.hostToken,
+      color: p.color || null,
+      color2: p.color2 || null,
+      isAI: p.isAI || false,
+      aiDifficulty: p.isAI ? p.aiDifficulty : undefined,
+      openSlot: p.openSlot || false,
+    }))
 }
 
 function broadcastGameState(room) {
@@ -642,7 +644,11 @@ io.on('connection', (socket) => {
     startRoom(roomCode, gameState)
 
     const serialized = serializeState(gameState)
-    io.to(roomCode).emit('game_start', { gameState: serialized })
+    // Only send game_start to players who returned to the lobby; others are
+    // still on the end screen and should not be pulled into the new game.
+    const activeSockets = room.players.filter(p => p.inLobby !== false).map(p => p.socketId).filter(Boolean)
+    room.players.forEach(p => { delete p.inLobby })
+    for (const sid of activeSockets) io.to(sid).emit('game_start', { gameState: serialized })
     ack?.({ ok: true })
 
     // Schedule AI turn if the first player is AI
@@ -764,31 +770,40 @@ io.on('connection', (socket) => {
     if (roomCode) checkAndScheduleAITurn(roomCode)
   })
 
-  // ── New game (host only, after game ends) ─────────────────────────────────
-  socket.on('new_game', (_, ack) => {
+  // ── Any player clicks "New Game" → resets room (once) and joins the lobby ──
+  function handleRejoinLobby(ack) {
+    const token = getTokenFromSocket(socket.id)
+    if (!token) { ack?.({ ok: false, error: 'not_authenticated' }); return }
+
     const roomCode = [...socket.rooms].find(r => r !== socket.id)
     if (!roomCode) { ack?.({ ok: false, error: 'not_in_room' }); return }
 
     const room = getRoom(roomCode)
     if (!room) { ack?.({ ok: false, error: 'room_not_found' }); return }
 
-    const token = getTokenFromSocket(socket.id)
-    if (!isHost(room, token)) { ack?.({ ok: false, error: 'not_host' }); return }
+    // First player to click "New Game" resets the room.
+    if (room.phase === 'ended') {
+      cancelAITurn(roomCode)
+      room.players = room.players.filter(p => !p.isAI)
+      room.players.forEach(p => { p.color = null; p.color2 = null; p.inLobby = false })
+      room.phase = 'waiting'
+      room.gameState = null
+      room.moveLog = []
+    }
 
-    cancelAITurn(roomCode)
+    if (room.phase !== 'waiting') { ack?.({ ok: false, error: 'wrong_phase' }); return }
 
-    // Remove AI players — new game starts fresh for human players to reconfigure
-    room.players = room.players.filter(p => !p.isAI)
-    room.phase = 'waiting'
-    room.gameState = null
-    room.moveLog = []
+    const player = room.players.find(p => p.token === token)
+    if (!player) { ack?.({ ok: false, error: 'player_not_found' }); return }
 
-    io.to(roomCode).emit('new_game_started', {
-      players: getRoomPlayers(room),
-      settings: room.settings,
-    })
+    player.inLobby = true
+
+    io.to(roomCode).emit('player_joined', { players: getRoomPlayers(room) })
     ack?.({ ok: true })
-  })
+  }
+
+  socket.on('new_game', (_, ack) => handleRejoinLobby(ack))
+  socket.on('rejoin_lobby', (_, ack) => handleRejoinLobby(ack))
 
   // ── Select color ──────────────────────────────────────────────────────────
   socket.on('select_color', ({ color, slotIdx = 0 }) => {

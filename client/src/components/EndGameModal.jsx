@@ -29,7 +29,7 @@ function formatTime(ms) {
   return `${s}s`
 }
 
-export default function EndGameModal({ players, playerCount, onNewGame, onViewBoard, onClose, onLeave, isHost = true, playerTimers = {}, moveHistory = [], boardData = null }) {
+export default function EndGameModal({ players, playerCount, onNewGame, onViewBoard, onClose, onLeave, playerTimers = {}, moveHistory = [], boardData = null }) {
   const [sharingImage, setSharingImage] = useState(false)
   const [generatingGIF, setGeneratingGIF] = useState(false)
   const [gifProgress, setGifProgress] = useState(0)
@@ -361,19 +361,15 @@ export default function EndGameModal({ players, playerCount, onNewGame, onViewBo
             Leave
           </button>
         )}
-        {isHost ? (
-          <button className={styles.newGameBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onNewGame, 350) }}>
-            <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
-              <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1z" clipRule="evenodd"/>
-            </svg>
-            New game
-          </button>
-        ) : (
-          <button className={styles.waitingNewGameBtn} disabled>
-            <div className={styles.waitingSpinner} />
-            Waiting for host to start a new game…
-          </button>
-        )}
+        <button
+          className={styles.newGameBtn}
+          onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(onNewGame, 350) }}
+        >
+          <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
+            <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1z" clipRule="evenodd"/>
+          </svg>
+          New game
+        </button>
       </div>
     </Modal>
   )

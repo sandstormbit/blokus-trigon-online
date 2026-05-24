@@ -77,10 +77,9 @@ export function useOnlineGame() {
   // Live cursors for other players: { [humanId]: { hoverCell, selectedPieceId, rotIndex, flipped } }
   const [otherPlayersCursors, setOtherPlayersCursors] = useState({})
 
-  // Ref to access latest myHumanId inside socket event handlers (which are bound once)
+  // Refs to access latest values inside socket event handlers (which are bound once)
   const myHumanIdRef = useRef(myHumanId)
   useEffect(() => { myHumanIdRef.current = myHumanId }, [myHumanId])
-
   // Cursor emission refs — track latest state without re-creating the interval
   const cursorStateRef = useRef(null)
   const cursorVersionRef = useRef(0)
@@ -158,19 +157,6 @@ export function useOnlineGame() {
           setMoveHistory(prev => prev.slice(0, -1))
         }
       }
-    })
-
-    socket.on('new_game_started', ({ players, settings: s }) => {
-      setRoomPlayers(players)
-      setSettings(s)
-      setGameState(null)
-      setRoomPhase('waiting')
-      setSelectedPieceId(null)
-      setHoverCell(null)
-      setPendingPlacement(null)
-      setOtherPlayersCursors({})
-      setMoveHistory([])
-      lastPlacedCellsRef.current = null
     })
 
     // ── Live cursor from another player ───────────────────────────────────────
@@ -671,11 +657,14 @@ export function useOnlineGame() {
     })
   }, [])
 
-  const newGame = useCallback(() => {
-    socketRef.current?.emit('new_game', {}, (res) => {
-      if (!res.ok) console.warn('new_game rejected:', res.error)
+  const goToGameLobby = useCallback(() => {
+    socketRef.current?.emit('rejoin_lobby', {}, (res) => {
+      if (res?.ok === false) console.warn('rejoin_lobby rejected:', res.error)
     })
+    setRoomPhase('waiting')
   }, [])
+
+  const newGame = goToGameLobby
 
   const disconnect = useCallback(() => {
     socketRef.current?.disconnect()
@@ -850,6 +839,7 @@ export function useOnlineGame() {
     selectColorSlot: selectColorSlotAction,
     disconnect,
     leaveGame,
+    goToGameLobby,
 
     // AI / spectator actions
     addAIPlayer: addAIPlayerAction,

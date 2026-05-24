@@ -17,13 +17,13 @@
 
 /* Sidebars */
 .sidebar {
-  width: 200px;
+  width: 240px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 12px 8px;
-  overflow-y: auto;
+  overflow: hidden;
   background: var(--bg-base);
   border-right: 1px solid var(--border-subtle);
 }
@@ -137,12 +137,14 @@
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
-/* Non-host waiting button in final board bar */
-.finalWaitingBtn {
+/* Disabled "New Game" in the board bar, shown before host starts a new game */
+.finalAnotherGameBtnWaiting {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  justify-content: center;
+  gap: 1px;
+  padding: 4px 12px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
@@ -151,23 +153,10 @@
   font-weight: 500;
   font-family: var(--font-display);
   cursor: not-allowed;
-  opacity: 0.75;
+  opacity: 0.6;
   white-space: nowrap;
 }
 
-.finalWaitingSpinner {
-  width: 11px;
-  height: 11px;
-  border: 1.5px solid var(--border-strong);
-  border-top-color: var(--text-muted);
-  border-radius: 50%;
-  animation: spinFinal 0.8s linear infinite;
-  flex-shrink: 0;
-}
-
-@keyframes spinFinal {
-  to { transform: rotate(360deg); }
-}
 
 /* Score overlay — floats at top of board area, top-aligned with sidebars */
 .scoreOverlay {

@@ -419,19 +419,15 @@ export default function GameScreen({
                 Leave
               </button>
             )}
-            {(!isOnline || isHostPlayer) ? (
-              <button className={styles.finalNewGameBtn} onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(newGame, 350) }}>
-                <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
-                  <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1z" clipRule="evenodd"/>
-                </svg>
-                New game
-              </button>
-            ) : (
-              <button className={styles.finalWaitingBtn} disabled>
-                <div className={styles.finalWaitingSpinner} />
-                Waiting for host…
-              </button>
-            )}
+            <button
+              className={styles.finalNewGameBtn}
+              onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(newGame, 350) }}
+            >
+              <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
+                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1z" clipRule="evenodd"/>
+              </svg>
+              New game
+            </button>
           </div>
         </div>
       ) : (
@@ -590,7 +586,6 @@ export default function GameScreen({
           onViewBoard={() => setViewingFinalBoard(true)}
           onClose={() => setViewingFinalBoard(true)}
           onLeave={onExit || null}
-          isHost={!isOnline || isHostPlayer}
           playerTimers={finalPlayerTimers}
           moveHistory={state.moveHistory ?? []}
           boardData={state.board}
