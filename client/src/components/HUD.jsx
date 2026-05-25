@@ -1,7 +1,8 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 import { PLAYER_COLORS } from '../hooks/useGameState.js'
 import styles from './HUD.module.css'
 import { playSound } from '../utils/sounds.js'
+import LeaveConfirmModal from './LeaveConfirmModal.jsx'
 
 function triggerBounce(el) {
   if (!el) return
@@ -29,6 +30,7 @@ export default function HUD({
   onExit = null,
   bounceRef,
 }) {
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
   const colorInfo = currentPlayer ? PLAYER_COLORS[currentPlayer.color] : null
   const endTurnRef = useRef()
   const skipRef    = useRef()
@@ -44,6 +46,7 @@ export default function HUD({
   })
 
   return (
+    <>
     <div className={styles.hud}>
       {/* Left: turn indicator */}
       <div className={styles.left}>
@@ -134,7 +137,7 @@ export default function HUD({
           </button>
         )}
         {isOnline && onExit && (
-          <button className={styles.leaveBtn} onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); setTimeout(onExit, 350) }}>Leave</button>
+          <button className={styles.leaveBtn} onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); setTimeout(() => setShowLeaveConfirm(true), 350) }}>Leave</button>
         )}
         {/* Skip button */}
         {isMyTurn && !waitingForEndTurn && !showSkipConfirm && onSkip && (
@@ -163,5 +166,13 @@ export default function HUD({
         </button>
       </div>
     </div>
+
+    {showLeaveConfirm && (
+      <LeaveConfirmModal
+        onConfirm={onExit}
+        onCancel={() => setShowLeaveConfirm(false)}
+      />
+    )}
+    </>
   )
 }

@@ -1,0 +1,46 @@
+.message {
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.stayBtn {
+  flex: 1;
+  height: 40px;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: var(--radius-md);
+  color: #93c5fd;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.stayBtn:hover {
+  background: rgba(59, 130, 246, 0.22);
+  border-color: #3B82F6;
+  color: #bfdbfe;
+}
+
+.leaveBtn {
+  flex: 1;
+  height: 40px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: var(--radius-md);
+  color: #EF4444;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.leaveBtn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #EF4444;
+}

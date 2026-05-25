@@ -5,8 +5,9 @@
  * Runs synchronously on the main thread — acceptable since local games
  * have only one game at a time and the board is small (≤486 cells).
  *
- * Normal: first 11 moves prefer size-5/6 pieces; first move aims for center.
- * Hard:   greedy heuristic (synchronous); first move aims for center.
+ * Normal: first 11 moves prefer size-5/6 pieces; first move picks randomly from
+ *          the top-half of unique piece shapes sorted by center proximity.
+ * Hard:   greedy heuristic (synchronous); first move uses same per-piece dedup.
  */
 
 import { getValidPlacements } from './gameLogic.js'
@@ -63,7 +64,8 @@ function scoreMove(boardCells, newCells, piece, playerId, allPlayers, isFirstPie
 /**
  * Compute a Normal AI move.
  * First 11 moves: randomly pick from size-5/6 pieces.
- * First move: among those, pick placement closest to board center.
+ * First move: pick from the center-nearest placement of each unique piece shape
+ *   (top 50% by distance), so no single compact piece dominates every game.
  * Returns { pieceId, anchorQ, anchorR, rotIndex, flipped, cells } or null.
  */
 export function getNormalAIMove(boardCells, player, isFirstPiece, gameOptions) {
@@ -94,14 +96,21 @@ export function getNormalAIMove(boardCells, player, isFirstPiece, gameOptions) {
     const centerQ = boardVals.reduce((s, c) => s + c.q, 0) / boardVals.length
     const centerR = boardVals.reduce((s, c) => s + c.r, 0) / boardVals.length
 
-    const scored = allMoves.map(move => {
+    // Keep only the center-nearest placement per unique piece shape,
+    // then pick randomly from the top half — prevents always landing on
+    // the most compact piece (e.g. #20) in its multiple center rotations.
+    const bestByPiece = new Map()
+    for (const move of allMoves) {
       const cQ = move.cells.reduce((s, c) => s + c.q, 0) / move.cells.length
       const cR = move.cells.reduce((s, c) => s + c.r, 0) / move.cells.length
-      return { ...move, dist: Math.sqrt((cQ - centerQ) ** 2 + (cR - centerR) ** 2) }
-    })
-    scored.sort((a, b) => a.dist - b.dist)
-    const topN = Math.min(5, scored.length)
-    return scored[Math.floor(Math.random() * topN)]
+      const dist = Math.sqrt((cQ - centerQ) ** 2 + (cR - centerR) ** 2)
+      if (!bestByPiece.has(move.pieceId) || dist < bestByPiece.get(move.pieceId).dist) {
+        bestByPiece.set(move.pieceId, { ...move, dist })
+      }
+    }
+    const candidates = [...bestByPiece.values()].sort((a, b) => a.dist - b.dist)
+    const topN = Math.max(3, Math.ceil(candidates.length * 0.5))
+    return candidates[Math.floor(Math.random() * topN)]
   }
 
   return allMoves[Math.floor(Math.random() * allMoves.length)]
@@ -135,6 +144,20 @@ export function getHardAIMove(boardCells, player, allPlayers, isFirstPiece, game
   }
 
   if (candidateMoves.length === 0) return null
+
+  if (isFirstPiece) {
+    // Deduplicate by pieceId (keep highest-scoring placement per piece) so the
+    // compact center piece doesn't crowd out all top-N slots with its rotations.
+    const bestByPiece = new Map()
+    for (const m of candidateMoves) {
+      if (!bestByPiece.has(m.pieceId) || m.score > bestByPiece.get(m.pieceId).score) {
+        bestByPiece.set(m.pieceId, m)
+      }
+    }
+    const candidates = [...bestByPiece.values()].sort((a, b) => b.score - a.score)
+    const topN = Math.max(3, Math.ceil(candidates.length * 0.5))
+    return candidates[Math.floor(Math.random() * topN)]
+  }
 
   candidateMoves.sort((a, b) => b.score - a.score)
   const topN = Math.min(5, Math.max(3, Math.ceil(candidateMoves.length * 0.05)))

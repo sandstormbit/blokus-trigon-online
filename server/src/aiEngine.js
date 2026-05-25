@@ -23,7 +23,8 @@ const WORKER_PATH = path.join(__dirname, 'aiWorker.js')
 const HARD_AI_TIMEOUT_MS = 5000
 
 /**
- * Normal AI: for the first 11 moves prefer size-5/6 pieces; first move aims for center.
+ * Normal AI: for the first 11 moves prefer size-5/6 pieces; first move picks randomly
+ * from the top-half of unique piece shapes sorted by center proximity.
  * Returns null if no moves exist.
  */
 export function getNormalAIMove(boardCells, player, isFirstPiece, gameOptions) {
@@ -52,16 +53,23 @@ export function getNormalAIMove(boardCells, player, isFirstPiece, gameOptions) {
     const centerQ = boardVals.reduce((s, c) => s + c.q, 0) / boardVals.length
     const centerR = boardVals.reduce((s, c) => s + c.r, 0) / boardVals.length
 
-    const scored = allMoves.map(move => {
+    // Keep only the center-nearest placement per unique piece shape,
+    // then pick randomly from the top half — prevents always landing on
+    // the most compact piece (e.g. #20) in its multiple center rotations.
+    const bestByPiece = new Map()
+    for (const move of allMoves) {
       const oriented = getPieceOrientation(move.piece, move.rotIndex, move.flipped)
       const cells = placePieceCells(oriented, move.anchorQ, move.anchorR)
       const cQ = cells.reduce((s, c) => s + c.q, 0) / cells.length
       const cR = cells.reduce((s, c) => s + c.r, 0) / cells.length
-      return { ...move, dist: Math.sqrt((cQ - centerQ) ** 2 + (cR - centerR) ** 2) }
-    })
-    scored.sort((a, b) => a.dist - b.dist)
-    const topN = Math.min(5, scored.length)
-    const chosen = scored[Math.floor(Math.random() * topN)]
+      const dist = Math.sqrt((cQ - centerQ) ** 2 + (cR - centerR) ** 2)
+      if (!bestByPiece.has(move.pieceId) || dist < bestByPiece.get(move.pieceId).dist) {
+        bestByPiece.set(move.pieceId, { ...move, dist })
+      }
+    }
+    const candidates = [...bestByPiece.values()].sort((a, b) => a.dist - b.dist)
+    const topN = Math.max(3, Math.ceil(candidates.length * 0.5))
+    const chosen = candidates[Math.floor(Math.random() * topN)]
     return { pieceId: chosen.pieceId, anchorQ: chosen.anchorQ, anchorR: chosen.anchorR, rotIndex: chosen.rotIndex, flipped: chosen.flipped }
   }
 

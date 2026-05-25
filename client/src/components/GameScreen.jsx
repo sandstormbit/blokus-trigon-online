@@ -608,7 +608,11 @@ export default function GameScreen({
             onMouseActivity={handleMouseActivity}
             players={players}
             disabled={!!boardDisabled}
-            requiredStartCells={state.gameModes?.requiredStart ? state.requiredStartCells : null}
+            requiredStartCells={
+              state.gameModes?.requiredStart && !state.players.every(p => p.pieces.some(pc => pc.placed))
+                ? state.requiredStartCells
+                : null
+            }
             otherPlayersGhosts={otherPlayersGhosts}
             lastPlacedCells={state.lastPlacedCells}
             lastPlacedPlayerId={state.lastPlacedPlayerId}

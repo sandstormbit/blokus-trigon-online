@@ -111,10 +111,32 @@ for (const piece of playerPieces) {
 
 if (candidateMoves.length === 0) {
   parentPort.postMessage(null)
+} else if (isFirstPiece) {
+  // Deduplicate by pieceId (keep highest-scoring placement per piece) so the
+  // compact center piece doesn't crowd out all top-N slots with its rotations.
+  const bestByPiece = new Map()
+  for (const m of candidateMoves) {
+    if (!bestByPiece.has(m.pieceId) || m.score > bestByPiece.get(m.pieceId).score) {
+      bestByPiece.set(m.pieceId, m)
+    }
+  }
+  const candidates = [...bestByPiece.values()].sort((a, b) => b.score - a.score)
+  const topN = Math.max(3, Math.ceil(candidates.length * 0.5))
+  const chosen = candidates[Math.floor(Math.random() * topN)]
+  parentPort.postMessage({
+    pieceId: chosen.pieceId,
+    anchorQ: chosen.anchorQ,
+    anchorR: chosen.anchorR,
+    rotIndex: chosen.rotIndex,
+    flipped: chosen.flipped,
+  })
 } else {
-  // Sort descending by score, pick randomly among top 3–5 for variety
+  // Sort descending by score, pick randomly among top moves for variety.
+  // Use a wider pool for the first few moves to avoid early-game repetition.
+  const piecesPlaced = playerPieces.filter(p => p.placed).length
   candidateMoves.sort((a, b) => b.score - a.score)
-  const topN = Math.min(5, Math.max(3, Math.ceil(candidateMoves.length * 0.05)))
+  const fraction = piecesPlaced < 3 ? 0.12 : 0.05
+  const topN = Math.min(piecesPlaced < 3 ? 12 : 5, Math.max(3, Math.ceil(candidateMoves.length * fraction)))
   const topMoves = candidateMoves.slice(0, topN)
   const chosen = topMoves[Math.floor(Math.random() * topMoves.length)]
 
