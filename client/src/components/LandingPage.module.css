@@ -125,6 +125,32 @@
   text-align: center;
 }
 
+/* ── iPad / large tablet scaling ─── */
+@media (min-width: 768px) and (pointer: coarse) {
+  .container {
+    gap: 52px;
+  }
+  .hero {
+    gap: 16px;
+  }
+  .title {
+    font-size: clamp(52px, 7vw, 76px);
+  }
+  .tagline {
+    font-size: 15px;
+    letter-spacing: 0.18em;
+  }
+  .actions {
+    max-width: 440px;
+    gap: 14px;
+  }
+  .actionBtn {
+    padding: 18px 28px;
+    font-size: 18px;
+    border-radius: 14px;
+  }
+}
+
 /* ── Modal overlay ─── */
 .overlay {
   position: fixed;

@@ -198,6 +198,10 @@ export default function Board({
   enhancedColoringPlayerIds, // number[] — player IDs whose pieces get thicker outlines
   yourTurn,             // bool — show pulsing outline when it's your turn
   onRemovePiece,        // callback — when defined, last placed piece cells are clickable to remove
+  // Mobile / touch callbacks (optional — no-op on desktop)
+  onTouchRotateCW,      // () => void — fired on single tap (< 8px movement, < 220ms)
+  onTouchRotateCCW,     // () => void — fired on leftward swipe
+  onTouchFlip,          // () => void — fired on double-tap
 }) {
   const svgRef = useRef(null)
 
@@ -261,6 +265,11 @@ export default function Board({
     if (!ghostCells || ghostCells.length === 0) return new Set()
     return new Set(ghostCells.map(c => `${c.q},${c.r}`))
   }, [ghostCells])
+
+  // Ref so handleTouchStart can read the latest ghostCellSet without being
+  // recreated on every hover change (which would break ongoing drag tracking).
+  const ghostCellSetRef = useRef(ghostCellSet)
+  ghostCellSetRef.current = ghostCellSet
 
   const playerColorMap = useMemo(() => {
     const map = {}
@@ -369,6 +378,11 @@ export default function Board({
   }, [boardData])
 
   const handleMouseMove = useCallback((e) => {
+    // On any touch-capable device, ignore ALL synthetic mouse events — the browser
+    // fires mousemove/mouseleave after every touch sequence and they would snap or
+    // clear the ghost piece position that was set by the touch/arrow handlers.
+    if (navigator.maxTouchPoints > 0) return
+
     // Notify parent of any mouse activity (for turn glow + inactivity reset)
     onMouseActivity?.()
 
@@ -399,6 +413,9 @@ export default function Board({
     rawSvgPos.current = null
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
     setFreeHoverPos(null)
+    // Suppress synthetic mouseleave fired by the browser after a touch — it would
+    // clear the hover cell and make the ghost piece disappear on mobile.
+    if (navigator.maxTouchPoints > 0) return
     onBoardLeave()
   }, [onBoardLeave])
 
@@ -411,6 +428,139 @@ export default function Board({
     playSound('click-to-place')
     onCellClick(hoverCell.q, hoverCell.r)
   }, [disabled, selectedPiece, hoverCell, ghostIsLegal, onCellClick])
+
+  // ── Touch event handling (mobile / tablet) ────────────────────────────────
+  const touchStateRef = useRef({
+    startX: 0, startY: 0,
+    startTime: 0,
+    lastTapTime: 0,
+    lastTapX: 0, lastTapY: 0,
+    moved: false,
+  })
+
+  const handleTouchStart = useCallback((e) => {
+    if (e.touches.length !== 1) return
+    const t = e.touches[0]
+    touchStateRef.current = {
+      ...touchStateRef.current,
+      startX: t.clientX,
+      startY: t.clientY,
+      startTime: Date.now(),
+      moved: false,
+      // Snapshot the ghost cells BEFORE onCellHover moves them. handleTouchEnd uses this
+      // to distinguish "tap on the ghost piece itself" (→ rotate) from "tap elsewhere" (→ move).
+      // Read from ref so handleTouchStart doesn't need ghostCellSet in its deps array
+      // (which would cause it to re-create on every hover change and break drag tracking).
+      ghostCellsAtStart: ghostCellSetRef.current,
+    }
+
+    // Notify activity
+    onMouseActivity?.()
+
+    // Teleport spring position (same as mouseenter)
+    const svg = svgRef.current
+    if (svg) {
+      const pt = svg.createSVGPoint()
+      pt.x = t.clientX; pt.y = t.clientY
+      const svgPt = pt.matrixTransform(svg.getScreenCTM().inverse())
+      rawSvgPos.current = { x: svgPt.x, y: svgPt.y }
+      if (!isOnBoardRef.current) {
+        isOnBoardRef.current = true
+        springRef.current = { x: svgPt.x, y: svgPt.y, vx: 0, vy: 0 }
+        rafRef.current = requestAnimationFrame(runSpring)
+      }
+    }
+
+    // Immediate ghost update on touch start
+    if (!disabled && selectedPiece) {
+      const cell = svgPosToCell(t.clientX, t.clientY)
+      if (cell) onCellHover(cell)
+    }
+  }, [onMouseActivity, disabled, selectedPiece, svgPosToCell, onCellHover, runSpring])
+
+  const handleTouchMove = useCallback((e) => {
+    if (e.touches.length !== 1) return
+    e.preventDefault() // prevent scroll while dragging piece
+    const t = e.touches[0]
+    const dx = t.clientX - touchStateRef.current.startX
+    const dy = t.clientY - touchStateRef.current.startY
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+      touchStateRef.current.moved = true
+    }
+
+    onMouseActivity?.()
+
+    // Track raw SVG position for free hover spring
+    const svg = svgRef.current
+    if (svg) {
+      const pt = svg.createSVGPoint()
+      pt.x = t.clientX; pt.y = t.clientY
+      const svgPt = pt.matrixTransform(svg.getScreenCTM().inverse())
+      rawSvgPos.current = { x: svgPt.x, y: svgPt.y }
+    }
+
+    // Ghost follows finger immediately
+    if (!disabled && selectedPiece) {
+      const cell = svgPosToCell(t.clientX, t.clientY)
+      if (cell) onCellHover(cell)
+    }
+  }, [onMouseActivity, disabled, selectedPiece, svgPosToCell, onCellHover])
+
+  const handleTouchEnd = useCallback((e) => {
+    if (e.changedTouches.length !== 1) return
+    const t = e.changedTouches[0]
+    const ts = touchStateRef.current
+    const now = Date.now()
+    const duration = now - ts.startTime
+    const dx = t.clientX - ts.startX
+    const dy = t.clientY - ts.startY
+    const dist = Math.sqrt(dx * dx + dy * dy)
+
+    // Swipe left → rotate CCW (dx < -50, mostly horizontal, fast)
+    if (dx < -50 && Math.abs(dy) < 40 && duration < 350) {
+      onTouchRotateCCW?.()
+      touchStateRef.current.lastTapTime = 0 // reset double-tap tracker
+      return
+    }
+
+    // Minimal movement tap (< 10px, < 220ms) → check for double-tap or single-tap
+    if (dist < 10 && duration < 220) {
+      const timeSinceLast = now - ts.lastTapTime
+      const tapDist = Math.sqrt(
+        (t.clientX - ts.lastTapX) ** 2 + (t.clientY - ts.lastTapY) ** 2
+      )
+      if (timeSinceLast < 300 && tapDist < 40) {
+        // Double tap → flip
+        onTouchFlip?.()
+        touchStateRef.current.lastTapTime = 0
+        return
+      }
+      // Single tap with piece selected:
+      //   • if tap lands on the ghost piece itself (where it WAS at touchstart) → rotate CW
+      //   • if tap lands elsewhere on the board → move ghost there (no rotate)
+      // We use ghostCellsAtStart (snapshot from touchstart) because handleTouchStart already
+      // called onCellHover, so the live ghostCellSet has already moved to the new position.
+      if (selectedPiece) {
+        const tappedCell = svgPosToCell(t.clientX, t.clientY)
+        const ghostAtStart = touchStateRef.current.ghostCellsAtStart
+        if (tappedCell && ghostAtStart?.has(`${tappedCell.q},${tappedCell.r}`)) {
+          onTouchRotateCW?.()
+        } else if (tappedCell) {
+          onCellHover(tappedCell)
+        } else {
+          // Tap outside board boundary — rotate as fallback
+          onTouchRotateCW?.()
+        }
+      }
+      touchStateRef.current.lastTapTime = now
+      touchStateRef.current.lastTapX = t.clientX
+      touchStateRef.current.lastTapY = t.clientY
+      return
+    }
+
+    // Touch with movement → reposition ghost (already handled in touchmove, just update tap tracker)
+    touchStateRef.current.lastTapTime = 0
+  }, [selectedPiece, onTouchRotateCW, onTouchRotateCCW, onTouchFlip, svgPosToCell, onCellHover])
 
   if (!boardData) return null
 
@@ -428,7 +578,10 @@ export default function Board({
         onMouseMove={handleMouseMove}
         onMouseLeave={handleBoardLeave}
         onClick={handleClick}
-        style={{ maxWidth: '100%', maxHeight: '100%' }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ maxWidth: '100%', maxHeight: '100%', touchAction: 'none' }}
       >
         <defs>
           {/* Glow for the free hover outline (current player's color) */}

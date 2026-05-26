@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useRef } from 'react'
 import { GAME_MODES } from '../game/gameModes.js'
 import { PLAYER_COLORS, COLOR_KEYS } from '../hooks/useGameState.js'
 import styles from './WaitingRoom.module.css'
 import { playSound } from '../utils/sounds.js'
+import { useDeviceType } from '../hooks/useDeviceType.js'
 
 const DEFAULT_COLORS = ['blue', 'red', 'green', 'yellow']
 
@@ -46,10 +47,33 @@ export default function WaitingRoom({
   onSetAIDifficulty,
   onExit,
 }) {
+  const { isTouchDevice } = useDeviceType()
   const [copied, setCopied] = useState(false)
   const [startError, setStartError] = useState(null)
   const [starting, setStarting] = useState(false)
-  const [aiDifficulty, setAIDifficulty] = useState({})  // { slotIndex: 'normal'|'hard' } — per slot
+  const [aiDifficulty, setAIDifficulty] = useState({})
+
+  // Mobile: which panel is active — 0 = Players, 1 = Game Modes
+  const [mobilePanel, setMobilePanel] = useState(0)
+  const mobileSwiping = useRef({ startX: 0, startY: 0, active: false })
+
+  const goToPlayers = useCallback(() => { playSound('home-lobby'); setMobilePanel(0) }, [])
+  const goToModes   = useCallback(() => { playSound('home-lobby'); setMobilePanel(1) }, [])
+
+  const handleSwipeStart = useCallback(e => {
+    if (e.touches.length !== 1) return
+    mobileSwiping.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, active: true }
+  }, [])
+
+  const handleSwipeEnd = useCallback(e => {
+    if (!mobileSwiping.current.active || e.changedTouches.length !== 1) return
+    const dx = e.changedTouches[0].clientX - mobileSwiping.current.startX
+    const dy = Math.abs(e.changedTouches[0].clientY - mobileSwiping.current.startY)
+    mobileSwiping.current.active = false
+    if (Math.abs(dx) < 50 || dy > Math.abs(dx)) return
+    if (dx < 0) goToModes()   // swipe left → Game Modes
+    else goToPlayers()         // swipe right → Players
+  }, [goToModes, goToPlayers])
 
   const shareUrl = `${window.location.origin}/api/share?join=${roomCode}`
   const gameModes = settings?.gameModes || {}
@@ -94,278 +118,330 @@ export default function WaitingRoom({
   const allColorsReady = isTwoPlayerStandard
     ? filledSlots === maxPlayers && players.filter(p => !p.isAI).every(p => p && p.color && p.color2)
     : true
-  // Must have at least 1 human + all slots filled
   const canStart = isHost && filledSlots >= maxPlayers && humanSlots >= 1 && allColorsReady
 
-  return (
-    <div className={styles.container}>
-      <div className={styles.backdrop} />
-
-      {/* Header */}
-      <div className={styles.header}>
-        <div className={styles.logoMark}>
-          <svg viewBox="-6 -6 72 64" width="36" height="32" overflow="visible">
-            <polygon points="30,4 56,48 4,48" fill="none" stroke="#3B82F6" strokeWidth="2.5" strokeLinejoin="round"/>
-            <polygon points="30,16 46,44 14,44" fill="rgba(59,130,246,0.2)" stroke="#3B82F6" strokeWidth="1.5" strokeLinejoin="round"/>
-          </svg>
+  // ── Shared left-panel (Players) ──────────────────────────────────────────
+  const leftPanelContent = (
+    <>
+      {/* Room code */}
+      <div className={styles.codeCard}>
+        <div className={styles.codeLabel}>Room Code</div>
+        <div className={styles.codeDisplay}>
+          <span className={styles.codeText}>{roomCode}</span>
+          <button className={styles.copyBtn} onClick={() => { playSound('home-lobby'); copyCode() }} title="Copy room code">
+            {copied ? (
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none">
+                <path d="M2 8l4 4 8-8" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            ) : (
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none">
+                <rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M11 5V3.5A1.5 1.5 0 009.5 2h-7A1.5 1.5 0 001 3.5v7A1.5 1.5 0 002.5 12H4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            )}
+          </button>
         </div>
-        <div className={styles.brand}>
-          <h1 className={styles.title}>Blokus Trigon</h1>
-          <p className={styles.subtitle}>
-            {roomMode === 'private' ? 'Private Room' : 'Public Room'} · {maxPlayers} players
-          </p>
-        </div>
-        <button className={styles.exitBtn} onClick={(e) => { triggerBounce(e.currentTarget); playSound('deselect-cancel-home'); setTimeout(onExit, 350) }} title="Leave room">
-          <svg viewBox="0 0 20 20" width="16" height="16" fill="none">
-            <path d="M7 3H4a1 1 0 00-1 1v12a1 1 0 001 1h3M10 10H17M17 10l-3-3M17 10l-3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <button className={styles.linkBtn} onClick={() => { playSound('home-lobby'); copyLink() }}>
+          <svg viewBox="0 0 16 16" width="12" height="12" fill="none">
+            <path d="M6.5 9.5a3.5 3.5 0 005 0l2-2a3.5 3.5 0 00-5-5L7.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <path d="M9.5 6.5a3.5 3.5 0 00-5 0l-2 2a3.5 3.5 0 005 5l1-1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
-          Leave
+          Copy invite link
         </button>
       </div>
 
-      <div className={styles.body}>
-        {/* Left: Room code + players */}
-        <div className={styles.leftPanel}>
-
-          {/* Room code */}
-          <div className={styles.codeCard}>
-            <div className={styles.codeLabel}>Room Code</div>
-            <div className={styles.codeDisplay}>
-              <span className={styles.codeText}>{roomCode}</span>
-              <button className={styles.copyBtn} onClick={() => { playSound('home-lobby'); copyCode() }} title="Copy room code">
-                {copied ? (
-                  <svg viewBox="0 0 16 16" width="14" height="14" fill="none">
-                    <path d="M2 8l4 4 8-8" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 16 16" width="14" height="14" fill="none">
-                    <rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
-                    <path d="M11 5V3.5A1.5 1.5 0 009.5 2h-7A1.5 1.5 0 001 3.5v7A1.5 1.5 0 002.5 12H4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                  </svg>
-                )}
-              </button>
-            </div>
-            <button className={styles.linkBtn} onClick={() => { playSound('home-lobby'); copyLink() }}>
-              <svg viewBox="0 0 16 16" width="12" height="12" fill="none">
-                <path d="M6.5 9.5a3.5 3.5 0 005 0l2-2a3.5 3.5 0 00-5-5L7.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                <path d="M9.5 6.5a3.5 3.5 0 00-5 0l-2 2a3.5 3.5 0 005 5l1-1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-              Copy invite link
-            </button>
-          </div>
-
-          {/* Player slots */}
-          <div className={styles.playersCard}>
-            <div className={styles.sectionLabel}>
-              Players <span className={styles.playerCount}>{filledSlots}/{maxPlayers}</span>
-            </div>
-            <div className={styles.playerList}>
-              {Array.from({ length: maxPlayers }, (_, i) => {
-                const player = players[i]
-                const isMe = player?.humanId === myHumanId
-                return (
-                  <div key={i} className={`${styles.playerSlot} ${player ? styles.playerSlotFilled : styles.playerSlotEmpty}`}>
-                    <div className={styles.playerSlotNum}>{i + 1}</div>
-                    {player ? (
-                      <>
-                        <div className={styles.playerSlotInfo}>
-                          <span className={styles.playerSlotName}>
-                            {player.name}
-                            {isMe && <span className={styles.youBadge}>You</span>}
-                            {player.isHost && <span className={styles.hostBadge}>Host</span>}
-                          </span>
-                          {isTwoPlayerStandard ? (
-                            // 2p standard mode: two color set rows per player
-                            <div className={styles.colorSets}>
-                              {[0, 1].map(setIdx => {
-                                const slotColor = setIdx === 0 ? player.color : player.color2
-                                return (
-                                  <div key={setIdx} className={styles.colorSetRow}>
-                                    <span className={styles.colorSetLabel}>Set {setIdx + 1}</span>
-                                    <div className={styles.colorSwatches}>
-                                      {COLOR_KEYS.map(colorKey => {
-                                        const isActive = slotColor === colorKey
-                                        const takenByOther = players.some(p => {
-                                          if (!p) return false
-                                          if (p.humanId === player.humanId) {
-                                            // Same player: block the other slot
-                                            return (setIdx === 0 ? p.color2 : p.color) === colorKey
-                                          }
-                                          // Different player: block both their slots
-                                          return p.color === colorKey || p.color2 === colorKey
-                                        })
-                                        return (
-                                          <button
-                                            key={colorKey}
-                                            className={`${styles.colorSwatch} ${isActive ? styles.colorSwatchActive : ''} ${takenByOther && !isActive ? styles.colorSwatchTaken : ''}`}
-                                            style={{ '--swatch-bg': PLAYER_COLORS[colorKey].bg }}
-                                            onClick={isMe ? () => { playSound('home-lobby'); onSelectColorSlot(setIdx, isActive ? null : colorKey) } : undefined}
-                                            disabled={!isMe || (takenByOther && !isActive)}
-                                            title={isMe ? (isActive ? `Deselect ${PLAYER_COLORS[colorKey].label}` : `Select ${PLAYER_COLORS[colorKey].label}`) : PLAYER_COLORS[colorKey].label}
-                                            type="button"
-                                          />
-                                        )
-                                      })}
-                                    </div>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          ) : (
-                            // Standard single-color row
-                            <div className={styles.colorSwatches}>
-                              {COLOR_KEYS.map(colorKey => {
-                                const activeColor = player.color || DEFAULT_COLORS[i]
-                                const isActive = activeColor === colorKey
-                                const takenByOther = players.some((p, j) => {
-                                  if (!p || j === i) return false
-                                  return (p.color || DEFAULT_COLORS[j]) === colorKey
-                                })
-                                return (
-                                  <button
-                                    key={colorKey}
-                                    className={`${styles.colorSwatch} ${isActive ? styles.colorSwatchActive : ''} ${takenByOther && !isActive ? styles.colorSwatchTaken : ''}`}
-                                    style={{ '--swatch-bg': PLAYER_COLORS[colorKey].bg }}
-                                    onClick={isMe ? () => { playSound('home-lobby'); onSelectColor(isActive ? null : colorKey) } : undefined}
-                                    disabled={!isMe || (takenByOther && !isActive)}
-                                    title={isMe ? (isActive ? `Deselect ${PLAYER_COLORS[colorKey].label}` : `Select ${PLAYER_COLORS[colorKey].label}`) : PLAYER_COLORS[colorKey].label}
-                                    type="button"
-                                  />
-                                )
-                              })}
-                            </div>
-                          )}
-                        </div>
-                        {player.isAI && isHost ? (
-                          <div className={styles.aiSlotControls}>
-                            <button
-                              className={styles.aiDiffCycleBtn}
-                              onClick={() => { playSound('home-lobby'); onSetAIDifficulty?.(player.humanId, player.aiDifficulty === 'normal' ? 'hard' : 'normal') }}
-                              title={`Switch to ${player.aiDifficulty === 'normal' ? 'Hard' : 'Normal'} AI`}
-                              type="button"
-                            >
-                              🤖 {player.aiDifficulty === 'hard' ? 'Hard' : 'Normal'} AI
-                            </button>
-                            <button
-                              className={styles.removeAIBtn}
-                              onClick={() => { playSound('home-lobby'); onRemoveAI?.(player.humanId) }}
-                              title="Remove AI player"
-                              type="button"
-                            >✕</button>
-                          </div>
-                        ) : (
-                          <div className={`${styles.connDot} ${player.connected ? styles.connDotOn : styles.connDotOff}`} title={player.connected ? 'Connected' : 'Disconnected'}/>
-                        )}
-                      </>
-                    ) : isHost ? (
-                      <div className={styles.emptySlotHost}>
-                        <span className={styles.playerSlotWaiting}>Waiting for player…</span>
-                        <div className={styles.addAIControls}>
-                          <select
-                            className={styles.aiDiffSelect}
-                            value={aiDifficulty[i] || 'normal'}
-                            onChange={e => setAIDifficulty(prev => ({ ...prev, [i]: e.target.value }))}
-                            onClick={e => e.stopPropagation()}
-                          >
-                            <option value="normal">Normal</option>
-                            <option value="hard">Hard</option>
-                          </select>
-                          <button
-                            className={styles.addAIBtn}
-                            onClick={(e) => { triggerBounceInline(e.currentTarget); playSound('add-ai'); onAddAI?.(aiDifficulty[i] || 'normal') }}
-                            type="button"
-                          >
-                            + Add AI
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <span className={styles.playerSlotWaiting}>Waiting for player…</span>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Start button */}
-          {isHost && (
-            <div className={styles.startArea}>
-              {startError && <div className={styles.startError}>{startError}</div>}
-              <button
-                className={`${styles.startBtn} ${!canStart ? styles.startBtnDisabled : ''}`}
-                onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(handleStart, 350) }}
-                disabled={!canStart || starting}
-              >
-                {starting ? 'Starting…' : (
-                  <>
-                    <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd"/>
-                    </svg>
-                    Start Game
-                  </>
-                )}
-              </button>
-              {!canStart && (
-                <p className={styles.startHint}>
-                  {filledSlots < maxPlayers
-                    ? `Waiting for ${maxPlayers - filledSlots} more player${maxPlayers - filledSlots !== 1 ? 's' : ''} (or add AI)…`
-                    : humanSlots === 0
-                      ? 'At least one human player is required.'
-                      : 'All players must select both color sets before starting.'}
-                </p>
-              )}
-            </div>
-          )}
-
-          {!isHost && (
-            <div className={styles.waitingForHost}>
-              <div className={styles.spinner}/>
-              <span>Waiting for host to start the game…</span>
-            </div>
-          )}
+      {/* Player slots */}
+      <div className={styles.playersCard}>
+        <div className={styles.sectionLabel}>
+          Players <span className={styles.playerCount}>{filledSlots}/{maxPlayers}</span>
         </div>
-
-        {/* Right: Game modes */}
-        <div className={styles.rightPanel}>
-          <div className={styles.modesCard}>
-            <div className={styles.sectionLabel}>Game Modes</div>
-            <p className={styles.modesHint}>Any player can toggle modes before the game starts.</p>
-            <div className={styles.modesList}>
-              {GAME_MODES.map(mode => {
-                const available = mode.availability === 'all' ||
-                  (mode.availability === '2p-only' && maxPlayers === 2)
-                const active = gameModes[mode.id] && available
-                return (
-                  <button
-                    key={mode.id}
-                    className={`${styles.modeToggle} ${active ? styles.modeToggleActive : ''} ${!available ? styles.modeToggleDisabled : ''}`}
-                    onClick={(e) => { if (available) { triggerBounceInlineMd(e.currentTarget); playSound(active ? '2-game-modes' : '1-game-modes'); toggleMode(mode.id) } }}
-                    disabled={!available}
-                    type="button"
-                    data-no-bounce
-                  >
-                    <div className={`${styles.modeCheck} ${active ? styles.modeCheckActive : ''}`}>
-                      {active && (
-                        <svg viewBox="0 0 10 8" width="9" height="9" fill="none">
-                          <path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
+        <div className={styles.playerList}>
+          {Array.from({ length: maxPlayers }, (_, i) => {
+            const player = players[i]
+            const isMe = player?.humanId === myHumanId
+            return (
+              <div key={i} className={`${styles.playerSlot} ${player ? styles.playerSlotFilled : styles.playerSlotEmpty}`}>
+                <div className={styles.playerSlotNum}>{i + 1}</div>
+                {player ? (
+                  <>
+                    <div className={styles.playerSlotInfo}>
+                      <span className={styles.playerSlotName}>
+                        {player.name}
+                        {isMe && <span className={styles.youBadge}>You</span>}
+                        {player.isHost && <span className={styles.hostBadge}>Host</span>}
+                      </span>
+                      {isTwoPlayerStandard ? (
+                        <div className={styles.colorSets}>
+                          {[0, 1].map(setIdx => {
+                            const slotColor = setIdx === 0 ? player.color : player.color2
+                            return (
+                              <div key={setIdx} className={styles.colorSetRow}>
+                                <span className={styles.colorSetLabel}>Set {setIdx + 1}</span>
+                                <div className={styles.colorSwatches}>
+                                  {COLOR_KEYS.map(colorKey => {
+                                    const isActive = slotColor === colorKey
+                                    const takenByOther = players.some(p => {
+                                      if (!p) return false
+                                      if (p.humanId === player.humanId) {
+                                        return (setIdx === 0 ? p.color2 : p.color) === colorKey
+                                      }
+                                      return p.color === colorKey || p.color2 === colorKey
+                                    })
+                                    return (
+                                      <button
+                                        key={colorKey}
+                                        className={`${styles.colorSwatch} ${isActive ? styles.colorSwatchActive : ''} ${takenByOther && !isActive ? styles.colorSwatchTaken : ''}`}
+                                        style={{ '--swatch-bg': PLAYER_COLORS[colorKey].bg }}
+                                        onClick={isMe ? () => { playSound('home-lobby'); onSelectColorSlot(setIdx, isActive ? null : colorKey) } : undefined}
+                                        disabled={!isMe || (takenByOther && !isActive)}
+                                        title={isMe ? (isActive ? `Deselect ${PLAYER_COLORS[colorKey].label}` : `Select ${PLAYER_COLORS[colorKey].label}`) : PLAYER_COLORS[colorKey].label}
+                                        type="button"
+                                      />
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <div className={styles.colorSwatches}>
+                          {COLOR_KEYS.map(colorKey => {
+                            const activeColor = player.color || DEFAULT_COLORS[i]
+                            const isActive = activeColor === colorKey
+                            const takenByOther = players.some((p, j) => {
+                              if (!p || j === i) return false
+                              return (p.color || DEFAULT_COLORS[j]) === colorKey
+                            })
+                            return (
+                              <button
+                                key={colorKey}
+                                className={`${styles.colorSwatch} ${isActive ? styles.colorSwatchActive : ''} ${takenByOther && !isActive ? styles.colorSwatchTaken : ''}`}
+                                style={{ '--swatch-bg': PLAYER_COLORS[colorKey].bg }}
+                                onClick={isMe ? () => { playSound('home-lobby'); onSelectColor(isActive ? null : colorKey) } : undefined}
+                                disabled={!isMe || (takenByOther && !isActive)}
+                                title={isMe ? (isActive ? `Deselect ${PLAYER_COLORS[colorKey].label}` : `Select ${PLAYER_COLORS[colorKey].label}`) : PLAYER_COLORS[colorKey].label}
+                                type="button"
+                              />
+                            )
+                          })}
+                        </div>
                       )}
                     </div>
-                    <div className={styles.modeBody}>
-                      <div className={styles.modeNameRow}>
-                        <span className={styles.modeName}>{mode.name}</span>
-                        {mode.availability === '2p-only' && (
-                          <span className={styles.modeBadge}>2p only</span>
-                        )}
+                    {player.isAI && isHost ? (
+                      <div className={styles.aiSlotControls}>
+                        <button
+                          className={styles.aiDiffCycleBtn}
+                          onClick={() => { playSound('home-lobby'); onSetAIDifficulty?.(player.humanId, player.aiDifficulty === 'normal' ? 'hard' : 'normal') }}
+                          title={`Switch to ${player.aiDifficulty === 'normal' ? 'Hard' : 'Normal'} AI`}
+                          type="button"
+                        >
+                          🤖 {player.aiDifficulty === 'hard' ? 'Hard' : 'Normal'} AI
+                        </button>
+                        <button
+                          className={styles.removeAIBtn}
+                          onClick={() => { playSound('home-lobby'); onRemoveAI?.(player.humanId) }}
+                          title="Remove AI player"
+                          type="button"
+                        >✕</button>
                       </div>
-                      <div className={styles.modeDesc}>{mode.description}</div>
+                    ) : (
+                      <div className={`${styles.connDot} ${player.connected ? styles.connDotOn : styles.connDotOff}`} title={player.connected ? 'Connected' : 'Disconnected'}/>
+                    )}
+                  </>
+                ) : isHost ? (
+                  <div className={styles.emptySlotHost}>
+                    <span className={styles.playerSlotWaiting}>Waiting for player…</span>
+                    <div className={styles.addAIControls}>
+                      <button
+                        className={styles.aiDiffToggleBtn}
+                        onClick={() => { playSound('home-lobby'); setAIDifficulty(prev => ({ ...prev, [i]: prev[i] === 'hard' ? 'normal' : 'hard' })) }}
+                        type="button"
+                        title="Toggle Normal / Hard AI"
+                      >
+                        {(aiDifficulty[i] || 'normal') === 'hard' ? 'Hard' : 'Normal'}
+                      </button>
+                      <button
+                        className={styles.addAIBtn}
+                        onClick={(e) => { triggerBounceInline(e.currentTarget); playSound('add-ai'); onAddAI?.(aiDifficulty[i] || 'normal') }}
+                        type="button"
+                      >
+                        + Add AI
+                      </button>
                     </div>
-                  </button>
-                )
-              })}
+                  </div>
+                ) : (
+                  <span className={styles.playerSlotWaiting}>Waiting for player…</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Start button */}
+      {isHost && (
+        <div className={styles.startArea}>
+          {startError && <div className={styles.startError}>{startError}</div>}
+          <button
+            className={`${styles.startBtn} ${!canStart ? styles.startBtnDisabled : ''}`}
+            onClick={(e) => { triggerBounce(e.currentTarget); setTimeout(handleStart, 350) }}
+            disabled={!canStart || starting}
+          >
+            {starting ? 'Starting…' : (
+              <>
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd"/>
+                </svg>
+                Start Game
+              </>
+            )}
+          </button>
+          {!canStart && (
+            <p className={styles.startHint}>
+              {filledSlots < maxPlayers
+                ? `Waiting for ${maxPlayers - filledSlots} more player${maxPlayers - filledSlots !== 1 ? 's' : ''} (or add AI)…`
+                : humanSlots === 0
+                  ? 'At least one human player is required.'
+                  : 'All players must select both color sets before starting.'}
+            </p>
+          )}
+        </div>
+      )}
+
+      {!isHost && (
+        <div className={styles.waitingForHost}>
+          <div className={styles.spinner}/>
+          <span>Waiting for host to start the game…</span>
+        </div>
+      )}
+    </>
+  )
+
+  // ── Shared right-panel (Game Modes) ──────────────────────────────────────
+  const rightPanelContent = (
+    <div className={styles.modesCard}>
+      <div className={styles.sectionLabel}>Game Modes</div>
+      <p className={styles.modesHint}>Any player can toggle modes before the game starts.</p>
+      <div className={styles.modesList}>
+        {GAME_MODES.map(mode => {
+          const available = mode.availability === 'all' ||
+            (mode.availability === '2p-only' && maxPlayers === 2)
+          const active = gameModes[mode.id] && available
+          return (
+            <button
+              key={mode.id}
+              className={`${styles.modeToggle} ${active ? styles.modeToggleActive : ''} ${!available ? styles.modeToggleDisabled : ''}`}
+              onClick={(e) => { if (available) { triggerBounceInlineMd(e.currentTarget); playSound(active ? '2-game-modes' : '1-game-modes'); toggleMode(mode.id) } }}
+              disabled={!available}
+              type="button"
+              data-no-bounce
+            >
+              <div className={`${styles.modeCheck} ${active ? styles.modeCheckActive : ''}`}>
+                {active && (
+                  <svg viewBox="0 0 10 8" width="9" height="9" fill="none">
+                    <path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+              <div className={styles.modeBody}>
+                <div className={styles.modeNameRow}>
+                  <span className={styles.modeName}>{mode.name}</span>
+                  {mode.availability === '2p-only' && (
+                    <span className={styles.modeBadge}>2p only</span>
+                  )}
+                </div>
+                <div className={styles.modeDesc}>{mode.description}</div>
+              </div>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+
+  // ── Shared header ─────────────────────────────────────────────────────────
+  const headerContent = (
+    <div className={styles.header}>
+      <div className={styles.logoMark}>
+        <svg viewBox="-6 -6 72 64" width="36" height="32" overflow="visible">
+          <polygon points="30,4 56,48 4,48" fill="none" stroke="#3B82F6" strokeWidth="2.5" strokeLinejoin="round"/>
+          <polygon points="30,16 46,44 14,44" fill="rgba(59,130,246,0.2)" stroke="#3B82F6" strokeWidth="1.5" strokeLinejoin="round"/>
+        </svg>
+      </div>
+      <div className={styles.brand}>
+        <h1 className={styles.title}>Blokus Trigon</h1>
+        <p className={styles.subtitle}>
+          {roomMode === 'private' ? 'Private Room' : 'Public Room'} · {maxPlayers} players
+        </p>
+      </div>
+      <button className={styles.exitBtn} onClick={(e) => { triggerBounce(e.currentTarget); playSound('deselect-cancel-home'); setTimeout(onExit, 350) }} title="Leave room">
+        <svg viewBox="0 0 20 20" width="16" height="16" fill="none">
+          <path d="M7 3H4a1 1 0 00-1 1v12a1 1 0 001 1h3M10 10H17M17 10l-3-3M17 10l-3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        Leave
+      </button>
+    </div>
+  )
+
+  // ── Mobile layout ─────────────────────────────────────────────────────────
+  if (isTouchDevice) {
+    return (
+      <div
+        className={styles.container}
+        onTouchStart={handleSwipeStart}
+        onTouchEnd={handleSwipeEnd}
+      >
+        <div className={styles.backdrop} />
+        {headerContent}
+
+        {/* Panel indicator dots */}
+        <div className={styles.mobilePanelIndicator}>
+          <button
+            className={`${styles.indicatorDot} ${mobilePanel === 0 ? styles.indicatorDotActive : ''}`}
+            onClick={goToPlayers}
+            aria-label="Players panel"
+            type="button"
+          />
+          <button
+            className={`${styles.indicatorDot} ${mobilePanel === 1 ? styles.indicatorDotActive : ''}`}
+            onClick={goToModes}
+            aria-label="Game Modes panel"
+            type="button"
+          />
+        </div>
+
+        {/* Sliding panels — track is 200vw wide; translate by exactly -100vw to show panel 1 */}
+        <div className={styles.mobilePanelsTrack} style={{ transform: `translateX(${mobilePanel === 0 ? '0' : '-100vw'})` }}>
+          {/* Panel 0: Players — no right-edge arrow; swipe left or tap dots to navigate */}
+          <div className={styles.mobilePanel}>
+            <div className={styles.mobilePanelScroll}>
+              {leftPanelContent}
             </div>
           </div>
+
+          {/* Panel 1: Game Modes */}
+          <div className={styles.mobilePanel}>
+            <div className={styles.mobilePanelScroll}>
+              {rightPanelContent}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Desktop layout (unchanged) ────────────────────────────────────────────
+  return (
+    <div className={styles.container}>
+      <div className={styles.backdrop} />
+      {headerContent}
+      <div className={styles.body}>
+        <div className={styles.leftPanel}>
+          {leftPanelContent}
+        </div>
+        <div className={styles.rightPanel}>
+          {rightPanelContent}
         </div>
       </div>
     </div>

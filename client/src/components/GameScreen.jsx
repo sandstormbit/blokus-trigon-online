@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { playSound } from '../utils/sounds.js'
 
 function triggerBounce(el) {
@@ -11,7 +11,10 @@ import Board from './Board.jsx'
 import PlayerPanel from './PlayerPanel.jsx'
 import PieceControlPanel from './PieceControlPanel.jsx'
 import HUD from './HUD.jsx'
+import MobileTopBar from './MobileTopBar.jsx'
+import MobileHUD from './MobileHUD.jsx'
 import { PLAYER_COLORS } from '../hooks/useGameState.js'
+import { triCentroid, TRI_SIZE, TRI_H } from '../game/boardGeometry.js'
 import AnimatedScore from './AnimatedScore.jsx'
 import PlacementConfirmModal from './PlacementConfirmModal.jsx'
 import EndGameConfirmModal from './EndGameConfirmModal.jsx'
@@ -19,6 +22,7 @@ import EndGameModal from './EndGameModal.jsx'
 import NoMovesModal from './NoMovesModal.jsx'
 import RemovePieceModal from './RemovePieceModal.jsx'
 import { useKeyboard } from '../hooks/useKeyboard.js'
+import { useDeviceType } from '../hooks/useDeviceType.js'
 import styles from './GameScreen.module.css'
 
 export default function GameScreen({
@@ -53,6 +57,8 @@ export default function GameScreen({
   onExit = null,
   otherPlayersGhosts = null,
 }) {
+  const { isTouchDevice } = useDeviceType()
+
   const [viewingFinalBoard, setViewingFinalBoard] = useState(false)
   const [freeHoverEnabled, setFreeHoverEnabled] = useState(true)
   const [showSkipConfirm, setShowSkipConfirm] = useState(false)
@@ -68,6 +74,17 @@ export default function GameScreen({
   const toggleControlPanel  = useCallback(() => setControlPanelOpen(v => !v), [])
   const openControlPanel   = useCallback(() => setControlPanelOpen(true), [])
   const closeControlPanel  = useCallback(() => setControlPanelOpen(false), [])
+
+  // ── Mobile: auto-confirm placement ref (skip PlacementConfirmModal) ────────
+  const mobileAutoConfirmRef = useRef(false)
+  // ── Mobile: skip center-on-board when picking a piece back up ────────────
+  const skipCenterOnSelectRef = useRef(false)
+  // ── Mobile: remember where the last piece was placed (for Pick Up restore) ─
+  const lastPlacedHoverRef = useRef(null)
+  // ── Mobile: remember which piece was last placed (for Pick Up re-select) ──
+  const lastPlacedPieceIdRef = useRef(null)
+  // ── Mobile: flag that a pick-up was just initiated (drives safety-net effect) ─
+  const pickUpPendingRef = useRef(false)
 
   // Refs for PieceControlPanel positioning
   const controlPanelBounceRef = useRef(null)
@@ -371,6 +388,136 @@ export default function GameScreen({
     confirmPlacement(autoAdvanceEnabled)
   }, [confirmPlacement, autoAdvanceEnabled])
 
+  // ── Mobile: center-of-board cell ─────────────────────────────────────────
+  const boardCenterCell = useMemo(() => {
+    if (!state.board) return null
+    const cells = Object.values(state.board.cells)
+    if (!cells.length) return null
+    const qs = cells.map(c => c.q)
+    const rs = cells.map(c => c.r)
+    const midQ = Math.round((Math.min(...qs) + Math.max(...qs)) / 2)
+    const midR = Math.round((Math.min(...rs) + Math.max(...rs)) / 2)
+    const key = `${midQ},${midR}`
+    if (state.board.cells[key]) return { q: midQ, r: midR }
+    // Fall back to closest cell by Manhattan distance
+    let best = null, bestDist = Infinity
+    for (const cell of cells) {
+      const d = Math.abs(cell.q - midQ) + Math.abs(cell.r - midR)
+      if (d < bestDist) { bestDist = d; best = { q: cell.q, r: cell.r } }
+    }
+    return best
+  }, [state.board])
+
+  // Mobile: when a piece is first selected, center the ghost on the board
+  // (skipped when picking a piece back up — we preserve the hover position instead)
+  const prevSelectedRef = useRef(null)
+  useEffect(() => {
+    if (!isTouchDevice) return
+    if (state.selectedPieceId !== null && prevSelectedRef.current === null && boardCenterCell) {
+      if (skipCenterOnSelectRef.current) {
+        skipCenterOnSelectRef.current = false
+      } else {
+        setHover(boardCenterCell)
+      }
+    }
+    prevSelectedRef.current = state.selectedPieceId
+  }, [state.selectedPieceId, isTouchDevice, boardCenterCell, setHover])
+
+  // Mobile: find nearest board cell to an SVG point (mirrors Board.jsx svgPosToCell logic)
+  const findNearestBoardCell = useCallback((svgX, svgY) => {
+    if (!state.board) return null
+    const { offsetX, offsetY, cells } = state.board
+    const gridX = svgX - offsetX
+    const gridY = svgY - offsetY
+    const rEst = gridY / TRI_H
+    const qEst = (gridX - TRI_SIZE / 2) / (TRI_SIZE / 2)
+    let best = null, bestDist = Infinity
+    for (let dr = -2; dr <= 2; dr++) {
+      for (let dq = -3; dq <= 3; dq++) {
+        const q = Math.round(qEst) + dq
+        const r = Math.round(rEst) + dr
+        const id = `${q},${r}`
+        if (!cells[id]) continue
+        const cent = triCentroid(q, r)
+        const sx = cent.x + offsetX
+        const sy = cent.y + offsetY
+        const dist = (svgX - sx) ** 2 + (svgY - sy) ** 2
+        if (dist < bestDist) { bestDist = dist; best = { q, r } }
+      }
+    }
+    return best
+  }, [state.board])
+
+  // Mobile: move the ghost piece by a pixel delta (used by arrow controls)
+  const boardSvgRef = useRef(null) // attached to the boardArea div
+
+  const moveGhostByDelta = useCallback((dx, dy) => {
+    if (!state.hoverCell || !state.board) return
+    const { q, r } = state.hoverCell
+    const { offsetX, offsetY } = state.board
+    const cent = triCentroid(q, r)
+    const newSvgX = cent.x + offsetX + dx
+    const newSvgY = cent.y + offsetY + dy
+    const cell = findNearestBoardCell(newSvgX, newSvgY)
+    if (cell) setHover(cell)
+  }, [state.hoverCell, state.board, findNearestBoardCell, setHover])
+
+  // Mobile: "Place" button — place piece and immediately auto-confirm (no modal)
+  const mobilePlacePiece = useCallback(() => {
+    if (!state.hoverCell || !ghostIsLegal || !state.selectedPieceId) return
+    lastPlacedHoverRef.current = { q: state.hoverCell.q, r: state.hoverCell.r }
+    lastPlacedPieceIdRef.current = state.selectedPieceId
+    mobileAutoConfirmRef.current = true
+    playSound('place-piece')
+    placePiece(state.hoverCell.q, state.hoverCell.r)
+  }, [state.hoverCell, ghostIsLegal, state.selectedPieceId, placePiece])
+
+  // Auto-confirm effect: fires when pendingPlacement is set by mobilePlacePiece
+  useEffect(() => {
+    if (isTouchDevice && state.pendingPlacement && mobileAutoConfirmRef.current) {
+      mobileAutoConfirmRef.current = false
+      confirmPlacement(autoAdvanceEnabled)
+    }
+  }, [state.pendingPlacement, isTouchDevice, confirmPlacement, autoAdvanceEnabled])
+
+  // Mobile: "Pick Up" button — remove last placed piece, restore ghost to placed position.
+  // Primary path: passes rehoverPieceId + rehoverCell into the REMOVE_PIECE action so the
+  // reducer does everything atomically in a single state update.
+  // The pickUpPendingRef flag activates a safety-net effect below that re-dispatches
+  // selectPiece + setHover if the ghost somehow doesn't appear (e.g., online games where
+  // removePiece emits a socket and the server response resets selectedPieceId/hoverCell).
+  const mobilePickUpPiece = useCallback(() => {
+    const savedCell = lastPlacedHoverRef.current
+    const savedPieceId = lastPlacedPieceIdRef.current
+    if (!savedPieceId || !savedCell) return
+    skipCenterOnSelectRef.current = true
+    pickUpPendingRef.current = true
+    playSound('remove-piece')
+    removePiece?.(savedPieceId, savedCell)
+  }, [removePiece])
+
+  // Safety-net effect for mobile Pick Up: if pickUpPendingRef is set but the ghost is
+  // not showing (selectedPieceId or hoverCell still null), re-dispatch them explicitly.
+  // This handles online games (where removePiece emits a socket and the server response
+  // clears selectedPieceId/hoverCell before we can restore them) and any edge case where
+  // the atomic reducer's rehover fields don't land in the rendered state.
+  useEffect(() => {
+    if (!isTouchDevice || !pickUpPendingRef.current) return
+    const savedPieceId = lastPlacedPieceIdRef.current
+    const savedCell    = lastPlacedHoverRef.current
+    if (!savedPieceId || !savedCell) { pickUpPendingRef.current = false; return }
+
+    if (state.selectedPieceId === savedPieceId && state.hoverCell) {
+      // Ghost is properly showing — clear the flag and done
+      pickUpPendingRef.current = false
+      return
+    }
+    // Ghost not showing yet — force it
+    skipCenterOnSelectRef.current = true
+    if (state.selectedPieceId !== savedPieceId) selectPiece(savedPieceId)
+    if (!state.hoverCell) setHover(savedCell)
+  }, [state.selectedPieceId, state.hoverCell, isTouchDevice, selectPiece, setHover])
+
   // Auto-advance when A is on — covers both: placement while A is already on,
   // and A being toggled on while already waiting for end turn.
   // Skip for AI players — they handle their own end-turn with a sound delay.
@@ -384,7 +531,12 @@ export default function GameScreen({
     return () => clearTimeout(autoAdvanceTimerRef.current)
   }, [autoAdvanceEnabled, state.waitingForEndTurn, currentPlayer?.isAI, endTurn])
 
-  const handleRemovePieceClick = useCallback(() => { playSound('1-select-piece'); setShowRemovePieceModal(true) }, [])
+  const handleRemovePieceClick = useCallback(() => {
+    playSound('1-select-piece')
+    // On mobile, use mobilePickUpPiece so the ghost is properly restored after removal
+    if (isTouchDevice) { mobilePickUpPiece(); return }
+    setShowRemovePieceModal(true)
+  }, [isTouchDevice, mobilePickUpPiece])
   const handleConfirmRemove = useCallback(() => {
     setShowRemovePieceModal(false)
     removePiece?.()
@@ -479,57 +631,258 @@ export default function GameScreen({
     finalBoardSorted[0]?.score === finalBoardSorted[1]?.score
   ) ? finalBoardSorted.filter(p => p.score === finalBoardSorted[0].score) : null
 
+  // ── Shared board sub-tree (used in both desktop and mobile layouts) ─────────
+  const sharedBoardContent = (boardDisabledFlag) => (
+    <>
+      {showInactivityFlash && <div className={styles.inactivityOverlay} />}
+
+      {/* Score overlay */}
+      <div className={styles.scoreOverlay} aria-hidden="true">
+        {isOnline && onlineRoomCode && (
+          <div className={styles.scoreOverlayRoomCode}>#{onlineRoomCode}</div>
+        )}
+        <div className={styles.scoreOverlayScores}>
+          {players.map(p => {
+            const ci = PLAYER_COLORS[p.color]
+            return (
+              <div key={p.id} className={styles.scoreOverlayItem}>
+                <div className={styles.scoreOverlayDot} style={{ background: ci.bg, boxShadow: `0 0 5px ${ci.bg}` }} />
+                <span className={styles.scoreOverlayValue} style={{ color: ci.bg }}>
+                  <AnimatedScore value={p.score} />
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      <Board
+        boardData={state.board}
+        selectedPiece={selectedPiece}
+        hoverCell={state.hoverCell}
+        ghostCells={ghostCells}
+        ghostIsLegal={ghostIsLegal}
+        currentPlayerColor={currentPlayer?.color || null}
+        freeHoverEnabled={freeHoverEnabled}
+        onCellClick={placePiece}
+        onCellHover={setHover}
+        onBoardLeave={handleBoardLeave}
+        onMouseActivity={handleMouseActivity}
+        players={players}
+        disabled={!!boardDisabledFlag}
+        requiredStartCells={
+          state.gameModes?.requiredStart && !state.players.every(p => p.pieces.some(pc => pc.placed))
+            ? state.requiredStartCells
+            : null
+        }
+        otherPlayersGhosts={otherPlayersGhosts}
+        lastPlacedCells={state.lastPlacedCells}
+        lastPlacedPlayerId={state.lastPlacedPlayerId}
+        lastPlacedPerPlayer={lastPlacedPerPlayer}
+        enhancedColoringPlayerIds={enhancedColoringPlayerIds}
+        yourTurn={showTurnGlow}
+        onRemovePiece={
+          isMyTurn && state.waitingForEndTurn && state.lastPlacedCells && !showRemovePieceModal
+            ? handleRemovePieceClick
+            : undefined
+        }
+        onTouchRotateCW={keyRotate}
+        onTouchRotateCCW={keyRotateReverse}
+        onTouchFlip={keyFlip}
+      />
+    </>
+  )
+
+  // ── Shared final-board bar ────────────────────────────────────────────────
+  const finalBoardBar = (
+    <div className={styles.finalBoardHud}>
+      <span className={styles.gameOverLabel}>Game over</span>
+      <div className={styles.finalBoardBtns}>
+        <button className={styles.backToResultsBtn} onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); setTimeout(() => setViewingFinalBoard(false), 350) }}>
+          Back to results
+        </button>
+        {onExit && (
+          <button className={styles.finalLeaveBtn} onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); setTimeout(onExit, 350) }}>
+            Leave
+          </button>
+        )}
+        <button
+          className={styles.finalNewGameBtn}
+          onClick={(e) => { triggerBounce(e.currentTarget); playSound('something-shiny'); setTimeout(newGame, 350) }}
+        >
+          <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
+            <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1z" clipRule="evenodd"/>
+          </svg>
+          New game
+        </button>
+      </div>
+    </div>
+  )
+
+  // ── Winner banner shown between bar and board ─────────────────────────────
+  const finalBoardWinnerBanner = (
+    <div className={styles.finalBoardWinnerBanner}>
+      {finalBoardTiedWinners && finalBoardTiedWinners.length > 1 ? (
+        <span className={styles.finalTie}>
+          {finalBoardTiedWinners.map((p, i) => {
+            const ci = PLAYER_COLORS[p.color]
+            return (
+              <React.Fragment key={p.id}>
+                {i > 0 && <span className={styles.finalTieAnd}> &amp; </span>}
+                <span style={{ color: ci.bg }}>{p.name}</span>
+              </React.Fragment>
+            )
+          })}
+          {' '}tie!
+        </span>
+      ) : finalBoardWinner ? (() => {
+        const colorInfo = PLAYER_COLORS[finalBoardWinner.color]
+        return (
+          <span className={styles.finalWinner} style={{ color: colorInfo.bg }}>
+            {finalBoardWinner.name} wins!
+          </span>
+        )
+      })() : null}
+    </div>
+  )
+
+  // ── Shared modals ─────────────────────────────────────────────────────────
+  const sharedModals = (
+    <>
+      {/* Desktop-only: placement confirm modal. Mobile auto-confirms via useEffect. */}
+      {!isTouchDevice && state.pendingPlacement && selectedPiece && (
+        <PlacementConfirmModal
+          currentPlayer={currentPlayer}
+          piece={selectedPiece}
+          onConfirm={handleConfirmPlacement}
+          onCancel={cancelPlacement}
+          autoAdvanceEnabled={autoAdvanceEnabled}
+        />
+      )}
+
+      {state.showEndGameConfirm && (
+        <EndGameConfirmModal onConfirm={confirmEndGame} onCancel={cancelEndGame} />
+      )}
+
+      {state.phase === 'ended' && !viewingFinalBoard && (
+        <EndGameModal
+          players={players}
+          playerCount={playerCount}
+          onNewGame={newGame}
+          onViewBoard={() => setViewingFinalBoard(true)}
+          onLeave={onExit || null}
+          playerTimers={finalPlayerTimers}
+          moveHistory={state.moveHistory ?? []}
+          boardData={state.board}
+        />
+      )}
+
+      {noMovesPlayer && (
+        <NoMovesModal
+          player={noMovesPlayer}
+          onDismiss={noMovesPlayer?.isAI ? null : (isNoMovesPlayer ? dismissNoMoves : () => setNoMovesLocallyDismissed(true))}
+        />
+      )}
+
+      {showRemovePieceModal && (
+        <RemovePieceModal onConfirm={handleConfirmRemove} onCancel={handleCancelRemove} />
+      )}
+    </>
+  )
+
+  // ── Mobile / Tablet layout ────────────────────────────────────────────────
+  if (isTouchDevice) {
+    // On mobile: board is disabled only for end-game-confirm / no-moves modals, NOT for waitingForEndTurn
+    const mobileBoardDisabled = state.showEndGameConfirm ||
+                                (state.phase === 'ended' && viewingFinalBoard) ||
+                                !!state.noMovesModalPlayerId
+
+    const canMobilePlace  = !!state.selectedPieceId && !!state.hoverCell && ghostIsLegal && isMyTurn && !state.waitingForEndTurn
+    const canMobilePickUp = isMyTurn && state.waitingForEndTurn && !!state.lastPlacedCells && !autoAdvanceEnabled
+
+    return (
+      <div className={styles.mobileScreen}>
+        {/* ── Top bar: C, Auto Advance, Leave, End Game ────────────────────── */}
+        {viewingFinalBoard ? finalBoardBar : (
+          <MobileTopBar
+            enhancedColoring={enhancedColoring}
+            onToggleEnhancedColoring={toggleEnhancedColoring}
+            autoAdvanceEnabled={autoAdvanceEnabled}
+            onToggleAutoAdvance={toggleAutoAdvance}
+            isOnline={isOnline}
+            onExit={onExit}
+            onEndGame={requestEndGame}
+            currentPlayer={currentPlayer}
+          />
+        )}
+
+        {/* ── Winner banner (between bar and board) ────────────────────────── */}
+        {viewingFinalBoard && finalBoardWinnerBanner}
+
+        {/* ── Board area ───────────────────────────────────────────────────── */}
+        <div className={styles.mobileBoardArea} ref={boardSvgRef}>
+          {sharedBoardContent(mobileBoardDisabled)}
+        </div>
+
+        {/* ── Arrow controls bar: ← ↑ ↓ → ────────────────────────────────── */}
+        {!viewingFinalBoard && (() => {
+          const arrowsLit = !!state.selectedPieceId && isMyTurn
+          const arrows = [
+            { label: 'left',  dx: -20, dy:   0, d: 'M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z' },
+            { label: 'up',    dx:   0, dy: -20, d: 'M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z' },
+            { label: 'down',  dx:   0, dy:  20, d: 'M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 011.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' },
+            { label: 'right', dx:  20, dy:   0, d: 'M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z' },
+          ]
+          return (
+            <div className={styles.mobileArrowBar}>
+              {arrows.map(({ label, dx, dy, d }) => (
+                <button
+                  key={label}
+                  className={`${styles.mobileArrowBtn} ${!arrowsLit ? styles.mobileArrowBtnDim : ''}`}
+                  onPointerDown={e => { e.preventDefault(); if (arrowsLit) moveGhostByDelta(dx, dy) }}
+                  aria-label={`Move piece ${label}`}
+                  type="button"
+                >
+                  <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor">
+                    <path fillRule="evenodd" d={d} clipRule="evenodd"/>
+                  </svg>
+                </button>
+              ))}
+            </div>
+          )
+        })()}
+
+        {/* ── Bottom HUD (hidden when viewing final board) ─────────────────── */}
+        {!viewingFinalBoard && (
+          <MobileHUD
+            players={players}
+            currentPlayerId={currentPlayer?.id ?? null}
+            myPlayerId={myHumanId}
+            selectedPieceId={state.selectedPieceId}
+            onSelectPiece={selectPiece}
+            isMyTurn={isMyTurn}
+            onRotateCW={keyRotate}
+            onRotateCCW={keyRotateReverse}
+            onFlip={keyFlip}
+            onPlace={mobilePlacePiece}
+            canPlace={canMobilePlace}
+            placeColor={canMobilePlace && currentPlayer ? PLAYER_COLORS[currentPlayer.color].bg : null}
+            onPickUp={mobilePickUpPiece}
+            canPickUp={canMobilePickUp}
+            onEndTurn={endTurn}
+            showEndTurn={!autoAdvanceEnabled && isMyTurn && !!state.waitingForEndTurn && !currentPlayer?.isAI}
+          />
+        )}
+
+        {sharedModals}
+      </div>
+    )
+  }
+
+  // ── Desktop layout (unchanged) ────────────────────────────────────────────
   return (
     <div className={styles.screen}>
-      {viewingFinalBoard ? (
-        <div className={styles.finalBoardHud}>
-          <div className={styles.finalBoardLeft}>
-            <span className={styles.gameOverLabel}>Game over</span>
-          </div>
-          <div className={styles.finalBoardCenter}>
-            {finalBoardTiedWinners && finalBoardTiedWinners.length > 1 ? (
-              <span className={styles.finalTie}>
-                {finalBoardTiedWinners.map((p, i) => {
-                  const ci = PLAYER_COLORS[p.color]
-                  return (
-                    <React.Fragment key={p.id}>
-                      {i > 0 && <span className={styles.finalTieAnd}> &amp; </span>}
-                      <span style={{ color: ci.bg }}>{p.name}</span>
-                    </React.Fragment>
-                  )
-                })}
-                {' '}tie!
-              </span>
-            ) : finalBoardWinner ? (() => {
-              const colorInfo = PLAYER_COLORS[finalBoardWinner.color]
-              return (
-                <span className={styles.finalWinner} style={{ color: colorInfo.bg }}>
-                  {finalBoardWinner.name} wins!
-                </span>
-              )
-            })() : null}
-          </div>
-          <div className={styles.finalBoardRight}>
-            <button className={styles.backToResultsBtn} onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); setTimeout(() => setViewingFinalBoard(false), 350) }}>
-              Back to results
-            </button>
-            {onExit && (
-              <button className={styles.finalLeaveBtn} onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); setTimeout(onExit, 350) }}>
-                Leave
-              </button>
-            )}
-            <button
-              className={styles.finalNewGameBtn}
-              onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); setTimeout(newGame, 350) }}
-            >
-              <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
-                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1z" clipRule="evenodd"/>
-              </svg>
-              New game
-            </button>
-          </div>
-        </div>
-      ) : (
+      {viewingFinalBoard ? finalBoardBar : (
         <HUD
           currentPlayer={currentPlayer}
           onToggleEnhancedColoring={toggleEnhancedColoring}
@@ -550,6 +903,8 @@ export default function GameScreen({
           bounceRef={hudBounceRef}
         />
       )}
+
+      {viewingFinalBoard && finalBoardWinnerBanner}
 
       <div className={styles.playArea}>
         <div className={styles.sidebar}>
@@ -572,59 +927,7 @@ export default function GameScreen({
         </div>
 
         <div className={styles.boardArea}>
-          {showInactivityFlash && <div className={styles.inactivityOverlay} />}
-
-          {/* Score overlay — floats at the top of the board area */}
-          <div className={styles.scoreOverlay} aria-hidden="true">
-            {isOnline && onlineRoomCode && (
-              <div className={styles.scoreOverlayRoomCode}>#{onlineRoomCode}</div>
-            )}
-            <div className={styles.scoreOverlayScores}>
-              {players.map(p => {
-                const ci = PLAYER_COLORS[p.color]
-                return (
-                  <div key={p.id} className={styles.scoreOverlayItem}>
-                    <div className={styles.scoreOverlayDot} style={{ background: ci.bg, boxShadow: `0 0 5px ${ci.bg}` }} />
-                    <span className={styles.scoreOverlayValue} style={{ color: ci.bg }}>
-                      <AnimatedScore value={p.score} />
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          <Board
-            boardData={state.board}
-            selectedPiece={selectedPiece}
-            hoverCell={state.hoverCell}
-            ghostCells={ghostCells}
-            ghostIsLegal={ghostIsLegal}
-            currentPlayerColor={currentPlayer?.color || null}
-            freeHoverEnabled={freeHoverEnabled}
-            onCellClick={placePiece}
-            onCellHover={setHover}
-            onBoardLeave={handleBoardLeave}
-            onMouseActivity={handleMouseActivity}
-            players={players}
-            disabled={!!boardDisabled}
-            requiredStartCells={
-              state.gameModes?.requiredStart && !state.players.every(p => p.pieces.some(pc => pc.placed))
-                ? state.requiredStartCells
-                : null
-            }
-            otherPlayersGhosts={otherPlayersGhosts}
-            lastPlacedCells={state.lastPlacedCells}
-            lastPlacedPlayerId={state.lastPlacedPlayerId}
-            lastPlacedPerPlayer={lastPlacedPerPlayer}
-            enhancedColoringPlayerIds={enhancedColoringPlayerIds}
-            yourTurn={showTurnGlow}
-            onRemovePiece={
-              isMyTurn && state.waitingForEndTurn && state.lastPlacedCells && !showRemovePieceModal
-                ? handleRemovePieceClick
-                : undefined
-            }
-          />
+          {sharedBoardContent(boardDisabled)}
         </div>
 
         <div className={styles.sidebar}>
@@ -666,45 +969,7 @@ export default function GameScreen({
         />
       )}
 
-      {/* Modals */}
-      {state.pendingPlacement && selectedPiece && (
-        <PlacementConfirmModal
-          currentPlayer={currentPlayer}
-          piece={selectedPiece}
-          onConfirm={handleConfirmPlacement}
-          onCancel={cancelPlacement}
-          autoAdvanceEnabled={autoAdvanceEnabled}
-        />
-      )}
-
-      {state.showEndGameConfirm && (
-        <EndGameConfirmModal onConfirm={confirmEndGame} onCancel={cancelEndGame} />
-      )}
-
-      {state.phase === 'ended' && !viewingFinalBoard && (
-        <EndGameModal
-          players={players}
-          playerCount={playerCount}
-          onNewGame={newGame}
-          onViewBoard={() => setViewingFinalBoard(true)}
-          onClose={() => setViewingFinalBoard(true)}
-          onLeave={onExit || null}
-          playerTimers={finalPlayerTimers}
-          moveHistory={state.moveHistory ?? []}
-          boardData={state.board}
-        />
-      )}
-
-      {noMovesPlayer && (
-        <NoMovesModal
-          player={noMovesPlayer}
-          onDismiss={noMovesPlayer?.isAI ? null : (isNoMovesPlayer ? dismissNoMoves : () => setNoMovesLocallyDismissed(true))}
-        />
-      )}
-
-      {showRemovePieceModal && (
-        <RemovePieceModal onConfirm={handleConfirmRemove} onCancel={handleCancelRemove} />
-      )}
+      {sharedModals}
     </div>
   )
 }

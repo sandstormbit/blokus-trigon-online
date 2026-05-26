@@ -9,7 +9,7 @@ function triggerBounce(el) {
   el.classList.add('btn-bounce')
 }
 
-export default function Modal({ title, children, onClose, wide, headerActions }) {
+export default function Modal({ title, children, onClose, wide, headerActions, mobileFull }) {
   const closeBtnRef = useRef()
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export default function Modal({ title, children, onClose, wide, headerActions })
 
   return (
     <div className={styles.overlay} onClick={(e) => { if (e.target === e.currentTarget && onClose) { playSound('2-deselect-piece'); onClose() } }}>
-      <div className={`${styles.modal} ${wide ? styles.wide : ''} animate-fadeInScale`}>
+      <div className={`${styles.modal} ${wide ? styles.wide : ''} ${mobileFull ? styles.mobileFull : ''} animate-fadeInScale`}>
         {title && (
           <div className={styles.header}>
             <h2 className={styles.title}>{title}</h2>
@@ -42,7 +42,7 @@ export default function Modal({ title, children, onClose, wide, headerActions })
             </div>
           </div>
         )}
-        <div className={styles.body}>
+        <div className={`${styles.body} ${mobileFull ? styles.mobileFullBody : ''}`}>
           {children}
         </div>
       </div>

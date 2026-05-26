@@ -36,18 +36,15 @@
 /* Final board HUD bar (shown instead of HUD when viewing board after game over) */
 .finalBoardHud {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 0 16px;
-  height: 56px;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
   z-index: 10;
-}
-
-.finalBoardLeft {
-  flex: 0 0 200px;
 }
 
 .gameOverLabel {
@@ -56,27 +53,33 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-muted);
+  text-align: center;
 }
 
-.finalBoardCenter {
-  flex: 1;
+.finalBoardBtns {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.finalBoardWinnerBanner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  z-index: 10;
+  text-align: center;
 }
 
 .finalWinner {
   font-family: var(--font-display);
   font-size: 15px;
   font-weight: 700;
-}
-
-.finalBoardRight {
-  flex: 0 0 200px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
 }
 
 .backToResultsBtn {
@@ -231,6 +234,204 @@
   z-index: 0;
 }
 
+/* ─── Mobile / Tablet layout ──────────────────────────────────────────────── */
+
+/**
+ * The mobile screen is a full-viewport flex column:
+ *   MobileTopBar (fixed height)
+ *   Board area   (flex: 1 — all remaining space)
+ *   MobileHUD    (fixed height, pinned to bottom)
+ */
+.mobileScreen {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh; /* dynamic viewport height — accounts for browser chrome */
+  overflow: hidden;
+  background: var(--bg-base);
+  position: relative;
+}
+
+/**
+ * Board area: fills all space between top bar and bottom HUD.
+ * position: relative so arrow controls can be absolutely positioned inside.
+ */
+.mobileBoardArea {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 30px 0 0; /* top clears score overlay; no side padding for max board width */
+  position: relative;
+  background: radial-gradient(ellipse 70% 70% at 50% 50%, rgba(59,130,246,0.03) 0%, transparent 70%);
+}
+
+/* Landscape: reduce vertical padding to give the board more room */
+@media (orientation: landscape) and (max-height: 500px) {
+  .mobileBoardArea {
+    padding: 20px 0 0;
+  }
+}
+
+/**
+ * Action bar — sits between the board area and the bottom HUD.
+ * Contains: [Place]  [Pick Up]  [End Turn]
+ */
+.mobileActionBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  z-index: 16;
+}
+
+.mobileActionBar button {
+  height: 38px;
+  padding: 0 18px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid transparent;
+  min-width: 80px;
+  transition: background 0.12s, border-color 0.12s, opacity 0.12s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.mobilePlaceBtn {
+  background: var(--place-color, var(--accent-blue));
+  color: #fff;
+  border-color: transparent !important;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--place-color, var(--accent-blue)) 40%, transparent);
+}
+
+.mobilePlaceBtn:active:not(:disabled) {
+  filter: brightness(1.15);
+}
+
+.mobilePlaceBtnDisabled {
+  background: rgba(255, 255, 255, 0.07) !important;
+  color: rgba(255, 255, 255, 0.3) !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+}
+
+.mobilePickUpBtn {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: var(--text-primary);
+}
+
+.mobilePickUpBtn:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.mobilePickUpBtnDisabled {
+  opacity: 0.3;
+  cursor: not-allowed !important;
+}
+
+.mobileEndTurnBtn {
+  background: rgba(34, 197, 94, 0.13);
+  border-color: rgba(34, 197, 94, 0.32) !important;
+  color: #4ADE80;
+}
+
+.mobileEndTurnBtn:active {
+  background: rgba(34, 197, 94, 0.22);
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .mobileActionBar {
+    padding: 4px 10px;
+    gap: 6px;
+  }
+  .mobileActionBar button {
+    height: 32px;
+    font-size: 12px;
+    padding: 0 12px;
+    min-width: 64px;
+  }
+}
+
+/* ─── Mobile arrow bar (← ↑ ↓ →) between board and HUD ─────────────────── */
+.mobileArrowBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 8px 14px; /* extra bottom padding separates arrows from HUD top */
+  flex-shrink: 0;
+}
+
+.mobileArrowBtn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+
+.mobileArrowBtn:active {
+  background: rgba(59, 130, 246, 0.25);
+  border-color: rgba(59, 130, 246, 0.5);
+  color: #93C5FD;
+}
+
+.mobileArrowBtnDim {
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .mobileArrowBar {
+    padding: 4px 8px;
+    gap: 8px;
+  }
+  .mobileArrowBtn {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* ─── Mobile: final board bar adapts to narrow screens ──────────────────── */
+@media (pointer: coarse) {
+  .finalBoardHud {
+    padding: 6px 12px;
+    gap: 5px;
+  }
+  .finalBoardBtns {
+    gap: 5px;
+  }
+  .backToResultsBtn,
+  .finalLeaveBtn,
+  .finalNewGameBtn,
+  .finalAnotherGameBtnWaiting {
+    font-size: 11px;
+    padding: 5px 9px;
+  }
+  .finalBoardWinnerBanner {
+    padding: 5px 12px;
+  }
+}
+
 /* Final board tie display */
 .finalTie {
   font-family: var(--font-display);
@@ -241,4 +442,65 @@
 .finalTieAnd {
   color: var(--text-muted);
   font-weight: 400;
+}
+
+/* ─── Tablet scaling ────────────────────────────────────────────────────── */
+@media (pointer: coarse) and (min-width: 768px) {
+  .mobileActionBar {
+    gap: 12px;
+    padding: 10px 20px;
+  }
+
+  .mobileActionBar button {
+    height: 52px;
+    font-size: 16px;
+    padding: 0 28px;
+    min-width: 110px;
+    border-radius: 10px;
+  }
+
+  .mobileArrowBar {
+    gap: 14px;
+    padding: 12px 8px 18px;
+  }
+
+  .mobileArrowBtn {
+    width: 58px;
+    height: 58px;
+  }
+
+  .scoreOverlayValue {
+    font-size: 18px;
+  }
+
+  .scoreOverlayDot {
+    width: 10px;
+    height: 10px;
+  }
+
+  .scoreOverlayRoomCode {
+    font-size: 12px;
+  }
+
+  .finalBoardHud {
+    padding: 10px 24px;
+    gap: 8px;
+  }
+
+  .backToResultsBtn,
+  .finalLeaveBtn,
+  .finalNewGameBtn,
+  .finalAnotherGameBtnWaiting {
+    font-size: 14px;
+    padding: 8px 16px;
+  }
+
+  .finalWinner,
+  .finalTie {
+    font-size: 20px;
+  }
+
+  .gameOverLabel {
+    font-size: 11px;
+  }
 }

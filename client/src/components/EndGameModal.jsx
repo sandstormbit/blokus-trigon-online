@@ -163,7 +163,7 @@ export default function EndGameModal({ players, playerCount, onNewGame, onViewBo
   ) : null
 
   return (
-    <Modal title="Game over" wide onClose={onClose} headerActions={headerActions}>
+    <Modal title="Game over" wide mobileFull onClose={onClose} headerActions={headerActions}>
       {/* Winner announcement */}
       <div className={styles.winnerBanner}>
         {isTie ? (
@@ -184,13 +184,15 @@ export default function EndGameModal({ players, playerCount, onNewGame, onViewBo
           </>
         ) : (
           <>
-            <div className={styles.crownIcon} style={{ color: PLAYER_COLORS[winnerPrimaryColor].bg }}>
-              <CrownIcon />
+            <div className={styles.winnerHeadline}>
+              <span className={styles.crownIcon} style={{ color: PLAYER_COLORS[winnerPrimaryColor].bg }}>
+                <CrownIcon />
+              </span>
+              <span className={styles.winnerName} style={{ color: PLAYER_COLORS[winnerPrimaryColor].bg }}>
+                {winner.name}
+              </span>
+              <span className={styles.winnerLabel}>wins!</span>
             </div>
-            <div className={styles.winnerName} style={{ color: PLAYER_COLORS[winnerPrimaryColor].bg }}>
-              {winner.name}
-            </div>
-            <div className={styles.winnerLabel}>wins!</div>
             <div className={styles.winnerScore}>
               {winner.score === 0
                 ? 'Placed all pieces — perfect score!'

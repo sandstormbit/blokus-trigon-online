@@ -69,3 +69,34 @@
 .body {
   padding: 16px 24px 20px;
 }
+
+/* ─── Mobile full-height sheet ───────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .overlay {
+    padding: 8px;
+  }
+
+  /* Modal: cap at viewport height, but size naturally to content */
+  .mobileFull {
+    max-height: calc(100dvh - 16px);
+    /* No fixed height — modal shrinks to content on tall phones */
+    max-width:  100%;
+    display:    flex;
+    flex-direction: column;
+    border-radius: 16px;
+  }
+
+  /* Body scrolls only if content overflows (e.g. very small phones) */
+  .mobileFullBody {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display:  flex;
+    flex-direction: column;
+    padding:  10px 14px 12px;
+  }
+
+  /* Tighter header padding so the title row doesn't consume too much height */
+  .mobileFull .header {
+    padding: 14px 16px 0;
+  }
+}

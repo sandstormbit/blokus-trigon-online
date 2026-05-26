@@ -402,9 +402,13 @@ function gameReducer(state, action) {
 
     case ACTIONS.REMOVE_PIECE: {
       // Remove the last placed piece from the board, returning it to the player's hand.
+      // Optional payload: { rehoverPieceId, rehoverCell } — when provided (mobile Pick Up),
+      // the piece is immediately re-selected and the ghost is restored to the saved position
+      // in a single atomic state update, avoiding any batching / intermediate-render issues.
       if (!state.waitingForEndTurn || !state.lastPlacedCells || !state.lastPlacedPieceId) return state
 
       const playerIdx = state.currentPlayerIndex
+      const { rehoverPieceId = null, rehoverCell = null } = action.payload ?? {}
 
       // Restore board cells
       const newBoardCells = { ...state.board.cells }
@@ -429,8 +433,8 @@ function gameReducer(state, action) {
         board: newBoard,
         players: newPlayers,
         waitingForEndTurn: false,
-        selectedPieceId: null,
-        hoverCell: null,
+        selectedPieceId: rehoverPieceId,
+        hoverCell: rehoverCell,
         pendingPlacement: null,
         lastPlacedCells: null,
         lastPlacedPlayerId: null,
@@ -589,7 +593,7 @@ export function useGameState() {
   const cancelPlacement  = useCallback(() => dispatch({ type: ACTIONS.CANCEL_PLACEMENT }), [])
   const dismissNoMoves   = useCallback(() => dispatch({ type: ACTIONS.DISMISS_NO_MOVES }), [])
   const confirmSkip      = useCallback(() => dispatch({ type: ACTIONS.CONFIRM_SKIP }), [])
-  const removePiece      = useCallback(() => dispatch({ type: ACTIONS.REMOVE_PIECE }), [])
+  const removePiece      = useCallback((rehoverPieceId, rehoverCell) => dispatch({ type: ACTIONS.REMOVE_PIECE, payload: { rehoverPieceId: rehoverPieceId ?? null, rehoverCell: rehoverCell ?? null } }), [])
   const endTurn          = useCallback(() => dispatch({ type: ACTIONS.END_TURN }), [])
   const requestEndGame   = useCallback(() => dispatch({ type: ACTIONS.END_GAME }), [])
   const confirmEndGame   = useCallback(() => dispatch({ type: ACTIONS.CONFIRM_END_GAME }), [])

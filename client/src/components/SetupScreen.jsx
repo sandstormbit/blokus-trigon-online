@@ -3,6 +3,7 @@ import { PLAYER_COLORS, COLOR_KEYS } from '../hooks/useGameState.js'
 import { GAME_MODES } from '../game/gameModes.js'
 import styles from './SetupScreen.module.css'
 import { playSound } from '../utils/sounds.js'
+import { useDeviceType } from '../hooks/useDeviceType.js'
 
 function triggerBounce(el) {
   if (!el) return
@@ -44,6 +45,7 @@ function generateAIName() {
 }
 
 export default function SetupScreen({ onStart, onBack }) {
+  const { isTouchDevice } = useDeviceType()
   const [playerCount, setPlayerCount] = useState(4)  // drives button active state (immediate)
   const [shownCount, setShownCount] = useState(4)    // drives player list rendering (animated)
   const [hiding, setHiding] = useState(false)        // true during the fade-out phase
@@ -60,6 +62,24 @@ export default function SetupScreen({ onStart, onBack }) {
   const [shownMegaColors, setShownMegaColors] = useState(false) // drives layout (animated)
   const playerContentRef = useRef(null)
   const isFirstMount = useRef(true)
+
+  // Mobile 2-page swipe state
+  const [mobileSetupPage, setMobileSetupPage] = useState(0)
+  const mobileSwipeRef = useRef({ startX: 0, startY: 0, active: false })
+
+  const handleMobileSwipeStart = (e) => {
+    if (e.touches.length !== 1) return
+    mobileSwipeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, active: true }
+  }
+  const handleMobileSwipeEnd = (e) => {
+    if (!mobileSwipeRef.current.active || e.changedTouches.length !== 1) return
+    const dx = e.changedTouches[0].clientX - mobileSwipeRef.current.startX
+    const dy = Math.abs(e.changedTouches[0].clientY - mobileSwipeRef.current.startY)
+    mobileSwipeRef.current.active = false
+    if (Math.abs(dx) < 50 || dy > Math.abs(dx)) return
+    if (dx < 0) { playSound('home-lobby'); setMobileSetupPage(1) }
+    else { playSound('home-lobby'); setMobileSetupPage(0) }
+  }
 
   const updateName = (idx, name) => {
     const updated = [...playerNames]
@@ -241,6 +261,285 @@ export default function SetupScreen({ onStart, onBack }) {
 
   const boardSize = shownCount === 3 ? 384 : 486
 
+  // ── Shared header content (for mobile bar) ────────────────────────────────
+  const headerInnerContent = (
+    <>
+      <div className={styles.logoMark}>
+        <svg viewBox="-6 -6 72 64" width="36" height="32" overflow="visible">
+          <polygon points="30,4 56,48 4,48" fill="none" stroke="#3B82F6" strokeWidth="2.5" strokeLinejoin="round"/>
+          <polygon points="30,16 46,44 14,44" fill="rgba(59,130,246,0.2)" stroke="#3B82F6" strokeWidth="1.5" strokeLinejoin="round"/>
+        </svg>
+      </div>
+      <div className={styles.brand}>
+        <h1 className={styles.title}>Blokus Trigon</h1>
+        <p className={styles.subtitle}>Local Game</p>
+      </div>
+      {onBack ? (
+        <button
+          className={styles.backBtn}
+          onClick={(e) => { triggerBounce(e.currentTarget); playSound('deselect-cancel-home'); setTimeout(onBack, 350) }}
+          title="Back to main menu"
+          type="button"
+        >
+          <svg viewBox="0 0 20 20" width="16" height="16" fill="none">
+            <path d="M7 3H4a1 1 0 00-1 1v12a1 1 0 001 1h3M10 10H17M17 10l-3-3M17 10l-3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Leave
+        </button>
+      ) : null}
+    </>
+  )
+
+  // ── Shared game modes JSX ──────────────────────────────────────────────────
+  const sharedModesContent = (
+    <div className={styles.modesCard}>
+      <label className={styles.sectionLabel}>Game modes</label>
+      <p className={styles.modesHint}>Toggle modes before the game starts.</p>
+      <div className={styles.modesList}>
+        {GAME_MODES.map(mode => {
+          const available = mode.availability === 'all' ||
+            (mode.availability === '2p-only' && playerCount === 2)
+          const active = gameModes[mode.id] && available
+          return (
+            <button
+              key={mode.id}
+              className={`${styles.modeToggle} ${active ? styles.modeToggleActive : ''} ${!available ? styles.modeToggleDisabled : ''}`}
+              onClick={(e) => {
+                if (!available) return
+                triggerBounceInline(e.currentTarget)
+                playSound(active ? '2-game-modes' : '1-game-modes')
+                if (mode.id === 'megaColors' && shownCount === 2) handleMegaColorsToggle()
+                else toggleMode(mode.id)
+              }}
+              disabled={!available}
+              type="button"
+              data-no-bounce
+            >
+              <div className={`${styles.modeToggleCheck} ${active ? styles.modeToggleCheckActive : ''}`}>
+                {active && (
+                  <svg viewBox="0 0 10 8" width="9" height="9" fill="none">
+                    <path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+              <div className={styles.modeToggleBody}>
+                <div className={styles.modeToggleNameRow}>
+                  <span className={styles.modeToggleName}>{mode.name}</span>
+                  {mode.availability === '2p-only' && (
+                    <span className={styles.modeBadge}>2p only</span>
+                  )}
+                </div>
+                <div className={styles.modeToggleDesc}>{mode.description}</div>
+              </div>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+
+  // ── Mobile layout (2-page swipe) ───────────────────────────────────────────
+  if (isTouchDevice) {
+    return (
+      <div
+        className={styles.mobileContainer}
+        onTouchStart={handleMobileSwipeStart}
+        onTouchEnd={handleMobileSwipeEnd}
+      >
+        <div className={styles.backdrop} />
+        <div className={styles.mobileHeader}>
+          {headerInnerContent}
+        </div>
+
+        {/* Dots indicator */}
+        <div className={styles.mobilePanelIndicator}>
+          <button
+            className={`${styles.indicatorDot} ${mobileSetupPage === 0 ? styles.indicatorDotActive : ''}`}
+            onClick={() => { playSound('home-lobby'); setMobileSetupPage(0) }}
+            aria-label="Setup panel"
+            type="button"
+          />
+          <button
+            className={`${styles.indicatorDot} ${mobileSetupPage === 1 ? styles.indicatorDotActive : ''}`}
+            onClick={() => { playSound('home-lobby'); setMobileSetupPage(1) }}
+            aria-label="Game Modes panel"
+            type="button"
+          />
+        </div>
+
+        {/* Sliding panels */}
+        <div className={styles.mobilePanelsTrack} style={{ transform: `translateX(${mobileSetupPage === 0 ? '0' : '-100vw'})` }}>
+          {/* Panel 0: Setup */}
+          <div className={styles.mobilePanel}>
+            <div className={styles.mobilePanelScroll}>
+              {/* Player count */}
+              <div className={`${styles.section} ${styles.sectionPlayerCount}`}>
+                <label className={styles.sectionLabel}>Number of players</label>
+                <div className={styles.countSelector}>
+                  {PLAYER_COUNT_OPTIONS.map(n => (
+                    <button
+                      key={n}
+                      className={`${styles.countBtn} ${playerCount === n ? styles.countBtnActive : ''}`}
+                      onClick={() => { playSound('home-lobby'); handleCountChange(n) }}
+                    >
+                      <span className={styles.countNum}>{n}</span>
+                      <span className={styles.countLabel}>players</span>
+                      <span className={styles.boardTag}>{n === 3 ? '384' : '486'} tiles</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Animated player list */}
+              <div ref={playerContentRef} className={styles.playerContentOuter}>
+                <div
+                  key={`${shownCount}-${shownMegaColors}`}
+                  className={`${styles.playerContent} ${hiding ? styles.playerContentOut : ''}`}
+                >
+                  <div className={styles.section}>
+                    <label className={styles.sectionLabel}>Players</label>
+                    <div className={styles.playerList}>
+                      {shownCount === 2 && shownMegaColors ? (
+                        [0, 1].map(humanIdx => {
+                          const isAI = playerAI[humanIdx]?.isAI
+                          return (
+                            <div key={humanIdx} className={styles.playerRow}>
+                              <div className={styles.playerNumber} style={{ background: PLAYER_COLORS[slotColor(humanIdx)].bg + '22', borderColor: PLAYER_COLORS[slotColor(humanIdx)].bg }}>
+                                <span style={{ color: PLAYER_COLORS[slotColor(humanIdx)].bg }}>{humanIdx + 1}</span>
+                              </div>
+                              {isAI ? (
+                                <span className={styles.aiLabel}>
+                                  <span className={styles.aiLabelName}>{playerNames[humanIdx] || AI_LABELS[playerAI[humanIdx].difficulty]}</span>
+                                  <span className={styles.aiDiffBadge}>{playerAI[humanIdx].difficulty === 'hard' ? 'Hard' : 'Normal'}</span>
+                                </span>
+                              ) : (
+                                <input className={styles.nameInput} placeholder={`Player ${humanIdx + 1}`} value={playerNames[humanIdx]} onChange={e => updateName(humanIdx, e.target.value)} maxLength={16}/>
+                              )}
+                              <button className={`${styles.aiToggle} ${isAI ? styles.aiToggleActive : ''}`} onClick={() => { playSound('home-lobby'); cycleAI(humanIdx) }} type="button">AI</button>
+                              <div className={styles.colorPicker} style={{ pointerEvents: isAI ? 'none' : 'auto' }}>
+                                {COLOR_KEYS.map(colorKey => {
+                                  const isUsed = [0, 1].some(i => playerColors[i] === colorKey && i !== humanIdx)
+                                  const isSelected = playerColors[humanIdx] === colorKey
+                                  return <button key={colorKey} className={`${styles.colorSwatch} ${isSelected ? styles.colorSwatchSelected : ''} ${isUsed ? styles.colorSwatchUsed : ''}`} style={{ background: PLAYER_COLORS[colorKey].bg }} onClick={() => { playSound('home-lobby'); updateColor(humanIdx, colorKey) }} title={PLAYER_COLORS[colorKey].label} disabled={isUsed || isAI}/>
+                                })}
+                              </div>
+                            </div>
+                          )
+                        })
+                      ) : shownCount === 2 ? (
+                        [0, 1].map(humanIdx => {
+                          const isAI = playerAI[humanIdx]?.isAI
+                          return (
+                            <div key={humanIdx} className={styles.twoPlayerGroup}>
+                              <div className={styles.twoPlayerHeader}>
+                                <div className={styles.playerNumber} style={{ background: PLAYER_COLORS[slotColor(humanIdx * 2)].bg + '22', borderColor: PLAYER_COLORS[slotColor(humanIdx * 2)].bg }}>
+                                  <span style={{ color: PLAYER_COLORS[slotColor(humanIdx * 2)].bg }}>{humanIdx + 1}</span>
+                                </div>
+                                {isAI ? (
+                                  <span className={styles.aiLabel}>
+                                    <span className={styles.aiLabelName}>{playerNames[humanIdx] || AI_LABELS[playerAI[humanIdx].difficulty]}</span>
+                                    <span className={styles.aiDiffBadge}>{playerAI[humanIdx].difficulty === 'hard' ? 'Hard' : 'Normal'}</span>
+                                  </span>
+                                ) : (
+                                  <input className={styles.nameInput} placeholder={`Player ${humanIdx + 1}`} value={playerNames[humanIdx]} onChange={e => updateName(humanIdx, e.target.value)} maxLength={16}/>
+                                )}
+                                <button className={`${styles.aiToggle} ${isAI ? styles.aiToggleActive : ''}`} onClick={() => { playSound('home-lobby'); cycleAI(humanIdx) }} type="button">AI</button>
+                              </div>
+                              <div className={styles.twoPlayerColors}>
+                                {[0, 1].map(setIdx => {
+                                  const slotIdx = humanIdx * 2 + setIdx
+                                  return (
+                                    <div key={setIdx} className={styles.twoPlayerColorRow}>
+                                      <span className={styles.colorSetLabel}>Set {setIdx + 1}</span>
+                                      <div className={styles.colorPicker} style={{ pointerEvents: isAI ? 'none' : 'auto' }}>
+                                        {COLOR_KEYS.map(colorKey => {
+                                          const isUsed = playerColors.slice(0, 4).some((c, i) => c === colorKey && i !== slotIdx)
+                                          const isSelected = playerColors[slotIdx] === colorKey
+                                          return <button key={colorKey} className={`${styles.colorSwatch} ${isSelected ? styles.colorSwatchSelected : ''} ${isUsed ? styles.colorSwatchUsed : ''}`} style={{ background: PLAYER_COLORS[colorKey].bg }} onClick={() => { playSound('home-lobby'); updateColor(slotIdx, colorKey) }} title={PLAYER_COLORS[colorKey].label} disabled={isUsed || isAI}/>
+                                        })}
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )
+                        })
+                      ) : (
+                        Array.from({ length: shownCount }, (_, i) => {
+                          const isAI = playerAI[i]?.isAI
+                          return (
+                            <div key={i} className={styles.playerRow}>
+                              <div className={styles.playerNumber} style={{ background: PLAYER_COLORS[slotColor(i)].bg + '22', borderColor: PLAYER_COLORS[slotColor(i)].bg }}>
+                                <span style={{ color: PLAYER_COLORS[slotColor(i)].bg }}>{i + 1}</span>
+                              </div>
+                              {isAI ? (
+                                <span className={styles.aiLabel}>
+                                  <span className={styles.aiLabelName}>{playerNames[i] || AI_LABELS[playerAI[i].difficulty]}</span>
+                                  <span className={styles.aiDiffBadge}>{playerAI[i].difficulty === 'hard' ? 'Hard' : 'Normal'}</span>
+                                </span>
+                              ) : (
+                                <input className={styles.nameInput} placeholder={`Player ${i + 1}`} value={playerNames[i]} onChange={e => updateName(i, e.target.value)} maxLength={16}/>
+                              )}
+                              <button className={`${styles.aiToggle} ${isAI ? styles.aiToggleActive : ''}`} onClick={() => { playSound('home-lobby'); cycleAI(i) }} type="button">AI</button>
+                              <div className={styles.colorPicker} style={{ pointerEvents: isAI ? 'none' : 'auto' }}>
+                                {COLOR_KEYS.map(colorKey => {
+                                  const isUsed = playerColors.slice(0, shownCount).some((c, j) => c === colorKey && j !== i)
+                                  const isSelected = playerColors[i] === colorKey
+                                  return <button key={colorKey} className={`${styles.colorSwatch} ${isSelected ? styles.colorSwatchSelected : ''} ${isUsed ? styles.colorSwatchUsed : ''}`} style={{ background: PLAYER_COLORS[colorKey].bg }} onClick={() => { playSound('home-lobby'); updateColor(i, colorKey) }} title={PLAYER_COLORS[colorKey].label} disabled={isUsed || isAI}/>
+                                })}
+                              </div>
+                            </div>
+                          )
+                        })
+                      )}
+                    </div>
+                    {/* Board info — inside the players card, pinned to bottom */}
+                    <div className={styles.boardInfo}>
+                      <div className={styles.boardInfoIcon}>⬡</div>
+                      <div>
+                        <div className={styles.boardInfoTitle}>
+                          {shownCount === 2 ? '2-player board' : `${shownCount}-player board`} — {boardSize} triangles
+                        </div>
+                        <div className={styles.boardInfoDesc}>
+                          {shownCount === 2 && shownMegaColors
+                            ? '2 × 44 pieces per player · 1 color each · Rules enforced'
+                            : shownCount === 2
+                              ? '2 × 22 pieces per player · 4 color sets total · Rules enforced'
+                              : `22 pieces per player · Local game · Rules enforced`}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* Panel 1: Game Modes */}
+          <div className={styles.mobilePanel}>
+            <div className={styles.mobilePanelScroll}>
+              {sharedModesContent}
+            </div>
+          </div>
+        </div>
+
+        {/* Start Game — pinned below the sliding panels, always visible */}
+        <div className={styles.mobileStartBar}>
+          <button className={styles.startBtn} onClick={() => setTimeout(handleStart, 320)} disabled={!allColorsSelected}>
+            <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd"/>
+            </svg>
+            Start Game
+          </button>
+        </div>
+
+        <p className={styles.footer}>For educational purposes only. Online adaptation of Blokus Trigon by Mattel.</p>
+      </div>
+    )
+  }
+
   return (
     <div className={styles.container}>
       <div className={styles.backdrop} />
@@ -354,7 +653,7 @@ export default function SetupScreen({ onStart, onBack }) {
                       </div>
                       {isAI ? (
                         <span className={styles.aiLabel}>
-                          {playerNames[humanIdx] || AI_LABELS[playerAI[humanIdx].difficulty]}
+                          <span className={styles.aiLabelName}>{playerNames[humanIdx] || AI_LABELS[playerAI[humanIdx].difficulty]}</span>
                           <span className={styles.aiDiffBadge}>{playerAI[humanIdx].difficulty === 'hard' ? 'Hard' : 'Normal'}</span>
                         </span>
                       ) : (
@@ -413,7 +712,7 @@ export default function SetupScreen({ onStart, onBack }) {
                         </div>
                         {isAI ? (
                           <span className={styles.aiLabel}>
-                            {playerNames[humanIdx] || AI_LABELS[playerAI[humanIdx].difficulty]}
+                            <span className={styles.aiLabelName}>{playerNames[humanIdx] || AI_LABELS[playerAI[humanIdx].difficulty]}</span>
                             <span className={styles.aiDiffBadge}>{playerAI[humanIdx].difficulty === 'hard' ? 'Hard' : 'Normal'}</span>
                           </span>
                         ) : (
@@ -480,7 +779,7 @@ export default function SetupScreen({ onStart, onBack }) {
                       </div>
                       {isAI ? (
                         <span className={styles.aiLabel}>
-                          {playerNames[i] || AI_LABELS[playerAI[i].difficulty]}
+                          <span className={styles.aiLabelName}>{playerNames[i] || AI_LABELS[playerAI[i].difficulty]}</span>
                           <span className={styles.aiDiffBadge}>{playerAI[i].difficulty === 'hard' ? 'Hard' : 'Normal'}</span>
                         </span>
                       ) : (

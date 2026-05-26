@@ -1,0 +1,154 @@
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 0 8px;
+  height: 48px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  z-index: 20;
+}
+
+/* ── Left: turn dot ── */
+.left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-left: 4px;
+}
+
+.turnDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Right: settings ── */
+.right {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+/* Shared base for all buttons */
+.bar button {
+  height: 34px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.12s, border-color 0.12s, opacity 0.12s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  min-width: 44px;
+}
+
+/* ── Icon / toggle buttons ── */
+.iconBtn {
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.iconBtn:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.iconBtnActive {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.45);
+  color: #93C5FD;
+}
+
+/* ── Auto Advance toggle ── */
+.autoBtn {
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.autoBtn:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.autoBtnActive {
+  background: rgba(234, 179, 8, 0.15);
+  border-color: rgba(234, 179, 8, 0.4);
+  color: #FCD34D;
+}
+
+/* ── Leave button ── */
+.leaveBtn {
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.leaveBtn:active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* ── End Game button ── */
+.endGameBtn {
+  padding: 0 10px;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #F87171;
+}
+
+.endGameBtn:active {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* ── Landscape compaction ── */
+@media (orientation: landscape) and (max-height: 500px) {
+  .bar {
+    height: 40px;
+    padding: 0 6px;
+  }
+
+  .bar button {
+    height: 30px;
+    font-size: 11px;
+  }
+}
+
+/* ─── Tablet scaling ────────────────────────────────────────────────────── */
+@media (pointer: coarse) and (min-width: 768px) {
+  .bar {
+    height: 64px;
+    padding: 0 16px;
+    gap: 10px;
+  }
+
+  .turnDot {
+    width: 14px;
+    height: 14px;
+  }
+
+  .bar button {
+    height: 44px;
+    font-size: 15px;
+    border-radius: 8px;
+    min-width: 56px;
+  }
+
+  .iconBtn,
+  .autoBtn,
+  .leaveBtn,
+  .endGameBtn {
+    padding: 0 16px;
+  }
+}

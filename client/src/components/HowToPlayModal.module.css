@@ -15,6 +15,8 @@
   border-radius: 16px;
   width: 100%;
   max-width: 480px;
+  height: 640px;
+  max-height: calc(100dvh - 32px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -59,9 +61,28 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  height: 380px;
+  flex: 1;
+  min-height: 0;
   justify-content: flex-start;
-  overflow-y: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (pointer: coarse) {
+  .overlay {
+    padding: 8px;
+  }
+  .modal {
+    max-height: calc(100dvh - 16px);
+    display: flex;
+    flex-direction: column;
+  }
+  .content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 .title {
