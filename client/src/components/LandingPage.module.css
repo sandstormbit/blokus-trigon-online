@@ -125,8 +125,8 @@
   text-align: center;
 }
 
-/* ── iPad / large tablet scaling ─── */
-@media (min-width: 768px) and (pointer: coarse) {
+/* ── iPad / large tablet scaling — home page only ─── */
+@media (min-width: 600px) and (pointer: coarse) {
   .container {
     gap: 52px;
   }
@@ -146,117 +146,8 @@
   }
   .actionBtn {
     padding: 18px 28px;
-    font-size: 18px;
+    font-size: 20px;
     border-radius: 14px;
-  }
-
-  /* Modal (Create Game / Join Game) */
-  .overlay {
-    padding: 24px;
-  }
-  .modalCard {
-    max-width: 740px;
-    border-radius: 36px;
-  }
-  .modalHeader {
-    padding: 48px 66px;
-  }
-  .modalTitle {
-    font-size: 45px;
-  }
-  .modalClose svg {
-    width: 36px;
-    height: 36px;
-  }
-  .modalBody {
-    padding: 54px 66px;
-    gap: 42px;
-    max-height: 80vh;
-  }
-  .modalFooter {
-    padding: 42px 66px;
-    gap: 24px;
-  }
-  .formLabel {
-    font-size: 24px;
-    letter-spacing: 0.1em;
-    margin-bottom: 21px;
-  }
-  .formInput {
-    padding: 27px 33px;
-    font-size: 33px;
-    border-radius: 18px;
-  }
-  .codeInput {
-    font-size: 51px;
-    letter-spacing: 0.25em;
-  }
-  .countRow {
-    gap: 24px;
-  }
-  .countBtn {
-    padding: 33px;
-    font-size: 39px;
-    border-radius: 21px;
-  }
-  .modeRow {
-    gap: 24px;
-  }
-  .modeBtn {
-    padding: 33px 42px;
-    border-radius: 21px;
-  }
-  .modeBtnLabel {
-    font-size: 33px;
-    margin-bottom: 9px;
-  }
-  .modeBtnDesc {
-    font-size: 26px;
-    line-height: 1.45;
-  }
-  .modalCancelBtn {
-    padding: 30px;
-    font-size: 30px;
-    border-radius: 21px;
-  }
-  .modalPrimaryBtn {
-    padding: 30px;
-    font-size: 30px;
-    border-radius: 21px;
-  }
-  .publicRoom {
-    padding: 30px 36px;
-    border-radius: 21px;
-    gap: 27px;
-  }
-  .publicRoomCode {
-    font-size: 36px;
-  }
-  .publicRoomInfo {
-    font-size: 28px;
-  }
-  .publicRoomJoin {
-    font-size: 28px;
-    font-weight: 700;
-  }
-  .refreshBtn {
-    font-size: 26px;
-    gap: 9px;
-  }
-  .publicLoading, .publicEmpty {
-    font-size: 28px;
-    padding: 42px;
-  }
-  .publicList {
-    gap: 21px;
-  }
-  .publicSection {
-    gap: 21px;
-  }
-  .formError {
-    font-size: 26px;
-    padding: 24px 33px;
-    border-radius: 18px;
   }
 }
 
@@ -551,4 +442,115 @@
   font-size: 12px;
   color: #60A5FA;
   font-weight: 600;
+}
+
+/* ── iPad / large tablet scaling — modals (must come AFTER base modal styles) ─── */
+@media (min-width: 600px) and (pointer: coarse) {
+  .overlay {
+    padding: 16px;
+  }
+  .modalCard {
+    max-width: 580px;
+    border-radius: 20px;
+  }
+  .modalHeader {
+    padding: 26px 36px;
+  }
+  .modalTitle {
+    font-size: 24px;
+  }
+  .modalClose svg {
+    width: 22px;
+    height: 22px;
+  }
+  .modalBody {
+    padding: 28px 36px;
+    gap: 22px;
+    max-height: 80vh;
+  }
+  .modalFooter {
+    padding: 22px 36px;
+    gap: 14px;
+  }
+  .formLabel {
+    font-size: 17px;
+    letter-spacing: 0.1em;
+    margin-bottom: 12px;
+  }
+  .formInput {
+    padding: 14px 18px;
+    font-size: 18px;
+    border-radius: 10px;
+  }
+  .codeInput {
+    font-size: 28px;
+    letter-spacing: 0.25em;
+  }
+  .countRow {
+    gap: 14px;
+  }
+  .countBtn {
+    padding: 18px;
+    font-size: 22px;
+    border-radius: 12px;
+  }
+  .modeRow {
+    gap: 14px;
+  }
+  .modeBtn {
+    padding: 18px 22px;
+    border-radius: 12px;
+  }
+  .modeBtnLabel {
+    font-size: 21px;
+    margin-bottom: 5px;
+  }
+  .modeBtnDesc {
+    font-size: 17px;
+    line-height: 1.45;
+  }
+  .modalCancelBtn {
+    padding: 16px;
+    font-size: 19px;
+    border-radius: 12px;
+  }
+  .modalPrimaryBtn {
+    padding: 16px;
+    font-size: 19px;
+    border-radius: 12px;
+  }
+  .publicRoom {
+    padding: 16px 20px;
+    border-radius: 12px;
+    gap: 14px;
+  }
+  .publicRoomCode {
+    font-size: 20px;
+  }
+  .publicRoomInfo {
+    font-size: 15px;
+  }
+  .publicRoomJoin {
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .refreshBtn {
+    font-size: 14px;
+    gap: 5px;
+  }
+  .publicLoading, .publicEmpty {
+    font-size: 15px;
+    padding: 22px;
+  }
+  .publicList {
+    gap: 12px;
+  }
+  .publicSection {
+    gap: 12px;
+  }
+  .formError {
+    font-size: 14px;
+    padding: 12px 18px;
+    border-radius: 10px;
+  }
 }

@@ -860,24 +860,24 @@
 }
 
 /* ─── Tablet scaling (iPads and large touch devices) ─────────────────────── */
-@media (pointer: coarse) and (min-width: 768px) {
+@media (pointer: coarse) and (min-width: 600px) {
   .header {
     padding: 24px 40px;
   }
 
   .title {
-    font-size: 22px;
+    font-size: 26px;
   }
 
   .subtitle {
-    font-size: 14px;
+    font-size: 17px;
   }
 
   .exitBtn {
-    font-size: 15px;
-    padding: 10px 18px;
-    border-radius: 10px;
-    gap: 8px;
+    font-size: 22px;
+    padding: 14px 24px;
+    border-radius: 12px;
+    gap: 10px;
   }
 
   .mobilePanelIndicator {
@@ -975,16 +975,92 @@
   }
 
   .modeName {
-    font-size: 17px;
+    font-size: 20px;
   }
 
   .modeDesc {
-    font-size: 14px;
+    font-size: 17px;
   }
 
   .modeBadge {
-    font-size: 11px;
-    padding: 2px 7px;
+    font-size: 13px;
+    padding: 3px 8px;
+  }
+
+  /* Room code label */
+  .codeLabel {
+    font-size: 17px;
+    margin-bottom: 14px;
+  }
+
+  /* Players section label + count badge */
+  .sectionLabel {
+    font-size: 17px;
+    margin-bottom: 16px;
+  }
+
+  .playerCount {
+    font-size: 14px;
+    padding: 2px 8px;
+  }
+
+  /* Player names */
+  .playerSlotName {
+    font-size: clamp(16px, 2.5vw, 20px);
+  }
+
+  /* Waiting for player (empty slot) */
+  .playerSlotWaiting {
+    font-size: 16px;
+  }
+
+  /* Waiting for X players / waiting for host text */
+  .waitingForHost {
+    font-size: 16px;
+  }
+
+  /* Copy link button */
+  .linkBtn {
+    font-size: 15px;
+    gap: 6px;
+  }
+
+  /* You / Host / AI badges */
+  .youBadge,
+  .hostBadge,
+  .aiBadge {
+    font-size: 13px;
+    padding: 5px 14px;
+    border-radius: 5px;
+    margin-left: 10px;
+  }
+
+  /* Color swatches */
+  .colorSwatch {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* Normal / Hard difficulty cycle button */
+  .aiDiffCycleBtn {
+    font-size: 16px;
+    padding: 4px 12px;
+    border-radius: 12px;
+  }
+
+  /* Add AI button */
+  .addAIBtn {
+    height: 34px;
+    padding: 0 16px;
+    font-size: 16px;
+    border-radius: 8px;
+  }
+
+  /* Difficulty toggle (replaces <select> on iOS) */
+  .aiDiffToggleBtn {
+    height: 34px;
+    font-size: 16px;
+    padding: 0 14px;
   }
 
   /* Difficulty / Add AI buttons */

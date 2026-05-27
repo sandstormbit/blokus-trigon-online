@@ -836,7 +836,7 @@
 }
 
 /* ─── Tablet scaling (iPads and large touch devices) ─────────────────────── */
-@media (pointer: coarse) and (min-width: 768px) {
+@media (pointer: coarse) and (min-width: 600px) {
   .container {
     padding: 24px;
     gap: 20px;
@@ -863,18 +863,18 @@
   }
 
   .mobileHeader .title {
-    font-size: 22px;
+    font-size: 26px;
   }
 
   .mobileHeader .subtitle {
-    font-size: 14px;
+    font-size: 17px;
   }
 
   .backBtn {
-    font-size: 15px;
-    padding: 10px 18px;
-    border-radius: 10px;
-    gap: 8px;
+    font-size: 18px;
+    padding: 14px 24px;
+    border-radius: 12px;
+    gap: 10px;
   }
 
   .mobilePanelIndicator {
@@ -898,7 +898,7 @@
   }
 
   .sectionLabel {
-    font-size: 13px;
+    font-size: 16px;
     margin-bottom: 12px;
   }
 
@@ -1032,16 +1032,16 @@
   }
 
   .modeToggleName {
-    font-size: 17px;
+    font-size: 20px;
   }
 
   .modeToggleDesc {
-    font-size: 14px;
+    font-size: 17px;
   }
 
   .modeBadge {
-    font-size: 11px;
-    padding: 2px 7px;
+    font-size: 13px;
+    padding: 3px 8px;
   }
 
   .modesList {

@@ -211,7 +211,7 @@ export default function LandingPage({ onPassAndPlay, onCreateRoom, onJoinRoom })
 
               <label className={styles.formLabel}>Room type</label>
               <div className={styles.modeRow}>
-                {[['public', 'Public', 'Appears in the public lobby'], ['private', 'Private', 'Invite only via code']].map(([val, label, desc]) => (
+                {[['public', 'Public', 'Appears in public lobby'], ['private', 'Private', 'Invite only via code']].map(([val, label, desc]) => (
                   <button
                     key={val}
                     className={`${styles.modeBtn} ${createMode === val ? styles.modeBtnActive : ''}`}
