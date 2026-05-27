@@ -49,3 +49,22 @@
   background: rgba(239, 68, 68, 0.25);
   border-color: #EF4444;
 }
+
+@media (min-width: 768px) and (pointer: coarse) {
+  .message {
+    font-size: 20px;
+    margin-bottom: 10px;
+  }
+  .hint {
+    font-size: 16px;
+    margin-bottom: 28px;
+  }
+  .actions {
+    gap: 14px;
+  }
+  .cancelBtn, .confirmBtn {
+    height: 56px;
+    font-size: 18px;
+    border-radius: 12px;
+  }
+}

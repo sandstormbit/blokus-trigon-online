@@ -37,6 +37,7 @@ export default function MobileHUD({
   selectedPieceId,
   onSelectPiece,
   isMyTurn,
+  waitingForEndTurn,
   onRotateCW,
   onRotateCCW,
   onFlip,
@@ -113,19 +114,34 @@ export default function MobileHUD({
     setExpanded(v => !v)
   }, [])
 
+  // Stable shuffle ranks per piece id (assigned once, persist across renders)
+  const shuffleRanksRef = useRef({})
+
   // ── Piece data for the active tab ─────────────────────────────────────────
   const pieceGroups = useMemo(() => {
     if (!activePlayer) return []
     const remaining = activePlayer.pieces.filter(p => !p.placed)
+    const ranks = shuffleRanksRef.current
+    // Assign a random rank to each piece once (sizes 4+ only)
+    for (const piece of remaining) {
+      if (piece.size > 3 && !(piece.id in ranks)) {
+        ranks[piece.id] = Math.random()
+      }
+    }
     const groups = {}
     for (const piece of remaining) {
       if (!groups[piece.size]) groups[piece.size] = []
       groups[piece.size].push(piece)
     }
-    // Largest → smallest (6 down to 1)
+    // Largest → smallest (6 down to 1); shuffle within each group for size > 3
     return Object.entries(groups)
       .sort(([a], [b]) => Number(b) - Number(a))
-      .map(([size, pieces]) => ({ size: Number(size), pieces }))
+      .map(([size, pieces]) => ({
+        size: Number(size),
+        pieces: Number(size) > 3
+          ? [...pieces].sort((a, b) => (ranks[a.id] ?? 0) - (ranks[b.id] ?? 0))
+          : pieces,
+      }))
   }, [activePlayer])
 
   const totalRemaining = useMemo(
@@ -142,10 +158,10 @@ export default function MobileHUD({
   )
 
   // ── Interactability ───────────────────────────────────────────────────────
-  // The player can only select pieces on their own tab AND on their own turn
+  // The player can only select pieces on their own tab, on their own turn, and before placing
   const ownId = myPlayerId ?? currentPlayerId
   const isOwnTab = activeTabId === ownId || activeTabId === currentPlayerId
-  const canSelect = isOwnTab && isMyTurn
+  const canSelect = isOwnTab && isMyTurn && !waitingForEndTurn
 
   const colorInfo = activePlayer ? PLAYER_COLORS[activePlayer.color] : null
   const playerColor = colorInfo?.bg || 'var(--accent-blue)'
@@ -244,7 +260,7 @@ export default function MobileHUD({
         {showEndTurn && (
           <button
             className={`${styles.actionBtn} ${styles.endTurnBtnAction}`}
-            onPointerDown={e => { e.preventDefault(); onEndTurn?.() }}
+            onPointerDown={e => { e.preventDefault(); playSound('end-turn'); onEndTurn?.() }}
             type="button"
           >
             End Turn
@@ -275,7 +291,7 @@ export default function MobileHUD({
                 style={{ background: ci.bg }}
               />
               <span className={styles.tabName}>
-                {player.id === ownId ? 'You' : player.name.split(' ')[0]}
+                {player.id === ownId && !player.isAI ? 'You' : player.name.split(' ')[0]}
               </span>
             </button>
           )

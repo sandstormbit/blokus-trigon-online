@@ -70,6 +70,38 @@
   padding: 16px 24px 20px;
 }
 
+/* ─── Tablet scaling ─────────────────────────────────────────────────────── */
+@media (min-width: 768px) and (pointer: coarse) {
+  .overlay {
+    padding: 32px;
+  }
+  .modal {
+    max-width: 560px;
+    border-radius: 20px;
+  }
+  .wide {
+    max-width: 720px;
+  }
+  .header {
+    padding: 28px 36px 0;
+  }
+  .title {
+    font-size: 26px;
+  }
+  .closeBtn {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+  }
+  .closeBtn svg {
+    width: 20px;
+    height: 20px;
+  }
+  .body {
+    padding: 24px 36px 32px;
+  }
+}
+
 /* ─── Mobile full-height sheet ───────────────────────────────────────────── */
 @media (max-width: 640px) {
   .overlay {

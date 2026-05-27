@@ -256,6 +256,23 @@ export default function Board({
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
   }, [])
 
+  // On touch devices, keep the free-hover spring anchored to the current hoverCell.
+  // This ensures the glow outline stays on the ghost piece when arrow buttons move it
+  // (arrow presses update hoverCell without firing any touch/mouse events on the board).
+  useEffect(() => {
+    if (!hoverCell || !boardData || navigator.maxTouchPoints === 0) return
+    const { offsetX, offsetY } = boardData
+    const cent = triCentroid(hoverCell.q, hoverCell.r)
+    const svgX = cent.x + offsetX
+    const svgY = cent.y + offsetY
+    rawSvgPos.current = { x: svgX, y: svgY }
+    if (!isOnBoardRef.current) {
+      isOnBoardRef.current = true
+      springRef.current = { x: svgX, y: svgY, vx: 0, vy: 0 }
+      rafRef.current = requestAnimationFrame(runSpring)
+    }
+  }, [hoverCell, boardData, runSpring])
+
   const viewBox = useMemo(() => {
     if (!boardData) return '0 0 100 100'
     return getBoardViewBox(boardData)
@@ -409,13 +426,15 @@ export default function Board({
   }, [onMouseActivity, disabled, selectedPiece, svgPosToCell, onCellHover, runSpring])
 
   const handleBoardLeave = useCallback(() => {
+    // On touch devices the browser fires a synthetic mouseleave after every touch
+    // sequence. Ignore it entirely — hover state and the free-hover spring are kept
+    // alive so the outline stays visible between taps and arrow presses. Cleanup
+    // happens through React state (piece deselected, turn ended) not pointer-leave.
+    if (navigator.maxTouchPoints > 0) return
     isOnBoardRef.current = false
     rawSvgPos.current = null
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
     setFreeHoverPos(null)
-    // Suppress synthetic mouseleave fired by the browser after a touch — it would
-    // clear the hover cell and make the ghost piece disappear on mobile.
-    if (navigator.maxTouchPoints > 0) return
     onBoardLeave()
   }, [onBoardLeave])
 

@@ -363,12 +363,8 @@ export default function GameScreen({
     const idx = state.currentPlayerIndex
     if (prevCurrentPlayerIdxRef.current !== null && prevCurrentPlayerIdxRef.current !== idx) {
       const prevPlayer = playersRef.current[prevCurrentPlayerIdxRef.current]
-      const prevPlayerIsMe = !isOnline || prevPlayer?.humanId === myHumanId
-      if (!prevPlayer?.isAI && prevPlayerIsMe) {
-        playSound('end-turn')
-      }
-      // Local AI: sound played in useGameState.js before dispatch
-      // Online (other human or AI ending turn): no sound
+      // end-turn sound fires directly on button / Shift+Enter / auto-advance interaction
+      // Local AI end-turn: sound played in useGameState.js with a deliberate delay
     }
     prevCurrentPlayerIdxRef.current = idx
   }, [state.phase, state.currentPlayerIndex])
@@ -381,12 +377,15 @@ export default function GameScreen({
   const keyHover = useCallback(() => { toggleFreeHover(); controlPanelBounceRef.current?.('hover') }, [toggleFreeHover])
   const keyDeselect = useCallback(() => { deselectPiece(); controlPanelBounceRef.current?.('deselect') }, [deselectPiece])
   const keyEndTurn = useCallback(() => {
-    if (state.waitingForEndTurn && !currentPlayer?.isAI) { endTurn(); hudBounceRef.current?.('endTurn') }
+    if (state.waitingForEndTurn && !currentPlayer?.isAI) { playSound('end-turn'); endTurn(); hudBounceRef.current?.('endTurn') }
   }, [state.waitingForEndTurn, currentPlayer?.isAI, endTurn])
 
   const handleConfirmPlacement = useCallback(() => {
     confirmPlacement(autoAdvanceEnabled)
   }, [confirmPlacement, autoAdvanceEnabled])
+
+  // In local games isMyTurn is always true; block AI turns so humans can't touch AI pieces
+  const effectiveIsMyTurn = isMyTurn && !currentPlayer?.isAI
 
   // ── Mobile: center-of-board cell ─────────────────────────────────────────
   const boardCenterCell = useMemo(() => {
@@ -526,7 +525,7 @@ export default function GameScreen({
   useEffect(() => {
     clearTimeout(autoAdvanceTimerRef.current)
     if (autoAdvanceEnabled && state.waitingForEndTurn && !currentPlayer?.isAI) {
-      autoAdvanceTimerRef.current = setTimeout(endTurn, 1000)
+      autoAdvanceTimerRef.current = setTimeout(() => { playSound('end-turn'); endTurn() }, 1000)
     }
     return () => clearTimeout(autoAdvanceTimerRef.current)
   }, [autoAdvanceEnabled, state.waitingForEndTurn, currentPlayer?.isAI, endTurn])
@@ -797,8 +796,8 @@ export default function GameScreen({
                                 (state.phase === 'ended' && viewingFinalBoard) ||
                                 !!state.noMovesModalPlayerId
 
-    const canMobilePlace  = !!state.selectedPieceId && !!state.hoverCell && ghostIsLegal && isMyTurn && !state.waitingForEndTurn
-    const canMobilePickUp = isMyTurn && state.waitingForEndTurn && !!state.lastPlacedCells && !autoAdvanceEnabled
+    const canMobilePlace  = !!state.selectedPieceId && !!state.hoverCell && ghostIsLegal && effectiveIsMyTurn && !state.waitingForEndTurn
+    const canMobilePickUp = effectiveIsMyTurn && state.waitingForEndTurn && !!state.lastPlacedCells && !autoAdvanceEnabled
 
     return (
       <div className={styles.mobileScreen}>
@@ -860,7 +859,8 @@ export default function GameScreen({
             myPlayerId={myHumanId}
             selectedPieceId={state.selectedPieceId}
             onSelectPiece={selectPiece}
-            isMyTurn={isMyTurn}
+            isMyTurn={effectiveIsMyTurn}
+            waitingForEndTurn={state.waitingForEndTurn}
             onRotateCW={keyRotate}
             onRotateCCW={keyRotateReverse}
             onFlip={keyFlip}
@@ -870,7 +870,7 @@ export default function GameScreen({
             onPickUp={mobilePickUpPiece}
             canPickUp={canMobilePickUp}
             onEndTurn={endTurn}
-            showEndTurn={!autoAdvanceEnabled && isMyTurn && !!state.waitingForEndTurn && !currentPlayer?.isAI}
+            showEndTurn={!autoAdvanceEnabled && effectiveIsMyTurn && !!state.waitingForEndTurn}
           />
         )}
 
@@ -898,7 +898,7 @@ export default function GameScreen({
           waitingForEndTurn={state.waitingForEndTurn}
           playerCount={playerCount}
           isOnline={isOnline}
-          isMyTurn={isMyTurn}
+          isMyTurn={effectiveIsMyTurn}
           onExit={onExit}
           bounceRef={hudBounceRef}
         />
@@ -915,7 +915,7 @@ export default function GameScreen({
               isActive={currentPlayer?.id === player.id}
               selectedPieceId={currentPlayer?.id === player.id ? state.selectedPieceId : null}
               onSelectPiece={selectPiece}
-              disabled={currentPlayer?.id !== player.id}
+              disabled={currentPlayer?.id !== player.id || currentPlayer?.isAI}
               isSkipped={state.skippedPlayerIds.has(player.id)}
               panelRef={
                 is2pStandard
@@ -938,7 +938,7 @@ export default function GameScreen({
               isActive={currentPlayer?.id === player.id}
               selectedPieceId={currentPlayer?.id === player.id ? state.selectedPieceId : null}
               onSelectPiece={selectPiece}
-              disabled={currentPlayer?.id !== player.id}
+              disabled={currentPlayer?.id !== player.id || currentPlayer?.isAI}
               isSkipped={state.skippedPlayerIds.has(player.id)}
               panelRef={
                 is2pStandard

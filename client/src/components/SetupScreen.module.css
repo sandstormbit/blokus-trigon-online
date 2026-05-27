@@ -837,6 +837,27 @@
 
 /* ─── Tablet scaling (iPads and large touch devices) ─────────────────────── */
 @media (pointer: coarse) and (min-width: 768px) {
+  .container {
+    padding: 24px;
+    gap: 20px;
+  }
+  .wrapper {
+    max-width: 620px;
+  }
+  .wrapperOpen {
+    max-width: 940px;
+  }
+  .setupCard {
+    padding: 28px;
+  }
+  .modesCardWrapperOpen {
+    width: 300px;
+  }
+  .modesCard {
+    width: 300px;
+    padding: 24px;
+  }
+
   .mobileHeader {
     padding: 24px 40px;
   }

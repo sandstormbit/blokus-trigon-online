@@ -85,6 +85,66 @@
   }
 }
 
+/* ── Tablet scaling ─────────────────────────────────────────────────────── */
+@media (min-width: 768px) and (pointer: coarse) {
+  .overlay {
+    padding: 24px;
+  }
+  .modal {
+    max-width: 740px;
+    height: calc(100dvh - 48px);
+    border-radius: 32px;
+  }
+  .header {
+    padding: 36px 54px;
+  }
+  .headerTitle {
+    font-size: 30px;
+    letter-spacing: 0.1em;
+  }
+  .closeBtn {
+    padding: 9px;
+  }
+  .closeBtn svg {
+    width: 36px;
+    height: 36px;
+  }
+  .content {
+    padding: 48px 72px 24px;
+  }
+  .title {
+    font-size: 63px;
+    margin-bottom: 24px;
+  }
+  .text {
+    font-size: 36px;
+    max-width: 580px;
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+  /* Scale up inline-styled visuals (SVGs, images, piece grids) */
+  .visual {
+    zoom: 2.0;
+    margin-top: 12px;
+  }
+  .nav {
+    padding: 36px 60px 48px;
+    gap: 24px;
+  }
+  .navBtn {
+    font-size: 30px;
+    padding: 21px 39px;
+    border-radius: 18px;
+  }
+  .dots {
+    gap: 18px;
+  }
+  .dot {
+    width: 20px;
+    height: 20px;
+  }
+}
+
 .title {
   font-size: 20px;
   font-weight: 700;

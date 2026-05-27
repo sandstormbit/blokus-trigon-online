@@ -120,8 +120,8 @@ export default function WaitingRoom({
     : true
   const canStart = isHost && filledSlots >= maxPlayers && humanSlots >= 1 && allColorsReady
 
-  // ── Shared left-panel (Players) ──────────────────────────────────────────
-  const leftPanelContent = (
+  // ── Shared left-panel scroll content (Players) — no start area ─────────
+  const leftScrollContent = (
     <>
       {/* Room code */}
       <div className={styles.codeCard}>
@@ -279,7 +279,31 @@ export default function WaitingRoom({
         </div>
       </div>
 
-      {/* Start button */}
+      {/* Mobile-only: status hint lives in the scroll area so the pinned button never moves */}
+      {isTouchDevice && isHost && !canStart && (
+        <p className={styles.startHint}>
+          {filledSlots < maxPlayers
+            ? `Waiting for ${maxPlayers - filledSlots} more player${maxPlayers - filledSlots !== 1 ? 's' : ''} (or add AI)…`
+            : humanSlots === 0
+              ? 'At least one human player is required.'
+              : 'All players must select both color sets before starting.'}
+        </p>
+      )}
+
+      {isTouchDevice && !isHost && (
+        <div className={styles.waitingForHost}>
+          <div className={styles.spinner}/>
+          <span>Waiting for host to start the game…</span>
+        </div>
+      )}
+
+    </>
+  )
+
+  // ── Start / waiting area — pinned outside scroll on mobile ───────────────
+  // On mobile this only contains the button (no variable-height text) so it never shifts.
+  const startAreaContent = (
+    <>
       {isHost && (
         <div className={styles.startArea}>
           {startError && <div className={styles.startError}>{startError}</div>}
@@ -297,7 +321,8 @@ export default function WaitingRoom({
               </>
             )}
           </button>
-          {!canStart && (
+          {/* Desktop only: hint text below button. On mobile it lives in the scroll area above. */}
+          {!isTouchDevice && !canStart && (
             <p className={styles.startHint}>
               {filledSlots < maxPlayers
                 ? `Waiting for ${maxPlayers - filledSlots} more player${maxPlayers - filledSlots !== 1 ? 's' : ''} (or add AI)…`
@@ -309,12 +334,20 @@ export default function WaitingRoom({
         </div>
       )}
 
-      {!isHost && (
+      {!isHost && !isTouchDevice && (
         <div className={styles.waitingForHost}>
           <div className={styles.spinner}/>
           <span>Waiting for host to start the game…</span>
         </div>
       )}
+    </>
+  )
+
+  // Desktop: combine scroll content + start area into one block
+  const leftPanelContent = (
+    <>
+      {leftScrollContent}
+      {startAreaContent}
     </>
   )
 
@@ -413,10 +446,13 @@ export default function WaitingRoom({
 
         {/* Sliding panels — track is 200vw wide; translate by exactly -100vw to show panel 1 */}
         <div className={styles.mobilePanelsTrack} style={{ transform: `translateX(${mobilePanel === 0 ? '0' : '-100vw'})` }}>
-          {/* Panel 0: Players — no right-edge arrow; swipe left or tap dots to navigate */}
+          {/* Panel 0: Players — scroll content above, start button pinned below */}
           <div className={styles.mobilePanel}>
             <div className={styles.mobilePanelScroll}>
-              {leftPanelContent}
+              {leftScrollContent}
+            </div>
+            <div className={styles.mobilePinnedBottom}>
+              {startAreaContent}
             </div>
           </div>
 

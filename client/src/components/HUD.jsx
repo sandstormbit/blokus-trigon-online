@@ -155,7 +155,7 @@ export default function HUD({
           <button
             ref={endTurnRef}
             className={styles.endTurnBtn}
-            onClick={(e) => { triggerBounce(e.currentTarget); onEndTurn() }}
+            onClick={(e) => { triggerBounce(e.currentTarget); playSound('end-turn'); onEndTurn() }}
             title="End your turn (Shift+Enter)"
           >
             End Turn <kbd>⇧↵</kbd>

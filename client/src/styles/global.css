@@ -177,6 +177,17 @@ input {
   font-family: var(--font-body);
 }
 
+/* Prevent iOS Safari from zooming in when focusing text inputs */
+@media (pointer: coarse) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input {
+    font-size: 16px;
+  }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 4px;

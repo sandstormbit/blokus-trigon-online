@@ -244,6 +244,9 @@ function gameReducer(state, action) {
     }
 
     case ACTIONS.SELECT_PIECE: {
+      // Prevent selecting during AI turns or while waiting to end turn (one piece per turn)
+      const currentPlayer = state.players[state.currentPlayerIndex]
+      if (state.waitingForEndTurn || currentPlayer?.isAI) return state
       const { pieceId } = action.payload
       if (state.selectedPieceId === pieceId) {
         return { ...state, selectedPieceId: null, hoverCell: null, pendingPlacement: null }
@@ -553,8 +556,6 @@ export function useGameState() {
         dispatch({ type: ACTIONS.DISMISS_NO_MOVES })
       } else if (s.waitingForEndTurn) {
         setTimeout(() => {
-          const wouldEndGame = checkGameOver(s.players, s.board.cells, s.skippedPlayerIds, getGameOptions(s))
-          if (!wouldEndGame) playSound('end-turn')
           dispatch({ type: ACTIONS.END_TURN })
         }, 1000)
       } else {
@@ -562,6 +563,7 @@ export function useGameState() {
         const isFirst = !player.pieces.some(p => p.placed)
         const move = computeAIMove(s.board.cells, player, s.players, isFirst, gameOptions)
         if (move) {
+          playSound('place-piece')
           dispatch({ type: ACTIONS.AI_MOVE, payload: move })
         } else {
           // No legal move — will be handled by noMovesModal on next advanceTurn
