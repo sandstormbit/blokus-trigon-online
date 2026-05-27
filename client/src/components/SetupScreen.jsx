@@ -534,8 +534,6 @@ export default function SetupScreen({ onStart, onBack }) {
             Start Game
           </button>
         </div>
-
-        <p className={styles.footer}>For educational purposes only. Online adaptation of Blokus Trigon by Mattel.</p>
       </div>
     )
   }

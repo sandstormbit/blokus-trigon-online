@@ -22,20 +22,60 @@ const FILES = {
   'something-shiny':     'something-shiny.wav',
 }
 
-const cache = {}
+// ── Web Audio API — zero-latency playback after initial decode ────────────
+let _ctx = null
+const decoded = {}  // name → AudioBuffer once decoded
 
-// Eagerly create Audio objects so files are fetched before first playback
+function getCtx() {
+  if (!_ctx) {
+    try { _ctx = new (window.AudioContext || window.webkitAudioContext)() } catch (_) {}
+  }
+  return _ctx
+}
+
+// Resume suspended context on first user gesture (required by iOS Safari)
+function unlockCtx() {
+  const c = getCtx()
+  if (c && c.state === 'suspended') c.resume().catch(() => {})
+}
+document.addEventListener('touchstart', unlockCtx, { capture: true, once: true })
+document.addEventListener('click',      unlockCtx, { capture: true, once: true })
+
+// Pre-fetch and decode all sounds eagerly so they're ready before first play
 for (const [name, file] of Object.entries(FILES)) {
-  try { cache[name] = new Audio(BASE + file) } catch (_) {}
+  fetch(BASE + file)
+    .then(r => r.arrayBuffer())
+    .then(ab => {
+      const c = getCtx()
+      if (!c) return
+      return c.decodeAudioData(ab)
+    })
+    .then(buf => { if (buf) decoded[name] = buf })
+    .catch(() => {})
+}
+
+// ── HTML5 Audio fallback — used before decode completes ───────────────────
+const fallback = {}
+for (const [name, file] of Object.entries(FILES)) {
+  try { fallback[name] = new Audio(BASE + file) } catch (_) {}
 }
 
 export function playSound(name) {
-  const file = FILES[name]
-  if (!file) return
+  if (!FILES[name]) return
   try {
-    if (!cache[name]) cache[name] = new Audio(BASE + file)
-    const audio = cache[name]
-    audio.currentTime = 0
-    audio.play().catch(() => {})
+    const c = getCtx()
+    const buf = decoded[name]
+    if (c && buf) {
+      // Web Audio path: near-zero latency
+      if (c.state === 'suspended') c.resume().catch(() => {})
+      const src = c.createBufferSource()
+      src.buffer = buf
+      src.connect(c.destination)
+      src.start(0)
+    } else {
+      // Fallback: HTML5 Audio (used until decode finishes on first page load)
+      const audio = fallback[name]
+      if (audio) { audio.currentTime = 0; audio.play().catch(() => {}) }
+    }
   } catch (_) {}
 }

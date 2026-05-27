@@ -677,7 +677,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 14px 20px;
+  padding: 10px 20px;
   border-bottom: 1px solid rgba(255,255,255,0.07);
   flex-shrink: 0;
 }
@@ -688,7 +688,7 @@
   display: flex;
   justify-content: center;
   gap: 8px;
-  padding: 12px 0 6px;
+  padding: 7px 0 5px;
   position: relative;
   z-index: 1;
   flex-shrink: 0;
@@ -736,17 +736,17 @@
 .mobilePanelScroll {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 20px;
+  padding: 12px 20px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   -webkit-overflow-scrolling: touch;
 }
 
 /* Start bar — pinned below the sliding panels */
 .mobileStartBar {
   flex-shrink: 0;
-  padding: 10px 20px 14px;
+  padding: 8px 20px max(14px, env(safe-area-inset-bottom, 14px));
   border-top: 1px solid rgba(255,255,255,0.07);
   background: var(--bg-base, #0f1117);
 }
@@ -804,12 +804,12 @@
 
 /* Expand player rows to be taller in mobile panel (match WaitingRoom slots) */
 .mobilePanelScroll .playerList {
-  gap: 10px;
+  gap: 6px;
 }
 .mobilePanelScroll .playerRow,
 .mobilePanelScroll .twoPlayerHeader {
-  min-height: 52px;
-  padding: 10px 0;
+  min-height: 44px;
+  padding: 6px 0;
   border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 .mobilePanelScroll .playerRow:last-child,
@@ -822,7 +822,12 @@
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
-  padding: 16px;
+  padding: 12px;
+}
+
+/* Tighter player-count section on mobile (reduce bottom margin) */
+.mobilePanelScroll .sectionPlayerCount {
+  margin-bottom: 10px;
 }
 
 /* AI label name text — truncates so badge always visible */

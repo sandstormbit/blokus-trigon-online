@@ -784,7 +784,14 @@
 
 /* Compact header on touch devices */
 @media (pointer: coarse) {
+  /* Lock container to viewport so page never scrolls — panels scroll internally */
+  .container {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
   .header {
+    flex-shrink: 0;
     padding: 14px 20px;
   }
 
