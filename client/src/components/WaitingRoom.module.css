@@ -787,6 +787,7 @@
   /* Lock container to viewport so page never scrolls — panels scroll internally */
   .container {
     height: 100dvh;
+    min-height: unset; /* cancel base min-height: 100vh — on iOS, 100vh > 100dvh when URL bar is visible */
     overflow: hidden;
   }
 
