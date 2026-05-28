@@ -75,7 +75,8 @@ export default function WaitingRoom({
     else goToPlayers()         // swipe right → Players
   }, [goToModes, goToPlayers])
 
-  const shareUrl = `${window.location.origin}/api/share?join=${roomCode}`
+  const appOrigin = import.meta.env.VITE_APP_URL || window.location.origin
+  const shareUrl = `${appOrigin}/api/share?join=${roomCode}`
   const gameModes = settings?.gameModes || {}
   const isTwoPlayerStandard = maxPlayers === 2 && !gameModes.megaColors
 

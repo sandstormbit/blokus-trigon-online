@@ -6,9 +6,15 @@ export default function handler(req, res) {
   // Sanitize: only allow alphanumeric + hyphens, max 12 chars
   const roomCode = rawCode.replace(/[^A-Za-z0-9-]/g, '').slice(0, 12).toUpperCase()
 
-  const host = (req.headers.host || 'localhost:5173').replace(/[^a-zA-Z0-9.\-:]/g, '')
-  const protocol = host.startsWith('localhost') ? 'http' : 'https'
-  const origin = `${protocol}://${host}`
+  const canonicalUrl = process.env.VITE_APP_URL || process.env.APP_URL
+  let origin
+  if (canonicalUrl) {
+    origin = canonicalUrl.replace(/\/$/, '')
+  } else {
+    const host = (req.headers.host || 'localhost:5173').replace(/[^a-zA-Z0-9.\-:]/g, '')
+    const protocol = host.startsWith('localhost') || /^\d/.test(host) ? 'http' : 'https'
+    origin = `${protocol}://${host}`
+  }
 
   if (!roomCode) {
     res.redirect(302, '/')
