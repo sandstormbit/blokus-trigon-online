@@ -779,7 +779,9 @@ export default function GameScreen({
       {noMovesPlayer && (
         <NoMovesModal
           player={noMovesPlayer}
-          onDismiss={noMovesPlayer?.isAI ? null : (isNoMovesPlayer ? dismissNoMoves : () => setNoMovesLocallyDismissed(true))}
+          onDismiss={noMovesPlayer?.isAI
+            ? (isOnline ? () => setNoMovesLocallyDismissed(true) : dismissNoMoves)
+            : (isNoMovesPlayer ? dismissNoMoves : () => setNoMovesLocallyDismissed(true))}
         />
       )}
 
