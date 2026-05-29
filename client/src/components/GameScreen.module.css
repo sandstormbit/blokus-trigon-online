@@ -272,13 +272,14 @@
 
 /* Board fill: absolutely positioned so it always has a definite pixel size,
    bypassing iOS Safari's flex percentage-height resolution issues.
+   top offset clears the score overlay; bottom offset gives breathing room above the arrow bar.
    align-items: stretch guarantees the boardWrapper child resolves height: 100% correctly. */
 .mobileBoardFill {
   position: absolute;
-  top: 0;
+  top: 52px;   /* clears score overlay (12px top + room code + gap + score values) */
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: 8px;
   display: flex;
   align-items: stretch;
 }
@@ -418,6 +419,10 @@
     width: 36px;
     height: 36px;
   }
+  .mobileBoardFill {
+    top: 38px; /* score overlay is smaller in landscape */
+    bottom: 4px;
+  }
 }
 
 /* ─── Mobile: final board bar adapts to narrow screens ──────────────────── */
@@ -511,5 +516,10 @@
 
   .gameOverLabel {
     font-size: 11px;
+  }
+
+  .mobileBoardFill {
+    top: 62px; /* tablet score overlay is taller (larger font sizes) */
+    bottom: 12px;
   }
 }
