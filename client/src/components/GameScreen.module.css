@@ -255,12 +255,17 @@
 /**
  * Board area: fills all space between top bar and bottom HUD.
  * position: relative so arrow controls can be absolutely positioned inside.
+ *
+ * We intentionally do NOT set align-items/justify-content here. The default
+ * align-items: stretch gives the Board's inner wrapper a definite height so
+ * that height:100% and max-height:100% on the SVG resolve correctly on
+ * iOS/iPadOS Safari (where percentage heights inside flex-column items can
+ * otherwise collapse to zero).  The Board wrapper centres the SVG itself.
  */
 .mobileBoardArea {
   flex: 1;
+  min-height: 0; /* prevent the flex item from overflowing its container */
   display: flex;
-  align-items: center;
-  justify-content: center;
   overflow: hidden;
   padding: 30px 0 0; /* top clears score overlay; no side padding for max board width */
   position: relative;

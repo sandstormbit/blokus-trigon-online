@@ -43,6 +43,8 @@ function getGameOptions(gameState) {
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 export function useOnlineGame() {
   const socketRef = useRef(null)
+  // True once we've successfully joined/created a room. Used to re-join on reconnect.
+  const isInRoomRef = useRef(false)
 
   // Connection / room state
   const [connected, setConnected] = useState(false)
@@ -100,7 +102,30 @@ export function useOnlineGame() {
 
     socketRef.current = socket
 
-    socket.on('connect', () => setConnected(true))
+    socket.on('connect', () => {
+      setConnected(true)
+      // Re-join the room whenever the socket reconnects (e.g. after the browser
+      // was backgrounded on mobile).  isInRoomRef is only true after a successful
+      // create/join, so this is a no-op on the very first connection.
+      if (!isInRoomRef.current) return
+      const token    = localStorage.getItem('bt_session_token')
+      const roomCode = localStorage.getItem('bt_room_code')
+      if (!token || !roomCode) return
+      socket.emit('join_room', { roomCode, playerName: '', sessionToken: token }, (res) => {
+        if (!res.ok) {
+          localStorage.removeItem('bt_room_code')
+          isInRoomRef.current = false
+          return
+        }
+        if (res.maxPlayers)  setMaxPlayersInRoom(res.maxPlayers)
+        if (res.humanId)     setMyHumanId(res.humanId)
+        setIsHostPlayer(res.isHost || false)
+        if (res.players)     setRoomPlayers(res.players)
+        if (res.settings)    setSettings(res.settings)
+        setRoomPhase(res.phase)
+        if (res.gameState)   setGameState(deserializeState(res.gameState))
+      })
+    })
     socket.on('disconnect', () => setConnected(false))
     socket.on('connect_error', (err) => setConnectionError(err.message))
 
@@ -244,6 +269,7 @@ export function useOnlineGame() {
           if (res.gameState) {
             setGameState(deserializeState(res.gameState))
           }
+          isInRoomRef.current = true
         })
       }
       if (socket.connected) {
@@ -314,6 +340,7 @@ export function useOnlineGame() {
         setRoomPlayers(res.players)
         setSettings(res.settings)
         setRoomPhase(res.phase)
+        isInRoomRef.current = true
         callback?.({ ok: true, roomCode: res.roomCode })
       })
     }
@@ -380,6 +407,7 @@ export function useOnlineGame() {
         if (res.gameState) {
           setGameState(deserializeState(res.gameState))
         }
+        isInRoomRef.current = true
         callback?.({ ok: true, roomCode: res.roomCode })
       })
     }
@@ -712,6 +740,7 @@ export function useOnlineGame() {
   const newGame = goToGameLobby
 
   const disconnect = useCallback(() => {
+    isInRoomRef.current = false
     socketRef.current?.disconnect()
     localStorage.removeItem('bt_session_token')
     localStorage.removeItem('bt_room_code')

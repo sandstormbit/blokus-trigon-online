@@ -33,13 +33,23 @@ function getCtx() {
   return _ctx
 }
 
-// Resume suspended context on first user gesture (required by iOS Safari)
+// Resume suspended context on user gesture (required by iOS Safari).
+// 'once: true' is intentionally NOT used — iOS suspends the context again when
+// the page is backgrounded, so we need the listener to fire every time the user
+// returns and interacts, not just the first time.
 function unlockCtx() {
   const c = getCtx()
-  if (c && c.state === 'suspended') c.resume().catch(() => {})
+  if (!c) return
+  if (c.state === 'suspended') c.resume().catch(() => {})
 }
-document.addEventListener('touchstart', unlockCtx, { capture: true, once: true })
-document.addEventListener('click',      unlockCtx, { capture: true, once: true })
+document.addEventListener('touchstart', unlockCtx, { capture: true })
+document.addEventListener('click',      unlockCtx, { capture: true })
+
+// Also resume as soon as the page becomes visible again (covers the case where
+// iOS suspends the AudioContext while the browser is in the background).
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) unlockCtx()
+})
 
 // Pre-fetch and decode all sounds eagerly so they're ready before first play
 for (const [name, file] of Object.entries(FILES)) {
