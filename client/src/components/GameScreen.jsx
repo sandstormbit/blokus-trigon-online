@@ -822,7 +822,61 @@ export default function GameScreen({
 
         {/* ── Board area ───────────────────────────────────────────────────── */}
         <div className={styles.mobileBoardArea} ref={boardSvgRef}>
-          {sharedBoardContent(mobileBoardDisabled)}
+          {showInactivityFlash && <div className={styles.inactivityOverlay} />}
+          <div className={styles.scoreOverlay} aria-hidden="true">
+            {isOnline && onlineRoomCode && (
+              <div className={styles.scoreOverlayRoomCode}>#{onlineRoomCode}</div>
+            )}
+            <div className={styles.scoreOverlayScores}>
+              {players.map(p => {
+                const ci = PLAYER_COLORS[p.color]
+                return (
+                  <div key={p.id} className={styles.scoreOverlayItem}>
+                    <div className={styles.scoreOverlayDot} style={{ background: ci.bg, boxShadow: `0 0 5px ${ci.bg}` }} />
+                    <span className={styles.scoreOverlayValue} style={{ color: ci.bg }}>
+                      <AnimatedScore value={p.score} />
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+          <div className={styles.mobileBoardFill}>
+            <Board
+              boardData={state.board}
+              selectedPiece={selectedPiece}
+              hoverCell={state.hoverCell}
+              ghostCells={ghostCells}
+              ghostIsLegal={ghostIsLegal}
+              currentPlayerColor={currentPlayer?.color || null}
+              freeHoverEnabled={freeHoverEnabled}
+              onCellClick={placePiece}
+              onCellHover={setHover}
+              onBoardLeave={handleBoardLeave}
+              onMouseActivity={handleMouseActivity}
+              players={players}
+              disabled={!!mobileBoardDisabled}
+              requiredStartCells={
+                state.gameModes?.requiredStart && !state.players.every(p => p.pieces.some(pc => pc.placed))
+                  ? state.requiredStartCells
+                  : null
+              }
+              otherPlayersGhosts={otherPlayersGhosts}
+              lastPlacedCells={state.lastPlacedCells}
+              lastPlacedPlayerId={state.lastPlacedPlayerId}
+              lastPlacedPerPlayer={lastPlacedPerPlayer}
+              enhancedColoringPlayerIds={enhancedColoringPlayerIds}
+              yourTurn={showTurnGlow}
+              onRemovePiece={
+                isMyTurn && state.waitingForEndTurn && state.lastPlacedCells && !showRemovePieceModal
+                  ? handleRemovePieceClick
+                  : undefined
+              }
+              onTouchRotateCW={keyRotate}
+              onTouchRotateCCW={keyRotateReverse}
+              onTouchFlip={keyFlip}
+            />
+          </div>
         </div>
 
         {/* ── Arrow controls bar: ← ↑ ↓ → ────────────────────────────────── */}

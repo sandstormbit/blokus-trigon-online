@@ -594,13 +594,15 @@ export default function Board({
         ref={svgRef}
         className={`${styles.svg} ${selectedPiece && !disabled ? styles.svgActive : ''}`}
         viewBox={viewBox}
+        width="100%"
+        height="100%"
         onMouseMove={handleMouseMove}
         onMouseLeave={handleBoardLeave}
         onClick={handleClick}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={{ maxWidth: '100%', maxHeight: '100%', touchAction: 'none' }}
+        style={{ display: 'block', touchAction: 'none' }}
       >
         <defs>
           {/* Glow for the free hover outline (current player's color) */}
