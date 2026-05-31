@@ -164,6 +164,19 @@ function OnlineApp({ onPassAndPlay }) {
     )
   }
 
+  // ── Reconnecting (has stored session, waiting for server to respond) ─────────
+  if (online.isReconnecting) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '100dvh', background: '#0f172a', color: '#94a3b8',
+        fontFamily: 'sans-serif', fontSize: '1.1rem', letterSpacing: '0.05em',
+      }}>
+        Reconnecting…
+      </div>
+    )
+  }
+
   // ── Landing page (disconnected state) ───────────────────────────────────────
   return (
     <>

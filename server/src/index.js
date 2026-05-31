@@ -19,6 +19,7 @@ import {
   replaceAIWithHuman, replaceHumanWithAI, claimAISlot,
   addSpectator, removeSpectator, transferHost, hasConnectedHumans,
   deleteRoom, leaveAndOpenSlot, takeOpenSlot,
+  removeDisconnectedWaitingPlayer,
 } from './roomManager.js'
 
 import { createGameState, processAction, serializeState } from './gameEngine.js'
@@ -79,6 +80,63 @@ function broadcastGameState(room) {
 
 const ABANDONMENT_MS = 15 * 60 * 1000  // 15 minutes
 const DISCONNECT_REPLACE_DELAY_MS = 5 * 60 * 1000  // 5 minutes
+// Grace periods so a page refresh doesn't immediately boot the player/end the game
+const WAITING_REMOVAL_DELAY_MS = 5 * 60 * 1000      // 5 min before removing from waiting room
+const NO_HUMANS_GRACE_MS = 30 * 1000                // 30 s before ending game with no humans
+
+// roomCode:humanId → timer handle for waiting-room grace period
+const waitingRemovalTimers = new Map()
+
+// roomCode → timer handle for "no humans connected" grace period during playing
+const noHumansTimers = new Map()
+
+function scheduleWaitingRemoval(roomCode, player) {
+  const key = `${roomCode}:${player.humanId}`
+  if (waitingRemovalTimers.has(key)) return
+  const timer = setTimeout(() => {
+    waitingRemovalTimers.delete(key)
+    const result = removeDisconnectedWaitingPlayer(roomCode, player.token)
+    if (!result.removed || result.roomDeleted) return
+    if (result.room) {
+      io.to(result.room.code).emit('player_disconnected', { players: getRoomPlayers(result.room) })
+    }
+  }, WAITING_REMOVAL_DELAY_MS)
+  waitingRemovalTimers.set(key, timer)
+}
+
+function clearWaitingRemovalTimer(roomCode, humanId) {
+  const key = `${roomCode}:${humanId}`
+  const timer = waitingRemovalTimers.get(key)
+  if (timer) {
+    clearTimeout(timer)
+    waitingRemovalTimers.delete(key)
+  }
+}
+
+function startNoHumansGracePeriod(roomCode) {
+  if (noHumansTimers.has(roomCode)) return
+  const timer = setTimeout(() => {
+    noHumansTimers.delete(roomCode)
+    const r = getRoom(roomCode)
+    if (!r || r.phase !== 'playing') return
+    if (hasConnectedHumans(r)) return
+    cancelAITurn(roomCode)
+    r.phase = 'ended'
+    if (r.gameState) {
+      r.gameState = { ...r.gameState, phase: 'ended' }
+      io.to(r.code).emit('game_state_update', { gameState: serializeState(r.gameState) })
+    }
+  }, NO_HUMANS_GRACE_MS)
+  noHumansTimers.set(roomCode, timer)
+}
+
+function clearNoHumansGracePeriod(roomCode) {
+  const timer = noHumansTimers.get(roomCode)
+  if (timer) {
+    clearTimeout(timer)
+    noHumansTimers.delete(roomCode)
+  }
+}
 
 /**
  * Check if the current player is an AI and schedule their turn.
@@ -285,6 +343,7 @@ io.on('connection', (socket) => {
         if (reconnect.room && reconnect.room.phase === 'waiting') {
           const { room, player } = reconnect
           socket.join(room.code)
+          clearWaitingRemovalTimer(room.code, player.humanId)
           ack({
             ok: true,
             roomCode: room.code,
@@ -355,6 +414,8 @@ io.on('connection', (socket) => {
           socket.join(room.code)
 
           clearDisconnectTimer(room, player.humanId)
+          clearWaitingRemovalTimer(room.code, player.humanId)
+          clearNoHumansGracePeriod(room.code)
 
           const payload = {
             ok: true,
@@ -898,13 +959,8 @@ io.on('connection', (socket) => {
       // Transfer host if needed
       if (room.hostToken === player.token || !room.players.find(p => p.token === room.hostToken)) {
         if (!hasConnectedHumans(room)) {
-          // No humans left — end the game
-          cancelAITurn(room.code)
-          room.phase = 'ended'
-          if (room.gameState) {
-            room.gameState = { ...room.gameState, phase: 'ended' }
-            io.to(room.code).emit('game_state_update', { gameState: serializeState(room.gameState) })
-          }
+          // No humans connected — give them 30 s to reconnect before ending the game
+          startNoHumansGracePeriod(room.code)
           return
         }
         const newHost = transferHost(room)
@@ -918,6 +974,10 @@ io.on('connection', (socket) => {
 
       // Start 5-minute replacement timer
       startDisconnectTimer(room.code, player)
+    } else if (room.phase === 'waiting' && player && !player.isAI) {
+      io.to(room.code).emit('player_disconnected', { players: getRoomPlayers(room) })
+      // Schedule actual removal after 30 s so a page refresh doesn't boot them
+      scheduleWaitingRemoval(room.code, player)
     } else {
       io.to(room.code).emit('player_disconnected', { players: getRoomPlayers(room) })
     }

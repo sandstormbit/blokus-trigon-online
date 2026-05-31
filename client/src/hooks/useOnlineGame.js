@@ -48,6 +48,13 @@ export function useOnlineGame() {
 
   // Connection / room state
   const [connected, setConnected] = useState(false)
+  // True while an auto-reconnect attempt is in flight (prevents landing-page flash on refresh)
+  const [isReconnecting, setIsReconnecting] = useState(() => {
+    const token = localStorage.getItem('bt_session_token')
+    const storedRoom = localStorage.getItem('bt_room_code')
+    const urlJoinCode = new URLSearchParams(window.location.search).get('join')?.toUpperCase() || null
+    return !!(token && storedRoom && (!urlJoinCode || urlJoinCode === storedRoom))
+  })
   const [roomCode, setRoomCode] = useState(null)
   const [roomMode, setRoomMode] = useState('public')
   const [maxPlayersInRoom, setMaxPlayersInRoom] = useState(4)
@@ -127,7 +134,10 @@ export function useOnlineGame() {
       })
     })
     socket.on('disconnect', () => setConnected(false))
-    socket.on('connect_error', (err) => setConnectionError(err.message))
+    socket.on('connect_error', (err) => {
+      setConnectionError(err.message)
+      setIsReconnecting(false)
+    })
 
     // ── Waiting room events ───────────────────────────────────────────────────
     socket.on('player_joined', ({ players }) => setRoomPlayers(players))
@@ -251,6 +261,7 @@ export function useOnlineGame() {
       socket.connect()
       const attemptReconnect = () => {
         socket.emit('join_room', { roomCode: storedRoomCode, playerName: '', sessionToken: storedToken }, (res) => {
+          setIsReconnecting(false)
           if (!res.ok) {
             localStorage.removeItem('bt_room_code')
             socket.disconnect()
@@ -888,6 +899,7 @@ export function useOnlineGame() {
   return {
     // Connection state
     connected,
+    isReconnecting,
     roomCode,
     roomMode,
     maxPlayersInRoom,

@@ -463,24 +463,49 @@ export function handleDisconnect(socketId) {
   if (!player) return { room, player: null, wasSpectator: false }
 
   if (room.phase === 'waiting') {
-    room.players = room.players.filter(p => p.token !== token)
-    tokenToRoom.delete(token)
-
-    if (room.players.length === 0) {
-      rooms.delete(code)
-      return { room: null, player, wasSpectator: false }
-    }
-
-    if (room.hostToken === token) {
-      const nextHuman = room.players.find(p => !p.isAI)
-      room.hostToken = nextHuman ? nextHuman.token : room.players[0]?.token
-    }
+    // Mark disconnected but keep in room so they can reconnect on refresh.
+    // The caller (index.js) should schedule a grace-period removal timer.
+    player.connected = false
+    player.socketId = null
+    // intentionally NOT deleting from tokenToRoom — token needed for reconnect
   } else {
     player.connected = false
     player.socketId = null
   }
 
   return { room, player, wasSpectator: false }
+}
+
+/**
+ * Actually remove a disconnected player from a waiting room after the grace period.
+ * Only removes if the player is still disconnected (i.e. didn't reconnect in time).
+ * Returns { removed: false } if they reconnected, { removed: true, room } if removed,
+ * or { removed: true, roomDeleted: true } if the room is now empty.
+ */
+export function removeDisconnectedWaitingPlayer(code, token) {
+  const room = rooms.get(code)
+  if (!room || room.phase !== 'waiting') return { removed: false }
+
+  const player = room.players.find(p => p.token === token)
+  if (!player) return { removed: false }
+
+  // They reconnected in time — leave them alone
+  if (player.connected) return { removed: false }
+
+  room.players = room.players.filter(p => p.token !== token)
+  tokenToRoom.delete(token)
+
+  if (room.players.length === 0) {
+    rooms.delete(code)
+    return { removed: true, roomDeleted: true }
+  }
+
+  if (room.hostToken === token) {
+    const nextHuman = room.players.find(p => !p.isAI)
+    room.hostToken = nextHuman ? nextHuman.token : room.players[0]?.token
+  }
+
+  return { removed: true, room }
 }
 
 /**
