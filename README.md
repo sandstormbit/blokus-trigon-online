@@ -12,7 +12,9 @@ STRATEGY · TERRITORY · TRIANGLES
 
 <br><br>
 
-<a href="docs/development-lifecycle.pdf">📄 Development Lifecycle</a>
+<a href="docs/development-lifecycle.pdf">
+  <img src="docs/dev-lifecycle-button.svg" alt="Development Lifecycle" height="38" />
+</a>
 
 <br><br>
 
