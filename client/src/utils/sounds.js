@@ -24,11 +24,32 @@ const FILES = {
 
 // ── Web Audio API — zero-latency playback after initial decode ────────────
 let _ctx = null
-const decoded = {}  // name → AudioBuffer once decoded
+const rawBuffers = {}    // name → ArrayBuffer (kept so we can re-decode after context recreation)
+const decoded = {}       // name → AudioBuffer for the current _ctx
 
+function createCtx() {
+  try {
+    const c = new (window.AudioContext || window.webkitAudioContext)()
+    return c
+  } catch (_) {
+    return null
+  }
+}
+
+// Returns a live (non-closed) AudioContext, recreating it if iOS killed it.
 function getCtx() {
   if (!_ctx) {
-    try { _ctx = new (window.AudioContext || window.webkitAudioContext)() } catch (_) {}
+    _ctx = createCtx()
+  } else if (_ctx.state === 'closed') {
+    // iOS Safari can fully close the context when backgrounded; recreate it
+    // and wipe decoded cache so buffers get re-decoded against the new ctx.
+    _ctx = createCtx()
+    for (const k of Object.keys(decoded)) delete decoded[k]
+    // Re-decode all sounds that have raw data available
+    for (const [name, ab] of Object.entries(rawBuffers)) {
+      if (!_ctx) break
+      _ctx.decodeAudioData(ab.slice(0), buf => { decoded[name] = buf }, () => {})
+    }
   }
   return _ctx
 }
@@ -45,20 +66,27 @@ function unlockCtx() {
 document.addEventListener('touchstart', unlockCtx, { capture: true })
 document.addEventListener('click',      unlockCtx, { capture: true })
 
-// Also resume as soon as the page becomes visible again (covers the case where
-// iOS suspends the AudioContext while the browser is in the background).
+// Resume on visibility restore AND on pageshow (covers back-forward cache on
+// mobile Safari where the page is restored without a full reload).
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) unlockCtx()
 })
+window.addEventListener('pageshow', (e) => {
+  // e.persisted is true when the page is restored from the back-forward cache
+  unlockCtx()
+})
 
-// Pre-fetch and decode all sounds eagerly so they're ready before first play
+// Pre-fetch and decode all sounds eagerly so they're ready before first play.
+// We keep the raw ArrayBuffer so the context can be recreated without re-fetching.
 for (const [name, file] of Object.entries(FILES)) {
   fetch(BASE + file)
     .then(r => r.arrayBuffer())
     .then(ab => {
+      rawBuffers[name] = ab
       const c = getCtx()
       if (!c) return
-      return c.decodeAudioData(ab)
+      // decodeAudioData consumes the buffer, so pass a copy and keep the original
+      return c.decodeAudioData(ab.slice(0))
     })
     .then(buf => { if (buf) decoded[name] = buf })
     .catch(() => {})
@@ -83,7 +111,7 @@ export function playSound(name) {
       src.connect(c.destination)
       src.start(0)
     } else {
-      // Fallback: HTML5 Audio (used until decode finishes on first page load)
+      // Fallback: HTML5 Audio (used until decode finishes, or if Web Audio unavailable)
       const audio = fallback[name]
       if (audio) { audio.currentTime = 0; audio.play().catch(() => {}) }
     }
