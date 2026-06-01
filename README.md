@@ -12,6 +12,10 @@ STRATEGY · TERRITORY · TRIANGLES
 
 <br><br>
 
+<a href="docs/development-lifecycle.pdf">📄 Development Lifecycle</a>
+
+<br><br>
+
 <a href="#"><img src="docs/badge-react.svg" alt="React + Vite" height="28" /></a>
 <a href="#"><img src="docs/badge-node.svg" alt="Node.js + Socket.io" height="28" /></a>
 <a href="#"><img src="docs/badge-players.svg" alt="2–4 Players" height="28" /></a>
