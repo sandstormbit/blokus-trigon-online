@@ -210,6 +210,7 @@ export function createGameState(roomPlayers, humanCount, gameModes = {}) {
     lastPlacedCells: null,
     lastPlacedPlayerId: null,
     lastPlacedPieceId: null,
+    moveHistory: [],
     gameModes,
     requiredStartCells,
   }
@@ -270,6 +271,7 @@ export function processAction(state, action, humanId) {
         return { ...p, pieces: newPieces, score }
       })
 
+      const placedCells = boardCells.map(c => ({ q: c.q, r: c.r }))
       return {
         ok: true,
         state: {
@@ -280,9 +282,10 @@ export function processAction(state, action, humanId) {
           selectedPieceId: null,
           hoverCell: null,
           waitingForEndTurn: true,
-          lastPlacedCells: boardCells.map(c => ({ q: c.q, r: c.r })),
+          lastPlacedCells: placedCells,
           lastPlacedPlayerId: currentPlayer.id,
           lastPlacedPieceId: pieceId,
+          moveHistory: [...(state.moveHistory || []), { playerId: currentPlayer.id, cells: placedCells }],
         }
       }
     }
@@ -325,6 +328,7 @@ export function processAction(state, action, humanId) {
           lastPlacedCells: null,
           lastPlacedPlayerId: null,
           lastPlacedPieceId: null,
+          moveHistory: (state.moveHistory || []).slice(0, -1),
         }
       }
     }
