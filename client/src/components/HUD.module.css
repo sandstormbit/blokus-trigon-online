@@ -11,6 +11,8 @@
   flex-shrink: 0;
   z-index: 10;
   overflow: hidden;
+  container-type: inline-size;
+  container-name: hud;
 }
 
 .left {
@@ -306,4 +308,18 @@ kbd {
   font-size: 12px;
   color: var(--text-muted);
   font-style: italic;
+}
+
+/* ── Compact HUD: fires when center text would overlap the right buttons ── */
+
+/* "Select a piece from your panel" → "Select piece" */
+.hintShort { display: none; }
+
+/* " Advance" word in "Auto Advance" button — hidden when compact */
+.advanceWord { /* visible by default */ }
+
+@container hud (max-width: 960px) {
+  .hintLong  { display: none; }
+  .hintShort { display: inline; }
+  .advanceWord { display: none; }
 }

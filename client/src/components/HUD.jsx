@@ -110,7 +110,8 @@ export default function HUD({
             </div>
           ) : (
             <div className={styles.hint}>
-              Select a piece from your panel
+              <span className={styles.hintLong}>Select a piece from your panel</span>
+              <span className={styles.hintShort}>Select piece</span>
             </div>
           )}
         </div>
@@ -133,7 +134,7 @@ export default function HUD({
             onClick={(e) => { triggerBounce(e.currentTarget); playSound('home-lobby'); onToggleAutoAdvance() }}
             title={autoAdvanceEnabled ? 'Auto Advance on — click to require End Turn (A)' : 'Auto Advance off — click to enable (A)'}
           >
-            Auto Advance <kbd>A</kbd>
+            Auto<span className={styles.advanceWord}> Advance</span> <kbd>A</kbd>
           </button>
         )}
         {isOnline && onExit && (

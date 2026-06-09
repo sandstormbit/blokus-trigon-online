@@ -202,8 +202,21 @@ export default function Board({
   onTouchRotateCW,      // () => void — fired on single tap (< 8px movement, < 220ms)
   onTouchRotateCCW,     // () => void — fired on leftward swipe
   onTouchFlip,          // () => void — fired on double-tap
+  isMobileLayout,       // bool — desktop showing mobile HUD; keeps hover alive + spring tracks hoverCell
+  hoverLocked = false,  // bool — mobile-layout ghost is stuck (click-to-stick); mouse no longer drives spring
 }) {
   const svgRef = useRef(null)
+
+  // True when a precise pointer (mouse/trackpad) is available. Distinguishes a real
+  // touch-only device (phone/tablet → coarse only) from a desktop/laptop that merely
+  // reports maxTouchPoints > 0 (touchscreen laptops, hybrids). On the latter we still
+  // want to honor mouse events so the free-hover glow tracks the cursor.
+  const hasFinePointer = useMemo(
+    () => typeof window !== 'undefined'
+      && typeof window.matchMedia === 'function'
+      && window.matchMedia('(pointer: fine)').matches,
+    []
+  )
 
   // ── Bounce animation state ─────────────────────────────────────────────────
   // When lastPlacedCells changes to a new value, trigger a short bounce animation.
@@ -256,22 +269,35 @@ export default function Board({
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
   }, [])
 
-  // On touch devices, keep the free-hover spring anchored to the current hoverCell.
-  // This ensures the glow outline stays on the ghost piece when arrow buttons move it
-  // (arrow presses update hoverCell without firing any touch/mouse events on the board).
+  // On touch devices (or desktop-mobile layout), keep the free-hover spring anchored
+  // to the current hoverCell so the glow outline follows arrow-key movement.
   useEffect(() => {
-    if (!hoverCell || !boardData || navigator.maxTouchPoints === 0) return
+    if (!hoverCell || !boardData || (hasFinePointer && !isMobileLayout)) return
     const { offsetX, offsetY } = boardData
     const cent = triCentroid(hoverCell.q, hoverCell.r)
     const svgX = cent.x + offsetX
     const svgY = cent.y + offsetY
+
+    // Fine-pointer (mouse) + mobile layout + NOT locked: handleMouseMove owns rawSvgPos for
+    // smooth cursor tracking. We only ensure the spring is running; don't clobber the target.
+    if (hasFinePointer && !hoverLocked) {
+      if (!isOnBoardRef.current) {
+        rawSvgPos.current = { x: svgX, y: svgY }
+        isOnBoardRef.current = true
+        springRef.current = { x: svgX, y: svgY, vx: 0, vy: 0 }
+        rafRef.current = requestAnimationFrame(runSpring)
+      }
+      return
+    }
+
+    // Touch-only device OR locked mobile layout: spring follows hoverCell centroid.
     rawSvgPos.current = { x: svgX, y: svgY }
     if (!isOnBoardRef.current) {
       isOnBoardRef.current = true
       springRef.current = { x: svgX, y: svgY, vx: 0, vy: 0 }
       rafRef.current = requestAnimationFrame(runSpring)
     }
-  }, [hoverCell, boardData, runSpring])
+  }, [hoverCell, boardData, runSpring, isMobileLayout, hoverLocked, hasFinePointer])
 
   const viewBox = useMemo(() => {
     if (!boardData) return '0 0 100 100'
@@ -395,58 +421,69 @@ export default function Board({
   }, [boardData])
 
   const handleMouseMove = useCallback((e) => {
-    // On any touch-capable device, ignore ALL synthetic mouse events — the browser
+    // On a true touch-ONLY device, ignore ALL synthetic mouse events — the browser
     // fires mousemove/mouseleave after every touch sequence and they would snap or
     // clear the ghost piece position that was set by the touch/arrow handlers.
-    if (navigator.maxTouchPoints > 0) return
+    // A desktop/laptop with a fine pointer (even one that also reports touch) keeps
+    // honoring mouse events so the free-hover glow follows the cursor.
+    if (navigator.maxTouchPoints > 0 && !hasFinePointer) return
 
     // Notify parent of any mouse activity (for turn glow + inactivity reset)
     onMouseActivity?.()
 
-    // Always track raw SVG position for free hover spring
-    const svg = svgRef.current
-    if (svg) {
-      const pt = svg.createSVGPoint()
-      pt.x = e.clientX
-      pt.y = e.clientY
-      const svgPt = pt.matrixTransform(svg.getScreenCTM().inverse())
-      rawSvgPos.current = { x: svgPt.x, y: svgPt.y }
+    // Mouse drives the spring when: (a) regular desktop, OR (b) mobile layout but not yet locked.
+    // Once locked (click-to-stick), the spring is driven by the hoverCell effect so arrow keys
+    // move the glow outline with the ghost. When unlocked again, mouse takes back control.
+    if (!isMobileLayout || !hoverLocked) {
+      const svg = svgRef.current
+      if (svg) {
+        const pt = svg.createSVGPoint()
+        pt.x = e.clientX
+        pt.y = e.clientY
+        const svgPt = pt.matrixTransform(svg.getScreenCTM().inverse())
+        rawSvgPos.current = { x: svgPt.x, y: svgPt.y }
 
-      if (!isOnBoardRef.current) {
-        // Teleport spring to current position on entry (no initial lag)
-        isOnBoardRef.current = true
-        springRef.current = { x: svgPt.x, y: svgPt.y, vx: 0, vy: 0 }
-        rafRef.current = requestAnimationFrame(runSpring)
+        if (!isOnBoardRef.current) {
+          // Teleport spring to current position on entry (no initial lag)
+          isOnBoardRef.current = true
+          springRef.current = { x: svgPt.x, y: svgPt.y, vx: 0, vy: 0 }
+          rafRef.current = requestAnimationFrame(runSpring)
+        }
       }
     }
 
     if (disabled || !selectedPiece) return
     const cell = svgPosToCell(e.clientX, e.clientY)
     if (cell) onCellHover(cell)
-  }, [onMouseActivity, disabled, selectedPiece, svgPosToCell, onCellHover, runSpring])
+  }, [onMouseActivity, disabled, selectedPiece, svgPosToCell, onCellHover, runSpring, isMobileLayout, hoverLocked, hasFinePointer])
 
   const handleBoardLeave = useCallback(() => {
-    // On touch devices the browser fires a synthetic mouseleave after every touch
-    // sequence. Ignore it entirely — hover state and the free-hover spring are kept
-    // alive so the outline stays visible between taps and arrow presses. Cleanup
-    // happens through React state (piece deselected, turn ended) not pointer-leave.
-    if (navigator.maxTouchPoints > 0) return
+    // On true touch-only devices (or desktop-mobile layout) ignore pointer-leave — hover
+    // state and the free-hover spring are kept alive so the outline persists between clicks
+    // and arrow presses. Cleanup happens through React state, not pointer-leave.
+    // A fine-pointer desktop in the full layout still cleans up normally on mouse-out.
+    if ((navigator.maxTouchPoints > 0 && !hasFinePointer) || isMobileLayout) return
     isOnBoardRef.current = false
     rawSvgPos.current = null
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
     setFreeHoverPos(null)
     onBoardLeave()
-  }, [onBoardLeave])
+  }, [onBoardLeave, isMobileLayout, hasFinePointer])
 
   const handleClick = useCallback((e) => {
     if (disabled || !selectedPiece || !hoverCell) return
+    // In mobile layout, a click while locked always unlocks ("pick up") — skip legality check.
+    if (isMobileLayout && hoverLocked) {
+      onCellClick(hoverCell.q, hoverCell.r)
+      return
+    }
     if (!ghostIsLegal) {
       playSound('invalid-placement')
       return
     }
     playSound('click-to-place')
     onCellClick(hoverCell.q, hoverCell.r)
-  }, [disabled, selectedPiece, hoverCell, ghostIsLegal, onCellClick])
+  }, [disabled, selectedPiece, hoverCell, ghostIsLegal, onCellClick, isMobileLayout, hoverLocked])
 
   // ── Touch event handling (mobile / tablet) ────────────────────────────────
   const touchStateRef = useRef({

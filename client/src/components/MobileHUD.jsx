@@ -49,6 +49,9 @@ export default function MobileHUD({
   canPickUp,
   onEndTurn,
   showEndTurn,
+  // Optionally controlled expansion (Shift+Up/Down from keyboard in desktop-mobile view)
+  expanded: externalExpanded,
+  onExpandedChange,
 }) {
   // ── Which player's pieces are being viewed ────────────────────────────────
   const [activeTabId, setActiveTabId] = useState(null)
@@ -90,8 +93,10 @@ export default function MobileHUD({
     setSelectedSize(null)
   }, [])
 
-  // ── HUD expansion (swipe-up) ──────────────────────────────────────────────
-  const [expanded, setExpanded] = useState(false)
+  // ── HUD expansion (swipe-up or keyboard Shift+Up/Down) ───────────────────
+  const [internalExpanded, setInternalExpanded] = useState(false)
+  const expanded = externalExpanded !== undefined ? externalExpanded : internalExpanded
+  const setExpanded = onExpandedChange ?? setInternalExpanded
   const dragRef = useRef({ startY: 0, dragging: false })
 
   const handleHandlePointerDown = useCallback(e => {

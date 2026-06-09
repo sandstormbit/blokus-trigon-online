@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useCallback, useMemo, useRef, useState } from 'react'
 import PiecePreview from './PiecePreview.jsx'
 import { PLAYER_COLORS } from '../hooks/useGameState.js'
 import styles from './PlayerPanel.module.css'
@@ -30,6 +30,20 @@ export default function PlayerPanel({
 
   const totalRemaining = player.score
   const placedCount = player.pieces.filter(p => p.placed).length
+  const totalPieces = player.pieces.length
+
+  // Name scroll: measure overflow on hover and animate to reveal full name
+  const nameRef = useRef(null)
+  const [nameScrollPx, setNameScrollPx] = useState(0)
+
+  const onNameEnter = useCallback(() => {
+    const el = nameRef.current
+    if (!el) return
+    const overflow = el.scrollWidth - el.clientWidth
+    if (overflow > 0) setNameScrollPx(overflow)
+  }, [])
+
+  const onNameLeave = useCallback(() => setNameScrollPx(0), [])
 
   return (
     <div
@@ -49,9 +63,18 @@ export default function PlayerPanel({
       <div className={styles.header}>
         <div className={styles.colorDot} />
         <div className={styles.playerInfo}>
-          <div className={styles.playerName}>{player.name}</div>
+          <div
+            ref={nameRef}
+            className={`${styles.playerName} ${nameScrollPx > 0 ? styles.playerNameScrolling : ''}`}
+            style={nameScrollPx > 0 ? { '--name-scroll': `-${nameScrollPx}px` } : undefined}
+            onMouseEnter={onNameEnter}
+            onMouseLeave={onNameLeave}
+            title={player.name}
+          >
+            {player.name}
+          </div>
           <div className={styles.playerMeta}>
-            {placedCount} placed · {22 - placedCount} remaining
+            {totalPieces - placedCount}/{totalPieces}
           </div>
         </div>
         <div className={styles.score}>

@@ -8,6 +8,9 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* container queries let the header respond to actual panel width */
+  container-type: inline-size;
+  container-name: player-panel;
 }
 
 .panelActive {
@@ -36,6 +39,7 @@
 .playerInfo {
   flex: 1;
   min-width: 0;
+  overflow: hidden; /* clips scrolling name translation */
 }
 
 .playerName {
@@ -46,6 +50,22 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: default;
+}
+
+/* Hover-triggered marquee scroll to reveal full name */
+.playerNameScrolling {
+  text-overflow: clip;
+  animation: scrollPlayerName 3.5s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes scrollPlayerName {
+  0%   { transform: translateX(0); }
+  18%  { transform: translateX(0); }
+  72%  { transform: translateX(var(--name-scroll, 0px)); }
+  88%  { transform: translateX(var(--name-scroll, 0px)); }
+  100% { transform: translateX(0); }
 }
 
 .playerMeta {
@@ -167,4 +187,43 @@
   margin-bottom: 6px;
   text-align: center;
   letter-spacing: 0.03em;
+}
+
+/* ── Compact header: kicks in when the panel is narrow (sidebar ~≤ 180px) ── */
+@container player-panel (max-width: 164px) {
+  .header {
+    padding: 7px 9px;
+    gap: 7px;
+  }
+
+  .colorDot {
+    width: 7px;
+    height: 7px;
+  }
+
+  .playerName {
+    font-size: 11px;
+  }
+
+  .playerMeta {
+    font-size: 9px;
+  }
+
+  .scoreNum {
+    font-size: 14px;
+  }
+
+  .scoreLabel {
+    font-size: 8px;
+  }
+
+  .turnBadge {
+    font-size: 9px;
+    padding: 3px 0;
+  }
+
+  .skippedBadge {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
 }

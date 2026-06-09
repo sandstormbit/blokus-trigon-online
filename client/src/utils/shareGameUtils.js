@@ -130,7 +130,7 @@ export async function generateShareImage(boardData, players, ranked, playerCount
 
 /**
  * Generate and download an animated GIF replaying all piece placements.
- * Total duration ≈ 10 seconds; final frame held 3× longer.
+ * Each placement shows for 0.12s; the completed board is held for 3s before looping.
  * Header: winner crown + name. Bottom: score rows (static, final state).
  *
  * @param {object[]} moveHistory  — [{playerId, cells:[{q,r}]}]
@@ -155,9 +155,9 @@ export async function generateReplayGIF(moveHistory, players, ranked, playerCoun
   const scoreSectionH = computeScoreSectionH(ranked, playerCount, canvasW)
   const canvasH = HEADER_H + boardH + scoreSectionH
 
-  const N = moveHistory.length
-  const normalDelay = N > 0 ? Math.max(6, Math.round(700 / (N + 1))) : 100
-  const finalDelay  = 300
+  // Delays are in centiseconds (GIF format). 12 = 0.12s between each placement.
+  const normalDelay = 12
+  const finalDelay  = 300  // 3s hold on the completed board before the loop restarts
 
   const canvas = createCanvas(canvasW, canvasH)
   const ctx = canvas.getContext('2d')

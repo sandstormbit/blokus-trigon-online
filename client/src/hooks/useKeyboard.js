@@ -23,10 +23,16 @@ export function useKeyboard({
   onToggleAutoAdvance,
   onArrowLeft,
   onArrowRight,
+  onArrowUp,
+  onArrowDown,
+  onShiftUp,
+  onShiftDown,
+  onPlace,
   onDeselect,
   onConfirmPlacement,
   onCancelPlacement,
   onEndTurn,
+  isTouchDevice,
   active,
 }) {
   useEffect(() => {
@@ -40,6 +46,14 @@ export function useKeyboard({
       if (e.key === 'Enter' && e.shiftKey) {
         e.preventDefault()
         onEndTurn?.()
+        return
+      }
+
+      // Enter → Place the penciled (stuck) piece in mobile layout.
+      // Mirrors the on-screen "Place" button; onPlace itself guards on a legal ghost.
+      if (e.key === 'Enter' && !e.shiftKey && isTouchDevice && selectedPieceId && !pendingPlacement) {
+        e.preventDefault()
+        onPlace?.()
         return
       }
 
@@ -59,16 +73,40 @@ export function useKeyboard({
         return
       }
 
-      // Arrow keys → open/close piece control panel (works any time during play)
+      // Shift+Up/Down → expand/collapse mobile HUD
+      if (e.key === 'ArrowUp' && e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault()
+        onShiftUp?.()
+        return
+      }
+      if (e.key === 'ArrowDown' && e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault()
+        onShiftDown?.()
+        return
+      }
+
+      // Arrow Up/Down → move ghost piece (mobile) or no-op (desktop)
+      if (e.key === 'ArrowUp' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault()
+        onArrowUp?.()
+        return
+      }
+      if (e.key === 'ArrowDown' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault()
+        onArrowDown?.()
+        return
+      }
+
+      // Arrow Left/Right → move ghost (mobile) or open/close piece panel (desktop)
       if (e.key === 'ArrowRight' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
         e.preventDefault()
-        playSound('home-lobby')
+        if (!isTouchDevice) playSound('home-lobby')
         onArrowRight?.()
         return
       }
       if (e.key === 'ArrowLeft' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
         e.preventDefault()
-        playSound('home-lobby')
+        if (!isTouchDevice) playSound('home-lobby')
         onArrowLeft?.()
         return
       }
@@ -138,6 +176,12 @@ export function useKeyboard({
     onToggleAutoAdvance,
     onArrowLeft,
     onArrowRight,
+    onArrowUp,
+    onArrowDown,
+    onShiftUp,
+    onShiftDown,
+    onPlace,
+    isTouchDevice,
     onDeselect,
     onConfirmPlacement,
     onCancelPlacement,

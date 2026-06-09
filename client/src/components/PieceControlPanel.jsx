@@ -21,6 +21,7 @@ export default function PieceControlPanel({
   onToggle,
   side,            // 'left' | 'right'
   anchorTop,       // viewport-relative top in px
+  sidebarWidth,    // current sidebar width in px — panel tracks the sidebar edge
   playerColor,     // hex string e.g. '#3B82F6'
   selectedPiece,
   onRotate,
@@ -57,8 +58,8 @@ export default function PieceControlPanel({
 
   const wrapperStyle = {
     top: anchorTop,
-    left: isLeft ? 240 : null,
-    right: isLeft ? null : 240,
+    left: isLeft ? sidebarWidth : null,
+    right: isLeft ? null : sidebarWidth,
     flexDirection: isLeft ? 'row' : 'row-reverse',
     '--panel-color': playerColor,
   }

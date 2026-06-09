@@ -1,4 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+
+const MIN_SIDEBAR_WIDTH = 130 // fits exactly 2 pieces per row
+const MAX_SIDEBAR_WIDTH = 240 // fits exactly 4 pieces per row (current default)
 import { playSound } from '../utils/sounds.js'
 
 function triggerBounce(el) {
@@ -58,6 +61,47 @@ export default function GameScreen({
   otherPlayersGhosts = null,
 }) {
   const { isTouchDevice } = useDeviceType()
+
+  // ── Desktop sidebar resize ────────────────────────────────────────────────
+  const [sidebarWidth, setSidebarWidth] = useState(MAX_SIDEBAR_WIDTH)
+  const sidebarWidthRef = useRef(MAX_SIDEBAR_WIDTH)
+  sidebarWidthRef.current = sidebarWidth
+  const sidebarResizeRef = useRef({ active: false, dir: 1, startX: 0, startWidth: MAX_SIDEBAR_WIDTH })
+  const leftHandleRef = useRef(null)
+  const rightHandleRef = useRef(null)
+
+  const handleResizeStart = useCallback((dir, e) => {
+    e.preventDefault()
+    sidebarResizeRef.current = { active: true, dir, startX: e.clientX, startWidth: sidebarWidthRef.current }
+    const handleRef = dir === 1 ? leftHandleRef : rightHandleRef
+    handleRef.current?.classList.add(styles.resizeHandleActive)
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }, [])
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!sidebarResizeRef.current.active) return
+      const { dir, startX, startWidth } = sidebarResizeRef.current
+      const dx = (e.clientX - startX) * dir
+      const newWidth = Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, Math.round(startWidth + dx)))
+      setSidebarWidth(newWidth)
+    }
+    const handleMouseUp = () => {
+      if (!sidebarResizeRef.current.active) return
+      sidebarResizeRef.current.active = false
+      leftHandleRef.current?.classList.remove(styles.resizeHandleActive)
+      rightHandleRef.current?.classList.remove(styles.resizeHandleActive)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
 
   const [viewingFinalBoard, setViewingFinalBoard] = useState(false)
   const [freeHoverEnabled, setFreeHoverEnabled] = useState(true)
@@ -447,6 +491,21 @@ export default function GameScreen({
     return best
   }, [state.board])
 
+  // Mobile: HUD expanded state (lifted here so keyboard Shift+Up/Down can control it)
+  const [mobileHudExpanded, setMobileHudExpanded] = useState(false)
+
+  // Mobile: hover lock — after clicking the board the ghost freezes until deselected
+  const [hoverLocked, setHoverLocked] = useState(false)
+  const hoverLockedRef = useRef(false)
+  hoverLockedRef.current = hoverLocked  // always current; avoids stale closures
+
+  useEffect(() => {
+    if (!state.selectedPieceId) {
+      setHoverLocked(false)
+      hoverLockedRef.current = false
+    }
+  }, [state.selectedPieceId])
+
   // Mobile: move the ghost piece by a pixel delta (used by arrow controls)
   const boardSvgRef = useRef(null) // attached to the boardArea div
 
@@ -460,6 +519,27 @@ export default function GameScreen({
     const cell = findNearestBoardCell(newSvgX, newSvgY)
     if (cell) setHover(cell)
   }, [state.hoverCell, state.board, findNearestBoardCell, setHover])
+
+  const mobileKeyLeft  = useCallback(() => moveGhostByDelta(-20,   0), [moveGhostByDelta])
+  const mobileKeyRight = useCallback(() => moveGhostByDelta( 20,   0), [moveGhostByDelta])
+  const mobileKeyUp    = useCallback(() => moveGhostByDelta(  0, -20), [moveGhostByDelta])
+  const mobileKeyDown  = useCallback(() => moveGhostByDelta(  0,  20), [moveGhostByDelta])
+  // Board click in mobile layout: first click sticks the ghost; second click picks it up again
+  const mobileBoardClick = useCallback((q, r) => {
+    if (hoverLockedRef.current) {
+      setHoverLocked(false)
+      hoverLockedRef.current = false
+    } else {
+      setHover({ q, r })
+      setHoverLocked(true)
+      hoverLockedRef.current = true
+    }
+  }, [setHover])
+
+  // Board hover in mobile layout: ignored once the ghost is locked by a click
+  const mobileSetHover = useCallback((cell) => {
+    if (!hoverLockedRef.current) setHover(cell)
+  }, [setHover])
 
   // Mobile: "Place" button — place piece and immediately auto-confirm (no modal)
   const mobilePlacePiece = useCallback(() => {
@@ -577,8 +657,14 @@ export default function GameScreen({
     onToggleHover: keyHover,
     onToggleEnhancedColoring: toggleEnhancedColoring,
     onToggleAutoAdvance: toggleAutoAdvance,
-    onArrowRight: panelSide === 'left' ? openControlPanel : closeControlPanel,
-    onArrowLeft:  panelSide === 'left' ? closeControlPanel : openControlPanel,
+    onArrowRight: isTouchDevice ? mobileKeyRight : (panelSide === 'left' ? openControlPanel : closeControlPanel),
+    onArrowLeft:  isTouchDevice ? mobileKeyLeft  : (panelSide === 'left' ? closeControlPanel : openControlPanel),
+    onArrowUp:    isTouchDevice ? mobileKeyUp    : undefined,
+    onArrowDown:  isTouchDevice ? mobileKeyDown  : undefined,
+    onShiftUp:    isTouchDevice ? () => setMobileHudExpanded(true)  : undefined,
+    onShiftDown:  isTouchDevice ? () => setMobileHudExpanded(false) : undefined,
+    onPlace:      isTouchDevice ? mobilePlacePiece : undefined,
+    isTouchDevice,
     onDeselect: keyDeselect,
     onConfirmPlacement: handleConfirmPlacement,
     onCancelPlacement: cancelPlacement,
@@ -850,12 +936,14 @@ export default function GameScreen({
               ghostIsLegal={ghostIsLegal}
               currentPlayerColor={currentPlayer?.color || null}
               freeHoverEnabled={freeHoverEnabled}
-              onCellClick={placePiece}
-              onCellHover={setHover}
+              onCellClick={mobileBoardClick}
+              onCellHover={mobileSetHover}
               onBoardLeave={handleBoardLeave}
               onMouseActivity={handleMouseActivity}
               players={players}
               disabled={!!mobileBoardDisabled}
+              isMobileLayout={true}
+              hoverLocked={hoverLocked}
               requiredStartCells={
                 state.gameModes?.requiredStart && !state.players.every(p => p.pieces.some(pc => pc.placed))
                   ? state.requiredStartCells
@@ -927,6 +1015,8 @@ export default function GameScreen({
             canPickUp={canMobilePickUp}
             onEndTurn={endTurn}
             showEndTurn={!autoAdvanceEnabled && effectiveIsMyTurn && !!state.waitingForEndTurn}
+            expanded={mobileHudExpanded}
+            onExpandedChange={setMobileHudExpanded}
           />
         )}
 
@@ -963,7 +1053,7 @@ export default function GameScreen({
       {viewingFinalBoard && finalBoardWinnerBanner}
 
       <div className={styles.playArea}>
-        <div className={styles.sidebar}>
+        <div className={styles.sidebar} style={{ width: sidebarWidth }}>
           {leftPlayers.map(player => (
             <PlayerPanel
               key={player.id}
@@ -982,11 +1072,43 @@ export default function GameScreen({
           ))}
         </div>
 
+        {/* Left sidebar resize handle */}
+        <div className={styles.resizeHandleContainer}>
+          <div
+            ref={leftHandleRef}
+            className={styles.resizeHandle}
+            onMouseDown={(e) => handleResizeStart(1, e)}
+          >
+            <div className={styles.resizeHandleIndicator}>
+              <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+                <path d="M4.5 1L1 5L4.5 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M7.5 1L11 5L7.5 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
         <div className={styles.boardArea}>
           {sharedBoardContent(boardDisabled)}
         </div>
 
-        <div className={styles.sidebar}>
+        {/* Right sidebar resize handle */}
+        <div className={styles.resizeHandleContainer}>
+          <div
+            ref={rightHandleRef}
+            className={styles.resizeHandle}
+            onMouseDown={(e) => handleResizeStart(-1, e)}
+          >
+            <div className={styles.resizeHandleIndicator}>
+              <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+                <path d="M4.5 1L1 5L4.5 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M7.5 1L11 5L7.5 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.sidebar} style={{ width: sidebarWidth }}>
           {rightPlayers.map(player => (
             <PlayerPanel
               key={player.id}
@@ -1013,6 +1135,7 @@ export default function GameScreen({
           onToggle={toggleControlPanel}
           side={panelSide}
           anchorTop={controlPanelAnchorTop}
+          sidebarWidth={sidebarWidth}
           playerColor={PLAYER_COLORS[toggleOwnerPlayer.color].bg}
           selectedPiece={selectedPiece}
           onRotate={keyRotate}
