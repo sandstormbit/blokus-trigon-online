@@ -53,7 +53,7 @@ export default function MobileTopBar({
             type="button"
             aria-label="Toggle enhanced coloring"
           >
-            ✦ C
+            ✦ <kbd className={styles.kbd}>C</kbd>
           </button>
 
           <button
@@ -63,7 +63,7 @@ export default function MobileTopBar({
             type="button"
             aria-label="Toggle auto advance"
           >
-            Auto
+            Auto <kbd className={styles.kbd}>A</kbd>
           </button>
 
           {isOnline && onExit && (

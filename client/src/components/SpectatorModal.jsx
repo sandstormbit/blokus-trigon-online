@@ -60,6 +60,22 @@ export default function SpectatorModal({
           </div>
         )}
 
+        {aiSlots && aiSlots.length > 0 && isInProgress && (
+          <div className={styles.section}>
+            <p className={styles.sectionLabel}>Replace an AI player:</p>
+            {aiSlots.map(slot => (
+              <button
+                key={slot.humanId}
+                className={styles.takeSlotBtn}
+                onClick={() => onTakeOpenSlot?.(slot.humanId)}
+              >
+                Replace <strong>{slot.name}</strong>
+                <span className={styles.slotDiff}>{slot.aiDifficulty} AI</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className={styles.actions}>
           <button className={styles.spectateBtn} onClick={onSpectate}>
             👁 Watch as Spectator

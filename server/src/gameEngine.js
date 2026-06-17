@@ -225,8 +225,12 @@ export function processAction(state, action, humanId) {
   const currentPlayer = state.players[state.currentPlayerIndex]
   if (!currentPlayer) return { ok: false, error: 'no_current_player' }
 
-  // Validate it's this human's turn
-  if (currentPlayer.humanId !== humanId) {
+  // End-game actions can be triggered by any player in the room, not just the
+  // current player, so they bypass the turn-ownership check below.
+  const ANY_PLAYER_ACTIONS = new Set(['REQUEST_END_GAME', 'CONFIRM_END_GAME', 'CANCEL_END_GAME'])
+
+  // Validate it's this human's turn (except for actions any player may take)
+  if (!ANY_PLAYER_ACTIONS.has(action.type) && currentPlayer.humanId !== humanId) {
     return { ok: false, error: 'not_your_turn' }
   }
 

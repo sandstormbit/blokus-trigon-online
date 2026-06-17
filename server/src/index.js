@@ -445,9 +445,15 @@ io.on('connection', (socket) => {
       // Room is in progress — offer to spectate or take an open slot
       if (result.error === 'game_in_progress') {
         const room = result.room
+        // Only offer abandoned (open) slots and AI slots — never a connected
+        // human who is still playing.
         const openSlots = room.players
-          .filter(p => p.openSlot)
+          .filter(p => p.openSlot && !p.isAI && !p.connected)
           .map(p => ({ humanId: p.humanId, name: p.name }))
+        // Mid-game: a joining human can also replace any AI player.
+        const aiSlots = room.players
+          .filter(p => p.isAI)
+          .map(p => ({ humanId: p.humanId, name: p.name, aiDifficulty: p.aiDifficulty }))
         socket.join(room.code)
         ack({
           ok: true,
@@ -456,6 +462,8 @@ io.on('connection', (socket) => {
           canSpectate: true,
           hasOpenSlots: openSlots.length > 0,
           openSlots: openSlots.length > 0 ? openSlots : null,
+          hasAISlots: aiSlots.length > 0,
+          aiSlots: aiSlots.length > 0 ? aiSlots : null,
           gameState: room.gameState ? serializeState(room.gameState) : null,
           moveLog: room.moveLog,
           players: getRoomPlayers(room),
@@ -851,7 +859,10 @@ io.on('connection', (socket) => {
     if (room.phase === 'ended') {
       cancelAITurn(roomCode)
       room.players = room.players.filter(p => !p.isAI)
-      room.players.forEach(p => { p.color = null; p.color2 = null; p.inLobby = false })
+      // Keep each human's selected color(s) so the lobby selection carries
+      // through to the next game. AI players (removed above) will be assigned
+      // the remaining colors when they're re-added.
+      room.players.forEach(p => { p.inLobby = false })
       room.phase = 'waiting'
       room.gameState = null
       room.moveLog = []
@@ -913,9 +924,22 @@ io.on('connection', (socket) => {
     const { room, player } = result
     socket.join(room.code)
 
-    // Cancel any pending AI turn for this slot if it's their turn
+    // Replace the AI's name in the live game state with the joining player's
+    // name (preserving any "(Color)" suffix used in 2p modes), and mark the
+    // slot as human-controlled.
     const state = room.gameState
     if (state) {
+      let changed = false
+      state.players = state.players.map(p => {
+        if (p.humanId !== player.humanId) return p
+        changed = true
+        const suffixMatch = typeof p.name === 'string' ? p.name.match(/\s*\([^)]*\)\s*$/) : null
+        const suffix = suffixMatch ? suffixMatch[0] : ''
+        return { ...p, name: `${player.name}${suffix}`, isAI: false }
+      })
+      if (changed) room.gameState = { ...state }
+
+      // Cancel any pending AI turn for this slot if it's their turn
       const cp = state.players[state.currentPlayerIndex]
       if (cp && cp.humanId === player.humanId) cancelAITurn(code)
     }
@@ -934,6 +958,8 @@ io.on('connection', (socket) => {
     })
 
     io.to(room.code).emit('player_reconnected', { players: getRoomPlayers(room) })
+    // Broadcast updated game state so everyone sees the new player's name in-game.
+    broadcastGameState(getRoom(room.code))
   })
 
   // ── Disconnect ────────────────────────────────────────────────────────────

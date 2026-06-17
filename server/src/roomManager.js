@@ -345,7 +345,8 @@ export function leaveAndOpenSlot(code, token) {
 }
 
 /**
- * Allow any new player to claim an open slot mid-game.
+ * Allow any new player to claim a slot mid-game — either an open (abandoned)
+ * slot or an AI-controlled slot, replacing the AI with the joining human.
  * Returns { room, player } or { error }.
  */
 export function takeOpenSlot(code, aiHumanId, playerName, socketId) {
@@ -353,8 +354,12 @@ export function takeOpenSlot(code, aiHumanId, playerName, socketId) {
   if (!room) return { error: 'room_not_found' }
   if (room.phase !== 'playing') return { error: 'game_not_active' }
 
-  const aiIdx = room.players.findIndex(p => p.openSlot && p.humanId === aiHumanId)
+  const aiIdx = room.players.findIndex(p => (p.openSlot || p.isAI) && p.humanId === aiHumanId)
   if (aiIdx === -1) return { error: 'slot_not_found' }
+
+  // If an AI previously replaced a disconnected human, drop the stale token mapping.
+  const prevToken = room.players[aiIdx].replacedToken
+  if (prevToken) tokenToRoom.delete(prevToken)
 
   const token = generateToken()
   const player = {
