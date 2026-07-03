@@ -699,14 +699,13 @@ io.on('connection', (socket) => {
       ack?.({ ok: false, error: 'not_enough_players' }); return
     }
 
-    // All slots must have a color in 2p standard mode
+    // Every human must have chosen a color before the game can start (humans are no
+    // longer auto-assigned a default). 2p standard additionally requires a second color.
     const gameModes = room.settings.gameModes
     const isTwoPlayerStandard = room.maxPlayers === 2 && !gameModes.megaColors
-    if (isTwoPlayerStandard) {
-      const humanPlayers = room.players.filter(p => !p.isAI)
-      if (humanPlayers.some(p => !p.color || !p.color2)) {
-        ack?.({ ok: false, error: 'colors_not_selected' }); return
-      }
+    const humanPlayers = room.players.filter(p => !p.isAI)
+    if (humanPlayers.some(p => !p.color || (isTwoPlayerStandard && !p.color2))) {
+      ack?.({ ok: false, error: 'colors_not_selected' }); return
     }
 
     const gameState = createGameState(

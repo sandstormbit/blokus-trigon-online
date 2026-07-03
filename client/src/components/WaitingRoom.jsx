@@ -5,8 +5,6 @@ import styles from './WaitingRoom.module.css'
 import { playSound } from '../utils/sounds.js'
 import { useDeviceType } from '../hooks/useDeviceType.js'
 
-const DEFAULT_COLORS = ['blue', 'red', 'green', 'yellow']
-
 function triggerBounce(el) {
   if (!el) return
   el.classList.remove('btn-bounce')
@@ -118,7 +116,7 @@ export default function WaitingRoom({
   const humanSlots = players.filter(p => !p.isAI).length
   const allColorsReady = isTwoPlayerStandard
     ? filledSlots === maxPlayers && players.filter(p => !p.isAI).every(p => p && p.color && p.color2)
-    : true
+    : players.filter(p => !p.isAI).every(p => p && p.color)
   const canStart = isHost && filledSlots >= maxPlayers && humanSlots >= 1 && allColorsReady
 
   // ── Shared left-panel scroll content (Players) — no start area ─────────
@@ -208,11 +206,10 @@ export default function WaitingRoom({
                       ) : (
                         <div className={styles.colorSwatches}>
                           {COLOR_KEYS.map(colorKey => {
-                            const activeColor = player.color || DEFAULT_COLORS[i]
-                            const isActive = activeColor === colorKey
+                            const isActive = player.color === colorKey
                             const takenByOther = players.some((p, j) => {
                               if (!p || j === i) return false
-                              return (p.color || DEFAULT_COLORS[j]) === colorKey
+                              return p.color === colorKey
                             })
                             return (
                               <button
@@ -287,7 +284,9 @@ export default function WaitingRoom({
             ? `Waiting for ${maxPlayers - filledSlots} more player${maxPlayers - filledSlots !== 1 ? 's' : ''} (or add AI)…`
             : humanSlots === 0
               ? 'At least one human player is required.'
-              : 'All players must select both color sets before starting.'}
+              : isTwoPlayerStandard
+                ? 'All players must select both color sets before starting.'
+                : 'All players must select a color before starting.'}
         </p>
       )}
 
@@ -329,7 +328,9 @@ export default function WaitingRoom({
                 ? `Waiting for ${maxPlayers - filledSlots} more player${maxPlayers - filledSlots !== 1 ? 's' : ''} (or add AI)…`
                 : humanSlots === 0
                   ? 'At least one human player is required.'
-                  : 'All players must select both color sets before starting.'}
+                  : isTwoPlayerStandard
+                ? 'All players must select both color sets before starting.'
+                : 'All players must select a color before starting.'}
             </p>
           )}
         </div>

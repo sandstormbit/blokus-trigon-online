@@ -22,6 +22,13 @@ const SPRING_MASS       = 0.1
 const SPRING_DAMPING    = 10
 const SPRING_STIFFNESS  = 131
 const SPRING_SUB_STEPS  = 5   // sub-steps per frame for stable integration
+// Once the spring is within this distance of its target AND moving slower than this,
+// treat it as at rest, snap to the target, and stop the RAF loop until new input arrives.
+// TRI_SIZE is 28 SVG units, so these thresholds are deeply sub-pixel — the resting frame
+// is visually identical to the fully-converged state, but we stop re-rendering it every
+// frame (which otherwise runs forever on touch, where the loop isn't cancelled on leave).
+const SPRING_SETTLE_POS = 0.03  // SVG units
+const SPRING_SETTLE_VEL = 0.3   // SVG units per second
 
 // Returns a transparent fill and stroke for the current player's color
 function ghostLegalColors(colorKey) {
@@ -259,10 +266,30 @@ export default function Board({
         sp.x  += sp.vx * dt
         sp.y  += sp.vy * dt
       }
+      // If the spring has effectively come to rest at its target, snap exactly to it,
+      // render one final frame, and park the loop instead of scheduling another RAF.
+      // Any new input re-arms it via ensureSpringRunning().
+      const atRest =
+        Math.abs(raw.x - sp.x) < SPRING_SETTLE_POS && Math.abs(raw.y - sp.y) < SPRING_SETTLE_POS &&
+        Math.abs(sp.vx) < SPRING_SETTLE_VEL && Math.abs(sp.vy) < SPRING_SETTLE_VEL
+      if (atRest) {
+        sp.x = raw.x; sp.y = raw.y; sp.vx = 0; sp.vy = 0
+        setFreeHoverPos({ x: sp.x, y: sp.y })
+        rafRef.current = null
+        return
+      }
       setFreeHoverPos({ x: sp.x, y: sp.y })
     }
     rafRef.current = requestAnimationFrame(runSpring)
   }, [])
+
+  // Restart the spring loop if it has been parked (at rest) while still on the board.
+  // No-op if the loop is already running or the pointer/finger has left the board.
+  const ensureSpringRunning = useCallback(() => {
+    if (isOnBoardRef.current && rafRef.current == null) {
+      rafRef.current = requestAnimationFrame(runSpring)
+    }
+  }, [runSpring])
 
   // Cancel RAF on unmount
   useEffect(() => {
@@ -296,8 +323,10 @@ export default function Board({
       isOnBoardRef.current = true
       springRef.current = { x: svgX, y: svgY, vx: 0, vy: 0 }
       rafRef.current = requestAnimationFrame(runSpring)
+    } else {
+      ensureSpringRunning()
     }
-  }, [hoverCell, boardData, runSpring, isMobileLayout, hoverLocked, hasFinePointer])
+  }, [hoverCell, boardData, runSpring, ensureSpringRunning, isMobileLayout, hoverLocked, hasFinePointer])
 
   const viewBox = useMemo(() => {
     if (!boardData) return '0 0 100 100'
@@ -448,6 +477,8 @@ export default function Board({
           isOnBoardRef.current = true
           springRef.current = { x: svgPt.x, y: svgPt.y, vx: 0, vy: 0 }
           rafRef.current = requestAnimationFrame(runSpring)
+        } else {
+          ensureSpringRunning()
         }
       }
     }
@@ -455,7 +486,7 @@ export default function Board({
     if (disabled || !selectedPiece) return
     const cell = svgPosToCell(e.clientX, e.clientY)
     if (cell) onCellHover(cell)
-  }, [onMouseActivity, disabled, selectedPiece, svgPosToCell, onCellHover, runSpring, isMobileLayout, hoverLocked, hasFinePointer])
+  }, [onMouseActivity, disabled, selectedPiece, svgPosToCell, onCellHover, runSpring, ensureSpringRunning, isMobileLayout, hoverLocked, hasFinePointer])
 
   const handleBoardLeave = useCallback(() => {
     // On true touch-only devices (or desktop-mobile layout) ignore pointer-leave — hover
@@ -524,6 +555,8 @@ export default function Board({
         isOnBoardRef.current = true
         springRef.current = { x: svgPt.x, y: svgPt.y, vx: 0, vy: 0 }
         rafRef.current = requestAnimationFrame(runSpring)
+      } else {
+        ensureSpringRunning()
       }
     }
 
@@ -532,7 +565,7 @@ export default function Board({
       const cell = svgPosToCell(t.clientX, t.clientY)
       if (cell) onCellHover(cell)
     }
-  }, [onMouseActivity, disabled, selectedPiece, svgPosToCell, onCellHover, runSpring])
+  }, [onMouseActivity, disabled, selectedPiece, svgPosToCell, onCellHover, runSpring, ensureSpringRunning])
 
   const handleTouchMove = useCallback((e) => {
     if (e.touches.length !== 1) return
@@ -553,6 +586,7 @@ export default function Board({
       pt.x = t.clientX; pt.y = t.clientY
       const svgPt = pt.matrixTransform(svg.getScreenCTM().inverse())
       rawSvgPos.current = { x: svgPt.x, y: svgPt.y }
+      ensureSpringRunning()
     }
 
     // Ghost follows finger immediately
@@ -560,7 +594,7 @@ export default function Board({
       const cell = svgPosToCell(t.clientX, t.clientY)
       if (cell) onCellHover(cell)
     }
-  }, [onMouseActivity, disabled, selectedPiece, svgPosToCell, onCellHover])
+  }, [onMouseActivity, disabled, selectedPiece, svgPosToCell, onCellHover, ensureSpringRunning])
 
   const handleTouchEnd = useCallback((e) => {
     if (e.changedTouches.length !== 1) return

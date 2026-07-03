@@ -52,9 +52,9 @@ function nextHumanId(room) {
   return Math.max(...room.players.map(p => p.humanId)) + 1
 }
 
-function pickAvailableColor(existingPlayers) {
-  const taken = new Set(existingPlayers.flatMap(p => [p.color, p.color2]).filter(Boolean))
-  return ALL_COLORS.find(c => !taken.has(c)) || null
+function pickRandomFrom(colors) {
+  if (!colors.length) return null
+  return colors[Math.floor(Math.random() * colors.length)]
 }
 
 /**
@@ -70,7 +70,7 @@ export function createRoom(mode, maxPlayers, hostName, socketId) {
     token,
     socketId,
     connected: true,
-    color: ALL_COLORS[0],  // auto-assign blue so server color is never null
+    color: null,   // humans choose their own color in the lobby (no default)
     color2: null,
     isAI: false,
   }
@@ -133,7 +133,7 @@ export function joinRoom(code, playerName, socketId) {
     token,
     socketId,
     connected: true,
-    color: pickAvailableColor(room.players),  // auto-assign so server color is never null
+    color: null,   // humans choose their own color in the lobby (no default)
     color2: null,
     isAI: false,
   }
@@ -156,12 +156,12 @@ export function addAIPlayer(code, difficulty = 'normal') {
   if (room.players.length >= room.maxPlayers) return { error: 'room_full' }
 
   const validDifficulty = difficulty === 'hard' ? 'hard' : 'normal'
-  const allColors = ['blue', 'red', 'green', 'yellow']
   const takenColors = new Set(room.players.flatMap(p => [p.color, p.color2]).filter(Boolean))
-  const available = allColors.filter(c => !takenColors.has(c))
+  const available = ALL_COLORS.filter(c => !takenColors.has(c))
   const isTwoPlayerStandard = room.maxPlayers === 2 && !room.settings?.gameModes?.megaColors
-  const aiColor = available[0] || null
-  const aiColor2 = isTwoPlayerStandard ? (available[1] || null) : null
+  // AI randomly picks an available color no one else has taken (and a second for 2p standard).
+  const aiColor = pickRandomFrom(available)
+  const aiColor2 = isTwoPlayerStandard ? pickRandomFrom(available.filter(c => c !== aiColor)) : null
 
   const aiPlayer = {
     humanId: nextHumanId(room),
